@@ -116,10 +116,10 @@ function sanitizeSpecialChars(text: string): string {
       ';': ',',
       '–': '-',
       '—': '-',
-      '"': '"',
-      '"': '"',
-      ''': "'",
-      ''': "'",
+      '\u201C': '"', // left double quotation mark
+      '\u201D': '"', // right double quotation mark
+      '\u2018': "'",
+      '\u2019': "'",
       '\u00A0': ' ',
       '\u200B': '',
       '…': '...',
@@ -133,7 +133,9 @@ function sanitizeSpecialChars(text: string): string {
     };
     
     for (const [old, new_] of Object.entries(replacements)) {
-      result = result.replace(new RegExp(old, 'g'), new_);
+      // Escape special regex characters
+      const escapedOld = old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escapedOld, 'g'), new_);
     }
     
     sanitizedLines.push(result);

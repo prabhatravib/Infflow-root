@@ -12,13 +12,23 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
+    console.log("🚀 Worker request received:", {
+      method: request.method,
+      pathname: pathname,
+      url: url.toString()
+    });
+
     try {
       if (request.method === 'POST' && pathname === '/api/describe') {
+        console.log("🔵 Handling describe request...");
         const body = await request.json();
+        console.log("🔵 Request body:", JSON.stringify(body, null, 2));
+        
         return describeHandler(body as any, env as any);
       }
 
       if (request.method === 'POST' && pathname === '/api/deep-dive') {
+        console.log("🔵 Handling deep-dive request...");
         const body = await request.json();
         return deepDiveHandler(body as any, env as any);
       }
@@ -31,7 +41,14 @@ export default {
       const indexUrl = new URL('/index.html', url.origin);
       return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
     } catch (err) {
-      return json({ success: false, detail: toMessage(err), error_type: 'internal_error' }, 500);
+      console.error("❌ Worker error:", err);
+      console.error("❌ Error stack:", err instanceof Error ? err.stack : 'No stack trace');
+      return json({ 
+        success: false, 
+        detail: toMessage(err), 
+        error_type: 'internal_error',
+        debug_info: err instanceof Error ? err.stack : String(err)
+      }, 500);
     }
   },
 };

@@ -62,6 +62,11 @@ export async function generateDiagramCode(
 ): Promise<string> {
   const diagramPrompt = getDiagramPrompt(diagramType);
   
+  console.log("🟡 Starting diagram generation...");
+  console.log("Diagram type:", diagramType);
+  console.log("Content description:", contentDescription.substring(0, 200) + "...");
+  console.log("Original query:", originalQuery);
+  
   // Build user message based on diagram type
   let userMessage: string;
   
@@ -84,7 +89,10 @@ ${contentDescription}`;
 ${contentDescription}`;
   }
   
+  console.log("🟡 User message for diagram generation:", userMessage.substring(0, 300) + "...");
+  
   try {
+    console.log("🟡 Calling OpenAI for diagram generation...");
     const response = await callOpenAI(
       env,
       diagramPrompt,
@@ -94,14 +102,19 @@ ${contentDescription}`;
       0.7
     );
     
+    console.log("✅ OpenAI diagram response received:");
+    console.log("Response length:", response?.length || 0);
+    console.log("Response preview:", response?.substring(0, 300) + "...");
+    
     if (!response) {
       throw new Error("Empty diagram response from LLM");
     }
     
+    console.log("✅ Diagram generation successful");
     return response;
     
   } catch (error) {
-    console.error("Diagram generation failed:", error);
+    console.error("❌ Diagram generation failed:", error);
     throw error;
   }
 }
@@ -146,28 +159,34 @@ export async function processDiagramPipeline(
   query: string,
   env: EnvLike
 ): Promise<DiagramResult> {
+  console.log("🚀 Starting diagram pipeline for query:", query);
+  
   try {
     // Step 1: Select diagram type
+    console.log("🔵 Step 1: Selecting diagram type...");
     const diagramType = await selectDiagramType(query, env);
-    console.log(`Selected diagram type: ${diagramType}`);
+    console.log(`✅ Selected diagram type: ${diagramType}`);
     
     // Step 2: Generate content
+    console.log("🔵 Step 2: Generating content...");
     const contentResult = await generateContent(query, diagramType, env);
-    console.log(`Generated content: ${contentResult.content.substring(0, 100)}...`);
+    console.log(`✅ Generated content: ${contentResult.content.substring(0, 100)}...`);
     
     // Step 3: Generate diagram code
+    console.log("🔵 Step 3: Generating diagram code...");
     const diagramCode = await generateDiagramCode(
       contentResult.content,
       query,
       diagramType,
       env
     );
-    console.log(`Generated diagram code: ${diagramCode.substring(0, 100)}...`);
+    console.log(`✅ Generated diagram code: ${diagramCode.substring(0, 100)}...`);
     
     // Step 4: Sanitize diagram (handled in utils.ts)
+    console.log("🔵 Step 4: Preparing final result...");
     const sanitizedDiagram = diagramCode; // Will be sanitized in handlers
     
-    return {
+    const result = {
       diagram_type: diagramType,
       description: contentResult.content,
       content: contentResult.content,
@@ -176,8 +195,20 @@ export async function processDiagramPipeline(
       rendered_content: sanitizedDiagram
     };
     
+    console.log("🎉 Pipeline completed successfully!");
+    console.log("Final result:", JSON.stringify({
+      diagram_type: result.diagram_type,
+      description_length: result.description.length,
+      diagram_length: result.diagram.length,
+      render_type: result.render_type
+    }, null, 2));
+    
+    return result;
+    
   } catch (error) {
-    console.error("Diagram pipeline failed:", error);
+    console.error("❌ Diagram pipeline failed:", error);
+    console.error("Pipeline error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("Pipeline error details:", JSON.stringify(error, null, 2));
     throw error;
   }
 }

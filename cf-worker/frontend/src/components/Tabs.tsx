@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Image, BarChart3, Newspaper, GraduationCap, Code } from 'lucide-react';
+import { Globe, MapPin, Newspaper } from 'lucide-react';
 
 interface TabsProps {
   currentTab: string;
@@ -8,33 +8,17 @@ interface TabsProps {
 }
 
 const tabs = [{
-  id: 'All',
-  label: 'All',
-  icon: Globe
-}, {
   id: 'Web',
   label: 'Web',
   icon: Globe
 }, {
-  id: 'Images',
-  label: 'Images',
-  icon: Image
-}, {
-  id: 'Diagrams',
-  label: 'Diagrams',
-  icon: BarChart3
+  id: 'Map',
+  label: 'Map',
+  icon: MapPin
 }, {
   id: 'News',
   label: 'News',
   icon: Newspaper
-}, {
-  id: 'Academic',
-  label: 'Academic',
-  icon: GraduationCap
-}, {
-  id: 'Code',
-  label: 'Code',
-  icon: Code
 }] as any[];
 
 // @component: Tabs

@@ -1,5 +1,6 @@
 import { json, sanitizeMermaid } from "./utils";
-import { processDiagramPipeline, generateDeepDiveResponse, EnvLike } from "./diagram";
+import { processDiagramPipeline, generateDeepDiveResponse } from "./diagram";
+import { EnvLike } from "./openai";
 
 type DescribeRequest = { query: string };
 type DiagramResponse = {
@@ -51,10 +52,13 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
     
   } catch (error) {
     console.error("Describe handler error:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("Error details:", JSON.stringify(error, null, 2));
     return json({ 
       success: false, 
       detail: `Error generating diagram: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-      error_type: "internal_error" 
+      error_type: "internal_error",
+      debug_info: error instanceof Error ? error.stack : String(error)
     }, 500);
   }
 }

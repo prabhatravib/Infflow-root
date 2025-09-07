@@ -21,7 +21,13 @@ export async function generateContent(
 ): Promise<ContentResult> {
   const prompt = getContentPrompt(diagramType);
   
+  console.log("🔵 Starting content generation...");
+  console.log("Query:", query);
+  console.log("Diagram type:", diagramType);
+  console.log("Using model:", env.OPENAI_MODEL || "gpt-4o-mini");
+  
   try {
+    console.log("🔵 Calling OpenAI for content generation...");
     const response = await callOpenAI(
       env,
       prompt,
@@ -31,17 +37,29 @@ export async function generateContent(
       0.7
     );
     
+    console.log("✅ OpenAI content response received:");
+    console.log("Response length:", response?.length || 0);
+    console.log("Response preview:", response?.substring(0, 200) + "...");
+    
     if (!response) {
       throw new Error("Empty content response from LLM");
     }
     
     // Validate content structure
-    if (!validateContent(response, diagramType)) {
+    console.log("🔵 Validating content structure...");
+    const isValid = validateContent(response, diagramType);
+    console.log("Content validation result:", isValid);
+    
+    if (!isValid) {
+      console.error("❌ Content validation failed");
+      console.error("Full content:", response);
       throw new Error("Invalid content structure");
     }
     
     // Parse content
+    console.log("🔵 Parsing content...");
     const parsed = parseContent(response, diagramType);
+    console.log("Parsed content:", JSON.stringify(parsed, null, 2));
     
     return {
       content: response,
@@ -49,7 +67,7 @@ export async function generateContent(
     };
     
   } catch (error) {
-    console.error("Content generation failed:", error);
+    console.error("❌ Content generation failed:", error);
     throw error;
   }
 }
@@ -71,7 +89,7 @@ function validateStandardContent(content: string): boolean {
   
   if (!hasTopic) return false;
   
-  // Must have at least one fact
+  // Must have at least one fact - be more lenient
   let factCount = 0;
   for (const line of lines) {
     if (line.startsWith('- ')) {
@@ -79,6 +97,9 @@ function validateStandardContent(content: string): boolean {
     } else if (/^\d+\.\s+/.test(line)) {
       factCount++;
     } else if (/fact/i.test(line)) {
+      factCount++;
+    } else if (line.length > 10 && !line.toLowerCase().includes('main topic')) {
+      // Any substantial line that's not the topic line counts as a fact
       factCount++;
     }
   }
@@ -111,10 +132,17 @@ function parseStandardContent(content: string): { topic: string; facts: string[]
     const lower = trimmed.toLowerCase();
     if (lower.startsWith('main topic:') || lower.startsWith('topic:')) {
       result.topic = trimmed.split(':', 1)[1]?.trim() || '';
+    } else if (lower.match(/^fact \d+:/)) {
+      // Handle "fact 1:", "fact 2:", etc.
+      const factText = trimmed.split(':', 1)[1]?.trim() || '';
+      if (factText) result.facts.push(factText);
     } else if (trimmed.startsWith('- ')) {
       result.facts.push(trimmed.substring(2).trim());
     } else if (/^\d+\.\s+/.test(trimmed)) {
       result.facts.push(trimmed.replace(/^\d+\.\s+/, '').trim());
+    } else if (trimmed.length > 10 && !lower.includes('main topic')) {
+      // Any substantial line that's not the topic line counts as a fact
+      result.facts.push(trimmed);
     }
   }
   

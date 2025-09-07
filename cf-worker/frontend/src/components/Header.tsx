@@ -11,6 +11,8 @@ interface HeaderProps {
   toggleTheme: () => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  showResults: boolean;
+  onBackToHome: () => void;
 }
 
 // @component: Header
@@ -21,25 +23,36 @@ export const Header = ({
   isDark,
   toggleTheme,
   sidebarOpen,
-  setSidebarOpen
+  setSidebarOpen,
+  showResults,
+  onBackToHome
 }: HeaderProps) => {
   // @return
-  return <header className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50">
-      <div className="flex items-center justify-between px-6 py-4">
+  return <header className={`sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 transition-all duration-300 ${showResults ? 'shadow-sm' : 'shadow-none'}`}>
+      <div className={`flex items-center justify-between px-6 transition-all duration-300 ${showResults ? 'py-3' : 'py-4'}`}>
         <div className="flex items-center gap-4">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors lg:hidden">
             <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
           
           <div className="flex items-center gap-2">
-            <Logo size="md" variant="full" />
+            <button onClick={onBackToHome} className="hover:opacity-80 transition-opacity">
+              <Logo size={showResults ? "sm" : "md"} variant="full" />
+            </button>
           </div>
         </div>
 
         <div className="flex-1 max-w-2xl mx-8 hidden md:block">
           <div className="relative">
-            <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300">
-              <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyPress={e => e.key === 'Enter' && onSearch(searchQuery)} placeholder="Search, ask, or explore visually…" className="flex-1 px-5 py-3 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm" />
+            <div className={`flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 ${showResults ? 'shadow-md' : 'shadow-none'}`}>
+              <input 
+                type="text" 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                onKeyPress={e => e.key === 'Enter' && onSearch(searchQuery)} 
+                placeholder="Search, ask, or explore visually…" 
+                className="flex-1 px-5 py-3 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm" 
+              />
               <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
                 <Mic className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
