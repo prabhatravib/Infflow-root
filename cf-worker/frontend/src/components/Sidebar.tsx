@@ -1,4 +1,3 @@
-import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Bookmark, Filter, Search, BarChart3, Image, FileText } from 'lucide-react';
 

@@ -1,7 +1,5 @@
 "use client";
 
-import * as React from "react";
-
 export interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "icon" | "full";
@@ -25,7 +23,7 @@ const sizeClasses = {
     container: "gap-3"
   },
   xl: {
-    icon: "w-48 h-48",
+    icon: "w-80 h-80",
     text: "text-7xl",
     container: "gap-3"
   }

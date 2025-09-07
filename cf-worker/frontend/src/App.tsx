@@ -1,53 +1,41 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mic, Image, Moon, Sun } from 'lucide-react';
+import { Search, Mic, Image, Moon, Sun, Download, FileText } from 'lucide-react';
 import { Header } from './components/Header';
 import { Tabs } from './components/Tabs';
 import { Sidebar } from './components/Sidebar';
 import Logo from './components/Logo';
 import Mermaid from './components/Mermaid';
-import { describe } from './lib/api';
-
-interface SearchResult {
-  id: string;
-  title: string;
-  url: string;
-  snippet: string;
-  domain: string;
-  favicon: string;
-}
-
+import { SelectionIndicator } from './components/SelectionIndicator';
+import { DeepDive } from './components/DeepDive';
+import { useSelection } from './hooks/use-selection';
+import { describe, callDeepDiveApi } from './lib/api';
+import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
 
 // @component: InfflowApp
 export default function App() {
   const [currentTab, setCurrentTab] = useState('Web');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
+  // Selection and deep dive functionality
+  const {
+    selection,
+    deepDive,
+    clearSelection,
+    setupSelectionHandler,
+    askDeepDive,
+  } = useSelection();
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
-    setIsSearching(true);
     setShowResults(true);
+    clearSelection();
     try {
       const res = await describe(query);
       console.log('API Response:', res); // Debug logging
-      
-      // Create search results based on the actual query
-      const searchResults = [{
-        id: '1',
-        title: `Results for "${query}"`,
-        url: '#',
-        snippet: res.description || 'Generated content based on your query',
-        domain: 'infflow.ai',
-        favicon: '🔍'
-      }];
-      
-      setResults(searchResults);
       
       // Set the diagram
       if (res.render_type === 'html') {
@@ -57,31 +45,72 @@ export default function App() {
       }
     } catch (e) {
       console.error('Search error:', e); // Debug logging
-      // Show error in search results
-      setResults([{
-        id: 'error',
-        title: 'Error generating results',
-        url: '#',
-        snippet: `Failed to process query: ${e instanceof Error ? e.message : 'Unknown error'}`,
-        domain: 'error',
-        favicon: '❌'
-      }]);
       setDiagram(null);
-    } finally {
-      setIsSearching(false);
     }
   };
 
   const handleBackToHome = () => {
     setShowResults(false);
     setSearchQuery('');
-    setResults([]);
     setDiagram(null);
+    clearSelection();
+  };
+
+  const handleDeepDiveAsk = async (question: string) => {
+    await askDeepDive(question, async (params) => {
+      // Call the real deep dive API endpoint
+      const response = await callDeepDiveApi({
+        selected_text: params.selectedText,
+        question: params.question,
+        original_query: searchQuery
+      });
+      return response;
+    });
   };
 
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleSaveText = async () => {
+    if (!diagram) {
+      alert('No diagram to save');
+      return;
+    }
+    try {
+      // Find the SVG element in the diagram container
+      const diagramContainer = document.querySelector('.mermaid-container');
+      const svg = diagramContainer?.querySelector('svg');
+      if (!svg) {
+        alert('No diagram image found to save');
+        return;
+      }
+      await exportDiagramAsText(svg, searchQuery);
+    } catch (error) {
+      console.error('Failed to save text:', error);
+      alert('Failed to save diagram text');
+    }
+  };
+
+  const handleSavePNG = async () => {
+    if (!diagram) {
+      alert('No diagram to save');
+      return;
+    }
+    try {
+      // Find the SVG element in the diagram container
+      const diagramContainer = document.querySelector('.mermaid-container');
+      const svg = diagramContainer?.querySelector('svg');
+      if (!svg) {
+        alert('No diagram image found to save');
+        return;
+      }
+      await exportDiagramAsPNG(svg);
+    } catch (error) {
+      console.error('Failed to save PNG:', error);
+      alert('Failed to save diagram as PNG');
+    }
   };
 
   // @return
@@ -105,12 +134,12 @@ export default function App() {
               {isDark ? <Sun className="w-6 h-6 text-gray-600 dark:text-gray-400" /> : <Moon className="w-6 h-6 text-gray-600 dark:text-gray-400" />}
             </button>
             
-            <div className="w-full max-w-4xl">
-                <div className="text-center mb-16">
-                  <div className="flex items-center justify-center mb-12">
+            <div className="w-full max-w-4xl flex flex-col items-center">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center mb-4">
                     <Logo size="xl" variant="full" />
                   </div>
-                  <h1 className="text-6xl font-bold text-gray-900 dark:text-white mb-6">
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                     Answers, you can See!
                   </h1>
                   <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
@@ -118,7 +147,7 @@ export default function App() {
                   </p>
                 </div>
                 
-                <div className="relative mb-16">
+                <div className="relative mb-6 w-full">
                   <div className="flex items-center bg-white dark:bg-gray-800 rounded-3xl shadow-2xl shadow-gray-200/30 dark:shadow-gray-900/30 border border-gray-200/60 dark:border-gray-700/60 hover:shadow-3xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300">
                     <input 
                       type="text" 
@@ -143,7 +172,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="flex flex-wrap justify-center gap-4">
+                <div className="flex flex-wrap justify-center gap-3">
                   {['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake'].map(chip => (
                     <button 
                       key={chip} 
@@ -187,71 +216,58 @@ export default function App() {
                   <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
                   
                   <main className="flex-1 transition-all duration-500">
-                    <div className="flex gap-8 p-8">
-                      <div className="flex-1 max-w-2xl">
-                        <div className="mb-4">
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            <span>About {results.length} results</span>
-                          </p>
-                        </div>
-                        
-                        <div className="space-y-6">
-                          {isSearching ? Array.from({
-                            length: 3
-                          }).map((_, i) => <div key={i} className="animate-pulse">
-                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
-                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1"></div>
-                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
-                          </div>) : results.map(result => <motion.div key={result.id} initial={{
-                            opacity: 0,
-                            y: 20
-                          }} animate={{
-                            opacity: 1,
-                            y: 0
-                          }} className="group">
-                            <div className="flex items-start gap-3 mb-1">
-                              <span className="text-lg">{result.favicon}</span>
-                              <div>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  <span>{result.domain}</span>
-                                </p>
+                    <div className="flex justify-center p-4">
+                      <div className="w-full max-w-6xl space-y-2">
+
+                        {/* Diagram Container */}
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
+                          <div className="space-y-4">
+                            {diagram ? (
+                              <div className="relative">
+                                <div className="rounded bg-white dark:bg-gray-900 p-2 mermaid-container">
+                                  <Mermaid 
+                                    code={diagram} 
+                                    onSetupSelection={setupSelectionHandler}
+                                  />
+                                </div>
+                                {/* Save Buttons */}
+                                <div className="absolute bottom-2 right-2 flex gap-2">
+                                  <button
+                                    onClick={handleSaveText}
+                                    className="px-3 py-2 bg-white hover:bg-gray-50 text-black text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200"
+                                    title="Save as text file"
+                                  >
+                                    Save text
+                                  </button>
+                                  <button
+                                    onClick={handleSavePNG}
+                                    className="px-3 py-2 bg-white hover:bg-gray-50 text-black text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200"
+                                    title="Save as PNG image"
+                                  >
+                                    Save PNG
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-                            <h3 className="text-xl text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mb-1">
-                              <span>{result.title}</span>
-                            </h3>
-                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                              <span>{result.snippet}</span>
-                            </p>
-                          </motion.div>)}
-                        </div>
-                      </div>
-                      
-                      <div className="w-96 bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                          <span>infflow Answer</span>
-                        </h3>
-                        <div className="space-y-4">
-                          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                            <span>Based on the search results, here's a comprehensive overview of the topic you're exploring.</span>
-                          </p>
-                          {diagram ? <div className="rounded bg-white dark:bg-gray-900 p-2"><Mermaid code={diagram} /></div> : <div className="rounded bg-white dark:bg-gray-900 p-8 text-center">
-                            <div className="text-4xl mb-2">📊</div>
-                            <p className="text-gray-500 dark:text-gray-400">Textchart will appear here</p>
-                          </div>}
-                          <div className="flex gap-2">
-                            <button className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm">
-                              <span>Text</span>
-                            </button>
-                            <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                              <span>Flowchart</span>
-                            </button>
-                            <button className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm">
-                              <span>Images</span>
-                            </button>
+                            ) : (
+                              <div className="rounded bg-white dark:bg-gray-900 p-8 text-center">
+                                <div className="text-4xl mb-2">📊</div>
+                                <p className="text-gray-500 dark:text-gray-400">Textchart will appear here</p>
+                              </div>
+                            )}
                           </div>
                         </div>
+
+                        {/* Deep Dive Panel */}
+                        {selection.hasSelection && (
+                          <DeepDive
+                            selectedText={selection.selectedText}
+                            isProcessing={deepDive.isProcessing}
+                            response={deepDive.response}
+                            history={deepDive.history}
+                            onAsk={handleDeepDiveAsk}
+                            onClose={() => {}}
+                          />
+                        )}
                       </div>
                     </div>
                   </main>
