@@ -20,7 +20,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
-  const [DetailStatus, setDetailStatus] = useState<'sent' | 'not-sent'>('not-sent');
+  const [CodeFlowStatus, setCodeFlowStatus] = useState<'sent' | 'not-sent'>('not-sent');
   const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string} | null>(null);
   // Selection and deep dive functionality
   const {
@@ -35,6 +35,7 @@ export default function App() {
     if (!query.trim()) return;
     setShowResults(true);
     clearSelection();
+    setCodeFlowStatus('not-sent'); // Reset status when starting new search
     try {
       const res = await describe(query);
       console.log('API Response:', res); // Debug logging
@@ -70,7 +71,7 @@ export default function App() {
     setSearchQuery('');
     setDiagram(null);
     setDiagramData(null);
-    setDetailStatus('not-sent');
+    setCodeFlowStatus('not-sent');
     clearSelection();
   };
 
@@ -104,8 +105,9 @@ export default function App() {
       const result = await response.json();
       console.log('✅ Diagram data sent to hexagon worker:', result);
       
-      // Update status to show "Code Details"
-      setDetailStatus('sent');
+      // Update status to show "Code Flow Sent"
+      setCodeFlowStatus('sent');
+      console.log('🔄 Status updated to: Code Flow Sent');
       
     } catch (error) {
       console.error('❌ Error sending data to hexagon worker:', error);
@@ -277,7 +279,7 @@ export default function App() {
                   {/* HexaWorker Component */}
                   <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50">
                     <HexaWorker 
-                      DetailStatus={DetailStatus} 
+                      codeFlowStatus={CodeFlowStatus} 
                       diagramData={diagramData} 
                     />
                   </div>
