@@ -1,0 +1,15 @@
+name = "infflow-worker"
+main = "src/entry.ts"
+compatibility_date = "2024-12-01"
+
+# Serve built frontend from the CF Worker's own frontend dist directory
+[assets]
+directory = "frontend/dist"
+
+[vars]
+OPENAI_MODEL = "gpt-4.1"
+
+# Bindings for secrets (set via: wrangler secret put OPENAI_API_KEY)
+# [vars]
+# Any non-secret vars can go here
+
