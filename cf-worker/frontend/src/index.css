@@ -141,3 +141,145 @@ body {
     padding: 0;
   }
 }
+
+/* Mermaid Diagram Styling for Clickability */
+.mermaid .actor,
+.mermaid .sequenceDiagram .actor {
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  pointer-events: auto !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+}
+
+.mermaid .actor:hover,
+.mermaid .sequenceDiagram .actor:hover {
+  filter: brightness(1.1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.5)) !important;
+  transform: scale(1.02) !important;
+}
+
+.mermaid .actor:hover rect,
+.mermaid .sequenceDiagram .actor:hover rect {
+  stroke-width: 3px !important;
+  filter: brightness(1.1) !important;
+}
+
+.mermaid .actor text,
+.mermaid .sequenceDiagram .actor text,
+.mermaid .actor .label,
+.mermaid .sequenceDiagram .actor .label,
+.mermaid .actor-label,
+.mermaid .sequenceDiagram .actor-label,
+.mermaid .participant text,
+.mermaid .sequenceDiagram .participant text {
+  font-size: 22.4px !important;
+  font-weight: bold !important;
+  fill: #000000 !important;
+  text-shadow: none !important;
+  font-family: Arial, sans-serif !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.mermaid .actor rect,
+.mermaid .sequenceDiagram .actor rect {
+  fill: #ffffff !important;
+  stroke: #000000 !important;
+  stroke-width: 2px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.mermaid .note,
+.mermaid .sequenceDiagram .note {
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.mermaid .note:hover,
+.mermaid .sequenceDiagram .note:hover {
+  filter: brightness(1.1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.5)) !important;
+  transform: scale(1.02) !important;
+}
+
+.mermaid .note:hover rect,
+.mermaid .sequenceDiagram .note:hover rect {
+  stroke-width: 3px !important;
+  filter: brightness(1.1) !important;
+}
+
+.mermaid .note:hover text,
+.mermaid .sequenceDiagram .note:hover text,
+.mermaid .note:hover tspan,
+.mermaid .sequenceDiagram .note:hover tspan {
+  filter: brightness(1.1) !important;
+  font-weight: 500 !important;
+}
+
+/* Selection styling */
+.mermaid .actor.element-selected,
+.mermaid .sequenceDiagram .actor.element-selected {
+  filter: drop-shadow(0 0 6px #ffb300) !important;
+}
+
+.mermaid .actor.element-selected rect,
+.mermaid .sequenceDiagram .actor.element-selected rect {
+  stroke: #ffb300 !important;
+  stroke-width: 3px !important;
+}
+
+.mermaid .actor.element-selected text,
+.mermaid .sequenceDiagram .actor.element-selected text {
+  font-weight: 400 !important;
+  filter: drop-shadow(0 0 4px #ffb300) !important;
+}
+
+.mermaid .note.element-selected,
+.mermaid .sequenceDiagram .note.element-selected {
+  filter: drop-shadow(0 0 6px #ffb300) !important;
+}
+
+.mermaid .note.element-selected rect,
+.mermaid .sequenceDiagram .note.element-selected rect {
+  stroke: #ffb300 !important;
+  stroke-width: 3px !important;
+}
+
+.mermaid .note.element-selected text,
+.mermaid .sequenceDiagram .note.element-selected text {
+  font-weight: 400 !important;
+  filter: drop-shadow(0 0 4px #ffb300) !important;
+}
+
+/* Hover classes for JavaScript-triggered effects */
+.mermaid .actor-hover,
+.mermaid .sequenceDiagram .actor-hover {
+  filter: brightness(1.1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.5)) !important;
+  transform: scale(1.02) !important;
+}
+
+.mermaid .actor-hover rect,
+.mermaid .sequenceDiagram .actor-hover rect {
+  stroke-width: 3px !important;
+  filter: brightness(1.1) !important;
+}
+
+.mermaid .note-hover,
+.mermaid .sequenceDiagram .note-hover {
+  filter: brightness(1.1) drop-shadow(0 0 6px rgba(255, 255, 255, 0.5)) !important;
+  transform: scale(1.02) !important;
+}
+
+.mermaid .note-hover rect,
+.mermaid .sequenceDiagram .note-hover rect {
+  stroke-width: 3px !important;
+  filter: brightness(1.1) !important;
+}
+
+.mermaid .note-hover text,
+.mermaid .sequenceDiagram .note-hover text,
+.mermaid .note-hover tspan,
+.mermaid .sequenceDiagram .note-hover tspan {
+  filter: brightness(1.1) !important;
+  font-weight: 500 !important;
+}

@@ -12,7 +12,38 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
 
   useEffect(() => {
     let mounted = true;
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'default' });
+    mermaid.initialize({ 
+      startOnLoad: false, 
+      securityLevel: 'loose', 
+      theme: 'base',
+      fontFamily: 'Arial, sans-serif',
+      fontSize: 20,
+      sequence: {
+        diagramMarginX: 50,
+        diagramMarginY: 30,
+        actorMargin: 40,
+        width: 150,
+        height: 50,
+        boxMargin: 10,
+        boxTextMargin: 8,
+        noteMargin: 10,
+        messageMargin: 15,
+        mirrorActors: false,
+        useMaxWidth: true,
+        wrap: true,
+        wrapPadding: 10,
+        noteAlign: 'center'
+      },
+      themeVariables: {
+        primaryColor: '#ffffff',
+        primaryTextColor: '#000000',
+        primaryBorderColor: '#000000',
+        lineColor: '#000000',
+        arrowheadColor: '#000000',
+        edgeLabelBackground: '#ffffff',
+        defaultLinkColor: '#000000'
+      }
+    });
     (async () => {
       try {
         if (!mounted || !ref.current) return;

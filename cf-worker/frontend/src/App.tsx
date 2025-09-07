@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar';
 import Logo from './components/Logo';
 import Mermaid from './components/Mermaid';
 import { DeepDive } from './components/DeepDive';
+import { HexaWorker } from './components/HexaWorker';
 import { useSelection } from './hooks/use-selection';
 import { describe, callDeepDiveApi } from './lib/api';
 import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
@@ -19,6 +20,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
+  const [DetailStatus, setDetailStatus] = useState<'sent' | 'not-sent'>('not-sent');
+  const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string} | null>(null);
   // Selection and deep dive functionality
   const {
     selection,
@@ -42,9 +45,23 @@ export default function App() {
       } else {
         setDiagram(res.diagram || res.rendered_content || null);
       }
+
+      // Set diagram data for HexaWorker
+      if (res.diagram) {
+        const newDiagramData = {
+          mermaidCode: res.diagram,
+          diagramImage: res.diagram, // For now, using the same value
+          prompt: query
+        };
+        setDiagramData(newDiagramData);
+        
+        // Send external data to hexa worker
+        handleDiscussionRequest(newDiagramData);
+      }
     } catch (e) {
       console.error('Search error:', e); // Debug logging
       setDiagram(null);
+      setDiagramData(null);
     }
   };
 
@@ -52,7 +69,47 @@ export default function App() {
     setShowResults(false);
     setSearchQuery('');
     setDiagram(null);
+    setDiagramData(null);
+    setDetailStatus('not-sent');
     clearSelection();
+  };
+
+  // Send diagram data to hexagon worker via HTTP API
+  const handleDiscussionRequest = async (diagramContext: {mermaidCode: string; diagramImage: string; prompt: string}) => {
+    console.log('Hexagon discussion started for diagram:', diagramContext);
+    
+    try {
+      const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mermaidCode: diagramContext.mermaidCode,
+          diagramImage: diagramContext.diagramImage,
+          prompt: diagramContext.prompt,
+          type: 'diagram'
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data');
+          const errorText = await response.text();
+          throw new Error(`Hexagon worker rejected data: ${errorText}`);
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Diagram data sent to hexagon worker:', result);
+      
+      // Update status to show "Code Details"
+      setDetailStatus('sent');
+      
+    } catch (error) {
+      console.error('❌ Error sending data to hexagon worker:', error);
+    }
   };
 
   const handleDeepDiveAsk = async (question: string) => {
@@ -216,6 +273,14 @@ export default function App() {
                 
                 <div className="flex">
                   <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+                  
+                  {/* HexaWorker Component */}
+                  <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-50">
+                    <HexaWorker 
+                      DetailStatus={DetailStatus} 
+                      diagramData={diagramData} 
+                    />
+                  </div>
                   
                   <main className="flex-1 transition-all duration-500">
                     <div className="flex justify-center p-4">

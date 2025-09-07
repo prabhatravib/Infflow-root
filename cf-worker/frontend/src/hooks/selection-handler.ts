@@ -82,15 +82,21 @@ export class SelectionHandler {
   }
 
   private setupSequenceSelection(svg: SVGElement) {
-    // Participants/actors
-    const actorCandidates = svg.querySelectorAll('g.actor, .actor, rect.actor, text.actor');
+    // Participants/actors - make entire actor area clickable
+    // Different Mermaid versions render actors differently, so target multiple variants
+    const actorCandidates = svg.querySelectorAll(
+      'g.actor, .actor, rect.actor, text.actor'
+    );
+
     actorCandidates.forEach(candidate => {
+      // Try to find a readable label near/within the candidate
       let labelText = '';
       let labelElement: Element | null = null;
 
       if (candidate.tagName.toLowerCase() === 'g') {
         labelElement = candidate.querySelector('text');
       } else if (candidate.tagName.toLowerCase() === 'rect') {
+        // Look for a sibling or a child text node for rect-based actors
         labelElement = candidate.parentElement?.querySelector('text') || null;
       } else if (candidate.tagName.toLowerCase() === 'text' || candidate.tagName.toLowerCase() === 'tspan') {
         labelElement = candidate;
@@ -101,12 +107,23 @@ export class SelectionHandler {
       }
 
       if (labelText) {
+        // Make the candidate clickable
         (candidate as HTMLElement).style.cursor = 'pointer';
+        
+        // Add hover effects
+        candidate.addEventListener('mouseenter', () => {
+          candidate.classList.add('actor-hover');
+        });
+        candidate.addEventListener('mouseleave', () => {
+          candidate.classList.remove('actor-hover');
+        });
+        
         candidate.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectElement(candidate, labelText);
         });
 
+        // Also make the label text clickable for better UX
         if (labelElement !== candidate && labelElement) {
           (labelElement as HTMLElement).style.cursor = 'pointer';
           labelElement.addEventListener('click', (e) => {
@@ -116,11 +133,21 @@ export class SelectionHandler {
         }
       }
     });
-
-    // Notes and messages
+    
+    // Notes and messages - make entire note area clickable
     const notes = svg.querySelectorAll('g.note, .note');
     notes.forEach(note => {
       (note as HTMLElement).style.cursor = 'pointer';
+      
+      // Add hover effects
+      note.addEventListener('mouseenter', () => {
+        note.classList.add('note-hover');
+      });
+      note.addEventListener('mouseleave', () => {
+        note.classList.remove('note-hover');
+      });
+      
+      // Make the entire note clickable
       note.addEventListener('click', (e) => {
         e.stopPropagation();
         const text = this.extractNoteText(note);
@@ -128,8 +155,51 @@ export class SelectionHandler {
           this.selectElement(note, text);
         }
       });
+      
+      // Also make all text elements within the note clickable
+      const textElements = note.querySelectorAll('text, tspan');
+      textElements.forEach(textEl => {
+        if (textEl.textContent?.trim()) {
+          (textEl as HTMLElement).style.cursor = 'pointer';
+          textEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const fullText = this.extractNoteText(note);
+            if (fullText) {
+              this.selectElement(note, fullText);
+            }
+          });
+        }
+      });
     });
-
+    
+    // Numbered lines in notes - make individual lines clickable
+    const tspans = svg.querySelectorAll('tspan');
+    tspans.forEach(tspan => {
+      const text = (tspan.textContent || '').trim();
+      if (/^\d+[\.\)]\s/.test(text)) {
+        (tspan as SVGTSpanElement).style.cursor = 'pointer';
+        tspan.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fullBulletContent = this.extractBulletPointContent(tspan, svg);
+          this.selectElement(tspan, fullBulletContent);
+        });
+      }
+    });
+    
+    // Also handle text elements that might contain numbered bullets
+    const texts = svg.querySelectorAll('text');
+    texts.forEach(text => {
+      const textContent = text.textContent?.trim();
+      if (textContent && /^\d+[\.\)]\s/.test(textContent)) {
+        (text as SVGTextElement).style.cursor = 'pointer';
+        text.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fullBulletContent = this.extractBulletPointContent(text, svg);
+          this.selectElement(text, fullBulletContent);
+        });
+      }
+    });
+    
     // Background rectangles for blocks
     const rects = svg.querySelectorAll('rect');
     rects.forEach(rect => {
@@ -276,6 +346,55 @@ export class SelectionHandler {
       .map(t => t.textContent?.trim())
       .filter(Boolean)
       .join('\n');
+  }
+
+  private extractBulletPointContent(clickedElement: Element, _svg: SVGElement): string {
+    const clickedText = clickedElement.textContent?.trim();
+    
+    // Check if this is a numbered bullet point
+    const bulletMatch = clickedText?.match(/^(\d+[\.\)])\s*(.*)/);
+    if (!bulletMatch) {
+      return clickedText || ''; // Not a numbered bullet, return as is
+    }
+    
+    const bulletNumber = bulletMatch[1]; // e.g., "1." or "1)"
+    
+    // Find all text elements in the same note/container
+    const container = clickedElement.closest('.note, g.note, .actor, g.actor');
+    if (!container) {
+      return clickedText || '';
+    }
+    
+    const allTexts = Array.from(container.querySelectorAll('text, tspan'));
+    let bulletContent: string[] = [];
+    let foundBullet = false;
+    
+    for (let i = 0; i < allTexts.length; i++) {
+      const text = allTexts[i].textContent?.trim();
+      
+      // Check if this is the start of our bullet point
+      if (text?.startsWith(bulletNumber)) {
+        foundBullet = true;
+        bulletContent.push(text);
+        continue;
+      }
+      
+      // If we found our bullet, collect subsequent lines until next numbered bullet
+      if (foundBullet) {
+        // Check if this is the start of the next numbered bullet
+        const nextBulletMatch = text?.match(/^\d+[\.\)]\s/);
+        if (nextBulletMatch) {
+          break; // Stop at next bullet point
+        }
+        
+        // Add this line to our bullet content
+        if (text) {
+          bulletContent.push(text);
+        }
+      }
+    }
+    
+    return bulletContent.join('\n');
   }
 
   private isSelectableRect(rect: Element): boolean {

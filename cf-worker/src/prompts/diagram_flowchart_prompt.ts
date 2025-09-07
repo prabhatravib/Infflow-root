@@ -32,12 +32,12 @@ Follow this exact pattern:
 }%%
 
 flowchart TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Action 1]
-    B -->|No| D[Action 2]
-    C --> E[Next Step]
+    A(Start) --> B{Decision}
+    B -->|Yes| C(Action 1)
+    B -->|No| D(Action 2)
+    C --> E(Next Step)
     D --> E
-    E --> F[End]
+    E --> F(End)
 
     style A fill:#ffffff,stroke:#000000
     style B fill:#ffffff,stroke:#000000
