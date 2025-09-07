@@ -13,3 +13,7 @@ OPENAI_MODEL = "gpt-4.1"
 # [vars]
 # Any non-secret vars can go here
 
+# Observability configuration for consistent logging across deployments
+[observability.logs]
+enabled = true
+
