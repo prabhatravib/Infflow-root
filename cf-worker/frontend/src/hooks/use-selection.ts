@@ -34,16 +34,18 @@ export function useSelection() {
   const selectionHandlerRef = useRef<SelectionHandler | null>(null);
 
   const clearSelection = useCallback(() => {
-    if (selection.selectedElement) {
-      removeSelectionStyling(selection.selectedElement);
-    }
-    
-    setSelection({
-      selectedElement: null,
-      selectedText: '',
-      hasSelection: false,
+    setSelection(prevSelection => {
+      if (prevSelection.selectedElement) {
+        removeSelectionStyling(prevSelection.selectedElement);
+      }
+      
+      return {
+        selectedElement: null,
+        selectedText: '',
+        hasSelection: false,
+      };
     });
-  }, [selection.selectedElement]);
+  }, []);
 
   const selectElement = useCallback((element: Element, text: string) => {
     // Clear previous selection

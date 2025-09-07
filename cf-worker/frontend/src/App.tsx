@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mic, Image, Moon, Sun, Download, FileText } from 'lucide-react';
+import { Search, Mic, Image, Moon, Sun } from 'lucide-react';
 import { Header } from './components/Header';
 import { Tabs } from './components/Tabs';
 import { Sidebar } from './components/Sidebar';
 import Logo from './components/Logo';
 import Mermaid from './components/Mermaid';
-import { SelectionIndicator } from './components/SelectionIndicator';
 import { DeepDive } from './components/DeepDive';
 import { useSelection } from './hooks/use-selection';
 import { describe, callDeepDiveApi } from './lib/api';
@@ -124,7 +123,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="flex flex-col items-center min-h-screen px-8 relative"
+            className="flex flex-col items-center justify-center min-h-screen px-8 relative"
           >
             {/* Floating theme toggle for landing page */}
             <button 
@@ -134,13 +133,13 @@ export default function App() {
               {isDark ? <Sun className="w-6 h-6 text-gray-600 dark:text-gray-400" /> : <Moon className="w-6 h-6 text-gray-600 dark:text-gray-400" />}
             </button>
             
-            {/* Main content container with better positioning */}
-            <div className="w-full max-w-4xl flex flex-col items-center mt-[12vh]">
-              <div className="text-center mb-10">
-                <div className="flex items-center justify-center mb-6">
+            {/* Main content container with better vertical centering */}
+            <div className="w-full max-w-4xl flex flex-col items-center mt-[8vh]">
+              <div className="text-center mb-12">
+                <div className="flex items-center justify-center mb-8">
                   <Logo size="xl" variant="full" />
                 </div>
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
                   Answers, you can See!
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
@@ -149,7 +148,7 @@ export default function App() {
               </div>
               
               {/* Search box with better spacing */}
-              <div className="relative mb-8 w-full">
+              <div className="relative mb-10 w-full">
                 <div className="flex items-center bg-white dark:bg-gray-800 rounded-3xl shadow-2xl shadow-gray-200/30 dark:shadow-gray-900/30 border border-gray-200/60 dark:border-gray-700/60 hover:shadow-3xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300">
                   <input 
                     type="text" 
@@ -260,29 +259,16 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Selected Text and Deep Dive Panel */}
+                        {/* Deep Dive Panel */}
                         {selection.hasSelection && (
-                          <div className="space-y-4">
-                            {/* Selected Text Display */}
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
-                              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                                <strong>Selected:</strong>
-                              </div>
-                              <div className="text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                {selection.selectedText.length > 100 ? `${selection.selectedText.substring(0, 100)}...` : selection.selectedText};
-                              </div>
-                            </div>
-                            
-                            {/* Deep Dive Panel */}
-                            <DeepDive
-                              selectedText={selection.selectedText}
-                              isProcessing={deepDive.isProcessing}
-                              response={deepDive.response}
-                              history={deepDive.history}
-                              onAsk={handleDeepDiveAsk}
-                              onClose={clearSelection}
-                            />
-                          </div>
+                          <DeepDive
+                            selectedText={selection.selectedText}
+                            isProcessing={deepDive.isProcessing}
+                            response={deepDive.response}
+                            history={deepDive.history}
+                            onAsk={handleDeepDiveAsk}
+                            onClose={clearSelection}
+                          />
                         )}
                       </div>
                     </div>
