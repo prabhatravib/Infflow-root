@@ -141,16 +141,6 @@ export function DeepDive({
         </button>
       </div>
 
-      <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">
-            <strong>Selected:</strong>
-          </div>
-          <div className="text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 p-3 rounded-lg flex-1">
-            {selectedText.length > 100 ? `${selectedText.substring(0, 100)}...` : selectedText}
-          </div>
-        </div>
-      </div>
 
       <form onSubmit={handleSubmit} className="mb-4">
         <div className="flex gap-2">
@@ -170,7 +160,7 @@ export function DeepDive({
             {isProcessing ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Asking...
+                Answeing...
               </>
             ) : (
               'Ask'

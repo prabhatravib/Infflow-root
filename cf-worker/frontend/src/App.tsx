@@ -124,7 +124,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="flex flex-col items-center justify-center min-h-screen px-8 relative"
+            className="flex flex-col items-center min-h-screen px-8 relative"
           >
             {/* Floating theme toggle for landing page */}
             <button 
@@ -134,60 +134,63 @@ export default function App() {
               {isDark ? <Sun className="w-6 h-6 text-gray-600 dark:text-gray-400" /> : <Moon className="w-6 h-6 text-gray-600 dark:text-gray-400" />}
             </button>
             
-            <div className="w-full max-w-4xl flex flex-col items-center">
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center mb-4">
-                    <Logo size="xl" variant="full" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    Answers, you can See!
-                  </h1>
-                  <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
-                    Ask anything. Get responses in Textcharts.
-                  </p>
+            {/* Main content container with better positioning */}
+            <div className="w-full max-w-4xl flex flex-col items-center mt-[12vh]">
+              <div className="text-center mb-10">
+                <div className="flex items-center justify-center mb-6">
+                  <Logo size="xl" variant="full" />
                 </div>
-                
-                <div className="relative mb-6 w-full">
-                  <div className="flex items-center bg-white dark:bg-gray-800 rounded-3xl shadow-2xl shadow-gray-200/30 dark:shadow-gray-900/30 border border-gray-200/60 dark:border-gray-700/60 hover:shadow-3xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300">
-                    <input 
-                      type="text" 
-                      value={searchQuery} 
-                      onChange={e => setSearchQuery(e.target.value)} 
-                      onKeyPress={e => e.key === 'Enter' && handleSearch(searchQuery)} 
-                      placeholder="Search, ask, or explore visually…" 
-                      className="flex-1 px-10 py-6 text-xl bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400" 
-                    />
-                    <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
-                      <Mic className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                    </button>
-                    <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
-                      <Image className="w-6 h-6 text-gray-500 dark:text-gray-400" />
-                    </button>
-                    <button 
-                      onClick={() => handleSearch(searchQuery)} 
-                      className="p-4 mr-3 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-2xl transition-colors"
-                    >
-                      <Search className="w-6 h-6 text-white dark:text-gray-900" />
-                    </button>
-                  </div>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                  Answers, you can See!
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
+                  Ask anything. Get responses in Textcharts.
+                </p>
+              </div>
+              
+              {/* Search box with better spacing */}
+              <div className="relative mb-8 w-full">
+                <div className="flex items-center bg-white dark:bg-gray-800 rounded-3xl shadow-2xl shadow-gray-200/30 dark:shadow-gray-900/30 border border-gray-200/60 dark:border-gray-700/60 hover:shadow-3xl hover:shadow-gray-200/40 dark:hover:shadow-gray-900/40 transition-all duration-300">
+                  <input 
+                    type="text" 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                    onKeyPress={e => e.key === 'Enter' && handleSearch(searchQuery)} 
+                    placeholder="Search, ask, or explore visually…" 
+                    className="flex-1 px-10 py-6 text-xl bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400" 
+                  />
+                  <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
+                    <Mic className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                  </button>
+                  <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
+                    <Image className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                  </button>
+                  <button 
+                    onClick={() => handleSearch(searchQuery)} 
+                    className="p-4 mr-3 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-2xl transition-colors"
+                  >
+                    <Search className="w-6 h-6 text-white dark:text-gray-900" />
+                  </button>
                 </div>
-                
-                <div className="flex flex-wrap justify-center gap-3">
-                  {['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake'].map(chip => (
-                    <button 
-                      key={chip} 
-                      onClick={() => {
-                        setSearchQuery(chip);
-                        handleSearch(chip);
-                      }} 
-                      className="px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl text-base font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-lg hover:scale-105"
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-                </div>
-              </motion.div>
+              </div>
+              
+              {/* Suggestion chips with better spacing */}
+              <div className="flex flex-wrap justify-center gap-3">
+                {['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake'].map(chip => (
+                  <button 
+                    key={chip} 
+                    onClick={() => {
+                      setSearchQuery(chip);
+                      handleSearch(chip);
+                    }} 
+                    className="px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl text-base font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-lg hover:scale-105"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
             ) : (
               // Search State - With Header and Tabs
               <motion.div 
@@ -223,25 +226,25 @@ export default function App() {
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
                           <div className="space-y-4">
                             {diagram ? (
-                              <div className="relative">
+                              <div className="space-y-4">
                                 <div className="rounded bg-white dark:bg-gray-900 p-2 mermaid-container">
                                   <Mermaid 
                                     code={diagram} 
                                     onSetupSelection={setupSelectionHandler}
                                   />
                                 </div>
-                                {/* Save Buttons */}
-                                <div className="absolute bottom-2 right-2 flex gap-2">
+                                {/* Save Buttons - Now in their own section */}
+                                <div className="flex justify-end gap-2 pt-2">
                                   <button
                                     onClick={handleSaveText}
-                                    className="px-3 py-2 bg-white hover:bg-gray-50 text-black text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200"
+                                    className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
                                     title="Save as text file"
                                   >
                                     Save text
                                   </button>
                                   <button
                                     onClick={handleSavePNG}
-                                    className="px-3 py-2 bg-white hover:bg-gray-50 text-black text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200"
+                                    className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
                                     title="Save as PNG image"
                                   >
                                     Save PNG
@@ -257,16 +260,29 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Deep Dive Panel */}
+                        {/* Selected Text and Deep Dive Panel */}
                         {selection.hasSelection && (
-                          <DeepDive
-                            selectedText={selection.selectedText}
-                            isProcessing={deepDive.isProcessing}
-                            response={deepDive.response}
-                            history={deepDive.history}
-                            onAsk={handleDeepDiveAsk}
-                            onClose={() => {}}
-                          />
+                          <div className="space-y-4">
+                            {/* Selected Text Display */}
+                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+                              <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                <strong>Selected:</strong>
+                              </div>
+                              <div className="text-sm text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                                {selection.selectedText.length > 100 ? `${selection.selectedText.substring(0, 100)}...` : selection.selectedText};
+                              </div>
+                            </div>
+                            
+                            {/* Deep Dive Panel */}
+                            <DeepDive
+                              selectedText={selection.selectedText}
+                              isProcessing={deepDive.isProcessing}
+                              response={deepDive.response}
+                              history={deepDive.history}
+                              onAsk={handleDeepDiveAsk}
+                              onClose={clearSelection}
+                            />
+                          </div>
                         )}
                       </div>
                     </div>
