@@ -8,6 +8,7 @@ type DiagramResponse = {
   query: string;
   description: string;
   content: string;
+  universal_content: string;
   diagram_type: "flowchart" | "radial_mindmap" | "sequence_comparison";
   diagram: string;
   render_type: "html";
@@ -42,6 +43,7 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
       query,
       description: result.description,
       content: result.content,
+      universal_content: result.universal_content,
       diagram_type: result.diagram_type,
       diagram: sanitizedDiagram,
       render_type: "html",

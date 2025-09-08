@@ -27,6 +27,39 @@ export function DeepDive({
   const [question, setQuestion] = useState('');
   const [showHistory, setShowHistory] = useState(false);
 
+  const fixSpacing = (text: string): string => {
+    return text
+      // Fix missing space before "like" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)like/g, '$1 like')
+      // Fix missing space before "for" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)for/g, '$1 for')
+      // Fix missing space before "and" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)and/g, '$1 and')
+      // Fix missing space before "or" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)or/g, '$1 or')
+      // Fix missing space before "with" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)with/g, '$1 with')
+      // Fix missing space before "in" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)in/g, '$1 in')
+      // Fix missing space before "on" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)on/g, '$1 on')
+      // Fix missing space before "at" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)at/g, '$1 at')
+      // Fix missing space before "to" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)to/g, '$1 to')
+      // Fix missing space before "of" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)of/g, '$1 of')
+      // Fix missing space before "the" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)the/g, '$1 the')
+      // Fix missing space before "a" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)a\b/g, '$1 a')
+      // Fix missing space before "an" when it follows a word ending in 's'
+      .replace(/([a-zA-Z]s)an\b/g, '$1 an')
+      // Normalize multiple spaces to single space
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (question.trim() && !isProcessing) {
@@ -118,19 +151,21 @@ export function DeepDive({
   };
 
   const relevantHistory = history.filter(item => item.selectedText === selectedText).slice(0, 5);
+  const fixedSelectedText = fixSpacing(selectedText);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+      className="deep-dive-panel bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Deep Dive ({selectedText.length > 50 ? `${selectedText.substring(0, 50)}...` : selectedText})
+            Deep Dive ({fixedSelectedText.length > 50 ? `${fixedSelectedText.substring(0, 50)}...` : fixedSelectedText})
           </h3>
         </div>
         <button

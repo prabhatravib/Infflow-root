@@ -92,17 +92,10 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      {/* Voice Status */}
+      {/* Code Flow Status */}
       <div className="text-center">
-        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-          isVoiceEnabled 
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-        }`}>
-          {isVoiceEnabled ? 'Voice ON' : 'Voice OFF'}
-        </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          {codeFlowStatus === 'sent' ? 'Code Flow Sent' : 'No Code Flow Sent'}
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
         </div>
       </div>
 
@@ -111,7 +104,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
         {isVoiceEnabled ? (
           <iframe
             ref={iframeRef}
-            src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}` : ''}`}
+            src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
             width="200"
             height="200"
             style={{

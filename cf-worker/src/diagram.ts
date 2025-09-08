@@ -4,7 +4,7 @@
  */
 
 import { callOpenAI, EnvLike } from './openai';
-import { getDiagramPrompt, getDeepDivePrompt } from './prompts';
+import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt } from './prompts';
 import { generateContent, ContentResult } from './content';
 
 export type DiagramType = "flowchart" | "radial_mindmap" | "sequence_comparison";
@@ -13,6 +13,7 @@ export interface DiagramResult {
   diagram_type: DiagramType;
   description: string;
   content: string;
+  universal_content: string;
   diagram: string;
   render_type: "html";
   rendered_content: string;
@@ -119,6 +120,92 @@ ${contentDescription}`;
   }
 }
 
+export async function generateCombinedContent(
+  query: string,
+  diagramType: string,
+  env: EnvLike
+): Promise<{ universalContent: string; diagramContent: string }> {
+  const combinedPrompt = getCombinedContentPrompt(diagramType);
+  
+  console.log("🔵 Starting combined content generation...");
+  console.log("Query:", query);
+  console.log("Diagram type:", diagramType);
+  console.log("Using model:", env.OPENAI_MODEL || "gpt-4o-mini");
+  
+  try {
+    console.log("🔵 Calling OpenAI for combined content generation...");
+    const response = await callOpenAI(
+      env,
+      combinedPrompt,
+      query,
+      env.OPENAI_MODEL || "gpt-4o-mini",
+      3000,
+      0.7
+    );
+    
+    console.log("✅ OpenAI combined content response received:");
+    console.log("Response length:", response?.length || 0);
+    console.log("Response preview:", response?.substring(0, 200) + "...");
+    
+    if (!response) {
+      throw new Error("Empty combined content response from LLM");
+    }
+    
+    // Parse the combined response
+    const { universalContent, diagramContent } = parseCombinedResponse(response);
+    
+    console.log("✅ Combined content generation successful");
+    console.log("Universal content length:", universalContent.length);
+    console.log("Diagram content length:", diagramContent.length);
+    
+    return { universalContent, diagramContent };
+    
+  } catch (error) {
+    console.error("❌ Combined content generation failed:", error);
+    throw error;
+  }
+}
+
+function parseCombinedResponse(response: string): { universalContent: string; diagramContent: string } {
+  try {
+    // Try to find JSON in the response (it might be wrapped in markdown code blocks)
+    let jsonString = response.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonString.startsWith('```json')) {
+      jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonString.startsWith('```')) {
+      jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
+    }
+    
+    // Try to find JSON object in the response
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    }
+    
+    const parsed = JSON.parse(jsonString);
+    
+    if (!parsed.universal_content || !parsed.diagram_content) {
+      throw new Error("Missing required fields in JSON response");
+    }
+    
+    return {
+      universalContent: parsed.universal_content.trim(),
+      diagramContent: parsed.diagram_content.trim()
+    };
+    
+  } catch (error) {
+    console.warn("⚠️ Could not parse JSON response, using fallback parsing:", error);
+    // Fallback: split response roughly in half
+    const midPoint = Math.floor(response.length / 2);
+    return {
+      universalContent: response.substring(0, midPoint).trim(),
+      diagramContent: response.substring(midPoint).trim()
+    };
+  }
+}
+
 export async function generateDeepDiveResponse(
   selectedText: string,
   question: string,
@@ -167,10 +254,20 @@ export async function processDiagramPipeline(
     const diagramType = await selectDiagramType(query, env);
     console.log(`✅ Selected diagram type: ${diagramType}`);
     
-    // Step 2: Generate content
-    console.log("🔵 Step 2: Generating content...");
-    const contentResult = await generateContent(query, diagramType, env);
-    console.log(`✅ Generated content: ${contentResult.content.substring(0, 100)}...`);
+    // Step 2: Generate both universal content and diagram-specific content in one call
+    console.log("🔵 Step 2: Generating combined content...");
+    const { universalContent, diagramContent } = await generateCombinedContent(query, diagramType, env);
+    console.log(`✅ Generated universal content: ${universalContent.substring(0, 100)}...`);
+    console.log(`✅ Generated diagram content: ${diagramContent.substring(0, 100)}...`);
+    
+    // Create a ContentResult object for compatibility
+    const contentResult: ContentResult = {
+      content: diagramContent,
+      parsed: {
+        topic: '',
+        facts: []
+      }
+    };
     
     // Step 3: Generate diagram code
     console.log("🔵 Step 3: Generating diagram code...");
@@ -186,12 +283,13 @@ export async function processDiagramPipeline(
     console.log("🔵 Step 4: Preparing final result...");
     const sanitizedDiagram = diagramCode; // Will be sanitized in handlers
     
-    const result = {
+    const result: DiagramResult = {
       diagram_type: diagramType,
-      description: contentResult.content,
-      content: contentResult.content,
+      description: diagramContent,
+      content: diagramContent,
+      universal_content: universalContent,
       diagram: sanitizedDiagram,
-      render_type: "html",
+      render_type: "html" as const,
       rendered_content: sanitizedDiagram
     };
     
@@ -199,6 +297,7 @@ export async function processDiagramPipeline(
     console.log("Final result:", JSON.stringify({
       diagram_type: result.diagram_type,
       description_length: result.description.length,
+      universal_content_length: result.universal_content.length,
       diagram_length: result.diagram.length,
       render_type: result.render_type
     }, null, 2));

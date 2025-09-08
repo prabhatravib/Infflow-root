@@ -3,6 +3,7 @@ export type DiagramResponse = {
   query: string;
   description: string;
   content: string;
+  universal_content: string;
   diagram_type: string;
   diagram: string;
   render_type: string;

@@ -135,18 +135,52 @@ function parseStandardContent(content: string): { topic: string; facts: string[]
     } else if (lower.match(/^fact \d+:/)) {
       // Handle "fact 1:", "fact 2:", etc.
       const factText = trimmed.split(':', 1)[1]?.trim() || '';
-      if (factText) result.facts.push(factText);
+      if (factText) result.facts.push(fixSpacing(factText));
     } else if (trimmed.startsWith('- ')) {
-      result.facts.push(trimmed.substring(2).trim());
+      result.facts.push(fixSpacing(trimmed.substring(2).trim()));
     } else if (/^\d+\.\s+/.test(trimmed)) {
-      result.facts.push(trimmed.replace(/^\d+\.\s+/, '').trim());
+      result.facts.push(fixSpacing(trimmed.replace(/^\d+\.\s+/, '').trim()));
     } else if (trimmed.length > 10 && !lower.includes('main topic')) {
       // Any substantial line that's not the topic line counts as a fact
-      result.facts.push(trimmed);
+      result.facts.push(fixSpacing(trimmed));
     }
   }
   
   return result;
+}
+
+function fixSpacing(text: string): string {
+  // Fix common spacing issues
+  return text
+    // Fix missing space before "like" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)like/g, '$1 like')
+    // Fix missing space before "for" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)for/g, '$1 for')
+    // Fix missing space before "and" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)and/g, '$1 and')
+    // Fix missing space before "or" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)or/g, '$1 or')
+    // Fix missing space before "with" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)with/g, '$1 with')
+    // Fix missing space before "in" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)in/g, '$1 in')
+    // Fix missing space before "on" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)on/g, '$1 on')
+    // Fix missing space before "at" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)at/g, '$1 at')
+    // Fix missing space before "to" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)to/g, '$1 to')
+    // Fix missing space before "of" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)of/g, '$1 of')
+    // Fix missing space before "the" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)the/g, '$1 the')
+    // Fix missing space before "a" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)a\b/g, '$1 a')
+    // Fix missing space before "an" when it follows a word ending in 's'
+    .replace(/([a-zA-Z]s)an\b/g, '$1 an')
+    // Normalize multiple spaces to single space
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function parseComparisonContent(content: string): { topic: string; facts: string[] } {
@@ -164,7 +198,7 @@ function parseComparisonContent(content: string): { topic: string; facts: string
       const items = trimmed.split(':', 1)[1]?.split(',').map(i => i.trim()) || [];
       result.topic = items.join(' vs ');
     } else if (lower.includes('similarity') || lower.includes('unique')) {
-      result.facts.push(trimmed);
+      result.facts.push(fixSpacing(trimmed));
     }
   }
   

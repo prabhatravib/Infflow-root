@@ -54,6 +54,44 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
         if (onSetupSelection && ref.current) {
           onSetupSelection(ref.current);
         }
+        
+        // Add hover effects to all nodes
+        if (ref.current) {
+          const nodes = ref.current.querySelectorAll('.node, .flowchart .node, .mindmap .node, .radial .node');
+          nodes.forEach(node => {
+            const rect = node.querySelector('rect');
+            const text = node.querySelector('text');
+            
+            if (rect) {
+              // Store original styles
+              const originalStroke = rect.getAttribute('stroke') || '';
+              const originalStrokeWidth = rect.getAttribute('stroke-width') || '1';
+              const originalFill = rect.getAttribute('fill') || '';
+              
+              node.addEventListener('mouseenter', () => {
+                rect.setAttribute('stroke', '#3b82f6');
+                rect.setAttribute('stroke-width', '3');
+                rect.setAttribute('fill', 'rgba(59, 130, 246, 0.05)');
+                if (text) {
+                  text.style.fontWeight = '500';
+                  text.style.filter = 'brightness(1.1)';
+                }
+                node.style.filter = 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.3))';
+              });
+              
+              node.addEventListener('mouseleave', () => {
+                rect.setAttribute('stroke', originalStroke);
+                rect.setAttribute('stroke-width', originalStrokeWidth);
+                rect.setAttribute('fill', originalFill);
+                if (text) {
+                  text.style.fontWeight = '';
+                  text.style.filter = '';
+                }
+                node.style.filter = '';
+              });
+            }
+          });
+        }
       } catch (e) {
         if (ref.current) ref.current.innerHTML = `<pre class='text-red-600'>Mermaid render error: ${String(e)}</pre>`;
       }
