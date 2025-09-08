@@ -147,39 +147,24 @@ function sanitizeSpecialChars(text: string): string {
   return sanitizedLines.join('\n');
 }
 
+/**
+ * Comprehensive text cleaning utility that handles all spacing issues
+ * Replaces newlines with spaces and fixes missing spaces between words
+ */
+function cleanTextContent(text: string): string {
+  return text
+    .replace(/\n/g, ' ')           // Replace newlines with spaces
+    .replace(/[\r\t]/g, ' ')       // Replace carriage returns and tabs with spaces
+    .replace(/\s+/g, ' ')          // Replace multiple whitespace with single space
+    .replace(/\s*([.,;:!?])\s*/g, '$1 ')  // Fix spacing around punctuation
+    .replace(/\s+/g, ' ')          // Clean up any new multiple spaces
+    .trim();
+}
+
 function fixNodeLabelSpacing(text: string): string {
   // Fix missing spaces in node labels (text within quotes in Mermaid nodes)
   return text.replace(/"([^"]*)"/g, (match, content) => {
-    const fixed = content
-      // Fix missing space before "like" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)like/g, '$1 like')
-      // Fix missing space before "for" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)for/g, '$1 for')
-      // Fix missing space before "and" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)and/g, '$1 and')
-      // Fix missing space before "or" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)or/g, '$1 or')
-      // Fix missing space before "with" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)with/g, '$1 with')
-      // Fix missing space before "in" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)in/g, '$1 in')
-      // Fix missing space before "on" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)on/g, '$1 on')
-      // Fix missing space before "at" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)at/g, '$1 at')
-      // Fix missing space before "to" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)to/g, '$1 to')
-      // Fix missing space before "of" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)of/g, '$1 of')
-      // Fix missing space before "the" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)the/g, '$1 the')
-      // Fix missing space before "a" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)a\b/g, '$1 a')
-      // Fix missing space before "an" when it follows a word ending in 's'
-      .replace(/([a-zA-Z]s)an\b/g, '$1 an')
-      // Normalize multiple spaces to single space
-      .replace(/\s+/g, ' ')
-      .trim();
+    const fixed = cleanTextContent(content);
     return `"${fixed}"`;
   });
 }
@@ -329,3 +314,6 @@ export function normalizeDiagramType(t: string): "flowchart" | "radial_mindmap" 
   if (["sequence_comparison", "sequence"].includes(v)) return "sequence_comparison";
   return "flowchart";
 }
+
+// Export the comprehensive text cleaning utility
+export { cleanTextContent };

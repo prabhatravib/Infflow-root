@@ -5,6 +5,7 @@
 
 import { callOpenAI, EnvLike } from './openai';
 import { getContentPrompt } from './prompts';
+import { cleanTextContent } from './utils';
 
 export interface ContentResult {
   content: string;
@@ -150,37 +151,8 @@ function parseStandardContent(content: string): { topic: string; facts: string[]
 }
 
 function fixSpacing(text: string): string {
-  // Fix common spacing issues
-  return text
-    // Fix missing space before "like" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)like/g, '$1 like')
-    // Fix missing space before "for" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)for/g, '$1 for')
-    // Fix missing space before "and" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)and/g, '$1 and')
-    // Fix missing space before "or" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)or/g, '$1 or')
-    // Fix missing space before "with" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)with/g, '$1 with')
-    // Fix missing space before "in" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)in/g, '$1 in')
-    // Fix missing space before "on" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)on/g, '$1 on')
-    // Fix missing space before "at" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)at/g, '$1 at')
-    // Fix missing space before "to" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)to/g, '$1 to')
-    // Fix missing space before "of" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)of/g, '$1 of')
-    // Fix missing space before "the" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)the/g, '$1 the')
-    // Fix missing space before "a" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)a\b/g, '$1 a')
-    // Fix missing space before "an" when it follows a word ending in 's'
-    .replace(/([a-zA-Z]s)an\b/g, '$1 an')
-    // Normalize multiple spaces to single space
-    .replace(/\s+/g, ' ')
-    .trim();
+  // Use the comprehensive text cleaning utility
+  return cleanTextContent(text);
 }
 
 function parseComparisonContent(content: string): { topic: string; facts: string[] } {

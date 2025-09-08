@@ -252,6 +252,17 @@ export class SelectionHandler {
   }
 
 
+  private cleanTextContent(text: string): string {
+    return text
+      .replace(/<br\s*\/?>/gi, ' ')  // Replace <br> tags with spaces
+      .replace(/\n/g, ' ')           // Replace newlines with spaces
+      .replace(/[\r\t]/g, ' ')       // Replace carriage returns and tabs with spaces
+      .replace(/\s+/g, ' ')          // Replace multiple whitespace with single space
+      .replace(/\s*([.,;:!?])\s*/g, '$1 ')  // Fix spacing around punctuation
+      .replace(/\s+/g, ' ')          // Clean up any new multiple spaces
+      .trim();
+  }
+
   private removeSelectionStyling(element: Element) {
     if (!element) return;
     
@@ -299,18 +310,14 @@ export class SelectionHandler {
   }
 
   private extractNodeText(node: Element): string {
+    // Look for the text element (Mermaid uses .nodeLabel spans)
     const textElement = node.querySelector('text, .nodeLabel, span');
     
     if (textElement) {
-      const tspans = textElement.querySelectorAll('tspan');
-      if (tspans.length > 0) {
-        return Array.from(tspans)
-          .map(t => t.textContent?.trim())
-          .filter(Boolean)
-          .join(' ');
-      }
-      
-      return textElement.textContent?.trim() || '';
+      // Get innerHTML to preserve <br> tags, then replace them with spaces
+      const htmlContent = textElement.innerHTML || '';
+      const rawText = htmlContent.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '');
+      return this.cleanTextContent(rawText);
     }
     
     return '';
@@ -318,15 +325,17 @@ export class SelectionHandler {
 
   private extractEdgeText(label: Element): string {
     const text = label.querySelector('text, span');
-    return text ? (text.textContent?.trim() || '') : (label.textContent?.trim() || '');
+    const extracted = text ? (text.textContent || '') : (label.textContent || '');
+    return this.cleanTextContent(extracted);
   }
 
   private extractNoteText(note: Element): string {
     const texts = note.querySelectorAll('text');
-    return Array.from(texts)
-      .map(t => t.textContent?.trim())
+    const text = Array.from(texts)
+      .map(t => t.textContent || '')
       .filter(Boolean)
-      .join('\n');
+      .join(' ');
+    return this.cleanTextContent(text);
   }
 
   private extractBlockText(rect: Element, svg: SVGElement): string {
@@ -342,10 +351,11 @@ export class SelectionHandler {
       );
     });
     
-    return texts
-      .map(t => t.textContent?.trim())
+    const text = texts
+      .map(t => t.textContent || '')
       .filter(Boolean)
-      .join('\n');
+      .join(' ');
+    return this.cleanTextContent(text);
   }
 
   private extractBulletPointContent(clickedElement: Element, _svg: SVGElement): string {
@@ -394,7 +404,8 @@ export class SelectionHandler {
       }
     }
     
-    return bulletContent.join('\n');
+    const text = bulletContent.join(' ');
+    return this.cleanTextContent(text);
   }
 
   private isSelectableRect(rect: Element): boolean {
