@@ -30,7 +30,7 @@ export default function App() {
     if (!query.trim()) return;
     setShowResults(true);
     clearSelection();
-    setCodeFlowStatus('not-sent'); // Reset status when starting new search
+ // Reset status when starting new search
     try {
       const res = await describe(query);
       console.log('API Response:', res); // Debug logging

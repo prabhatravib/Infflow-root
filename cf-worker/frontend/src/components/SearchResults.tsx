@@ -91,7 +91,7 @@ export default function SearchResults({
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        {/* HexaWorker Component */}
+        {/* HexaWorker Component - Static hexagon removed, only iframe functionality */}
         <div className="fixed left-4 top-[60%] transform -translate-y-1/2 z-50">
           <HexaWorker 
             codeFlowStatus={codeFlowStatus} 
@@ -100,12 +100,12 @@ export default function SearchResults({
         </div>
         
         <main className="flex-1 transition-all duration-500">
-          <div className="flex justify-center p-4">
+          <div className="flex justify-center pt-2 pb-4 px-4">
             <div className="w-full max-w-6xl space-y-2">
 
               {/* Diagram Container */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
-                <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6">
+                <div className="space-y-2">
                   {/* Sub-tabs for diagram panel */}
                   <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
                     <button
