@@ -31,7 +31,7 @@ export default function LandingPage({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="flex flex-col items-center px-8 relative py-8"
+      className="flex flex-col items-center justify-start px-8 relative -mt-16 pb-8 min-h-screen"
     >
       {/* Floating theme toggle for landing page */}
       <button 
@@ -44,19 +44,19 @@ export default function LandingPage({
       {/* Main content container with better vertical centering */}
       <div className="w-full max-w-4xl flex flex-col items-center">
         <div className="text-center mb-0">
-          <div className="flex items-center justify-center -mb-12">
+          <div className="flex items-center justify-center" style={{ marginBottom: '-4.5rem' }}>
             <Logo size="xl" variant="full" isDark={isDark} />
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-0">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Answers, you can See!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
+          <p className="text-gray-600 dark:text-gray-400 text-2xl font-light mb-8">
             Ask anything. Get responses in Textcharts.
           </p>
         </div>
         
         {/* Suggestion chips with "Try:" text */}
-        <div className="flex items-center justify-center gap-3 mb-2">
+        <div className="flex items-center justify-center gap-3 mb-6">
           <span className="text-gray-600 dark:text-gray-400 text-lg font-medium">Try asking:</span>
           {suggestionChips.map(chip => (
             <button 

@@ -153,17 +153,17 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               <iframe
                 ref={iframeRef}
                 src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-                width="280"
-                height="280"
+                width="320"
+                height="320"
                 style={{
                   border: 'none',
                   backgroundColor: 'transparent',
                   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                   borderRadius: '0',
                   position: 'absolute',
-                  top: '0',
-                  left: '0',
-                  transform: 'translateY(-8px)',
+                  top: '-20px',
+                  left: '-20px',
+                  transform: 'scale(0.875) translateY(15px)',
                 }}
                 title="Hexa Voice Agent"
                 allow="microphone"
