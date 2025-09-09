@@ -48,7 +48,7 @@ export default function LandingPage({
             <Logo size="xl" variant="full" isDark={isDark} />
           </div>
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            Answers, you can See!
+            Answers, you can See and Hear!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-2xl font-light mb-8">
             Ask anything. Get responses in Textcharts.

@@ -145,9 +145,9 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               className="hexagon-container"
               style={{
                 width: '280px',
-                height: '280px',
+                height: '300px',  // Increased height to give more room
                 position: 'relative',
-                transform: 'translateY(8px)',
+                transform: 'translateY(10px)',  // Move the entire container down
               }}
             >
               <iframe
@@ -161,9 +161,9 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                   borderRadius: '0',
                   position: 'absolute',
-                  top: '-20px',
+                  top: '10px',  // Move iframe down to show the top point
                   left: '-20px',
-                  transform: 'scale(0.875) translateY(15px)',
+                  transform: 'scale(0.875) translateY(-5px)',  // Fine-tune positioning
                 }}
                 title="Hexa Voice Agent"
                 allow="microphone"
@@ -172,7 +172,6 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   if (sessionId) {
                     console.log('🆔 Voice session started with session ID:', sessionId);
                   }
-                  // Diagram data is already sent via API, no postMessage needed
                   console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
                 }}
               />
