@@ -43,11 +43,11 @@ export default function LandingPage({
       
       {/* Main content container with better vertical centering */}
       <div className="w-full max-w-4xl flex flex-col items-center">
-        <div className="text-center mb-3">
-          <div className="flex items-center justify-center -mb-4">
-            <Logo size="xl" variant="full" />
+        <div className="text-center mb-1">
+          <div className="flex items-center justify-center -mb-8">
+            <Logo size="xl" variant="full" isDark={isDark} />
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-1">
             Answers, you can See!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-2xl font-light">
@@ -56,7 +56,7 @@ export default function LandingPage({
         </div>
         
         {/* Suggestion chips with "Try:" text */}
-        <div className="flex items-center justify-center gap-3 mb-6">
+        <div className="flex items-center justify-center gap-3 mb-3">
           <span className="text-gray-600 dark:text-gray-400 text-lg font-medium">Try asking:</span>
           {suggestionChips.map(chip => (
             <button 

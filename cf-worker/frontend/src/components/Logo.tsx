@@ -4,6 +4,7 @@ export interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "icon" | "full";
   className?: string;
+  isDark?: boolean;
 }
 
 const sizeClasses = {
@@ -32,13 +33,14 @@ const sizeClasses = {
 export default function Logo({
   size = "md",
   variant = "full",
-  className = ""
+  className = "",
+  isDark = false
 }: LogoProps) {
   const sizes = sizeClasses[size];
   
   const IconComponent = () => <div className={`${sizes.icon} flex items-center justify-center`}>
       <img 
-        src="/infflow-logo.webp" 
+        src={isDark ? "/infflow_whitefont.webp" : "/infflow-logo.webp"} 
         alt="infflow logo" 
         className="w-full h-full object-contain"
         onLoad={() => console.log('Logo loaded successfully')}

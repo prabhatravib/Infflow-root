@@ -95,21 +95,18 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   return (
     <div className="flex flex-col items-center">
       {/* Voice Control Bar - Positioned at top right */}
-      <div className="relative w-[250px] mb-2">
+      <div className="relative w-[280px] mb-2">
         <button
           onClick={toggleVoice}
-          className={`absolute -top-2 -right-2 z-10 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-lg ${
+          className={`absolute -top-2 -right-2 z-10 transition-all duration-200 shadow-lg ${
             isVoiceEnabled
-              ? 'bg-red-500 hover:bg-red-600 text-white'
-              : 'bg-green-500 hover:bg-green-600 text-white'
+              ? 'w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center'
+              : 'px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium flex items-center gap-2'
           }`}
           title={isVoiceEnabled ? 'Disable Voice' : 'Enable Voice'}
         >
           {isVoiceEnabled ? (
-            <>
-              <Minus className="w-4 h-4" />
-              <span>Disable Voice</span>
-            </>
+            <Minus className="w-4 h-4" />
           ) : (
             <>
               <Plus className="w-4 h-4" />
@@ -121,8 +118,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
 
       {/* Hexagon Container - Shows when voice is disabled */}
       <div 
-        className={`transition-all duration-500 ease-in-out overflow-hidden flex items-center justify-center ${
-          isVoiceEnabled ? 'h-[250px] mb-4' : 'h-0 mb-0'
+        className={`transition-all duration-500 ease-in-out overflow-visible flex items-center justify-center ${
+          isVoiceEnabled ? 'h-[280px] mb-4' : 'h-0 mb-0'
         }`}
       >
         {!isVoiceEnabled ? (
@@ -142,12 +139,11 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
           <iframe
             ref={iframeRef}
             src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-            width="250"
-            height="250"
+            width="280"
+            height="280"
             style={{
               border: 'none',
               backgroundColor: 'transparent',
-              clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
               transform: 'translateY(8px)',
             }}
             title="Hexa Voice Agent"
