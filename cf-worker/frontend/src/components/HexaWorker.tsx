@@ -176,22 +176,6 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
                 }}
               />
-              {/* Hexagon border */}
-              <div 
-                className="hexagon-border"
-                style={{
-                  position: 'absolute',
-                  top: '0',
-                  left: '0',
-                  width: '280px',
-                  height: '280px',
-                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  border: '3px solid #10b981',
-                  borderRadius: '0',
-                  pointerEvents: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
             </div>
           </div>
 
