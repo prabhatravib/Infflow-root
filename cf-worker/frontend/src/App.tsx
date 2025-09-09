@@ -219,6 +219,20 @@ export default function App() {
     className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
     onClick={handlePageClick}
   >
+      {/* Centralized Tab Content - Works regardless of current page */}
+      {currentTab === 'News' && (
+        <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50">
+          <div className="w-full h-full">
+            <iframe
+              src="https://newsbloom.prabhatravib.workers.dev/"
+              className="w-full h-full border-0"
+              title="News"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {!showResults ? (
           <LandingPage

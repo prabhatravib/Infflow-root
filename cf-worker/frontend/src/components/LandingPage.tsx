@@ -98,20 +98,6 @@ export default function LandingPage({
         </div>
       </div>
       
-      {/* Tab Content */}
-      {currentTab === 'News' && (
-        <div className="fixed inset-0 bg-white dark:bg-gray-900 z-40">
-          <div className="w-full h-full">
-            <iframe
-              src="https://newsbloom.prabhatravib.workers.dev/"
-              className="w-full h-full border-0"
-              title="News"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      )}
-      
       {/* Bottom Navigation */}
       <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} position="bottom" />
     </motion.div>

@@ -120,7 +120,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
           </button>
           
           {/* Code Flow Status */}
-          <div className="text-center mt-2">
+          <div className="text-center mt-6">
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
             </div>
@@ -141,27 +141,58 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               <Minus className="w-4 h-4" />
             </button>
             
-            <iframe
-              ref={iframeRef}
-              src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-              width="280"
-              height="280"
+            <div 
+              className="hexagon-container"
               style={{
-                border: 'none',
-                backgroundColor: 'transparent',
+                width: '280px',
+                height: '280px',
+                position: 'relative',
                 transform: 'translateY(8px)',
               }}
-              title="Hexa Voice Agent"
-              allow="microphone"
-              onLoad={() => {
-                console.log('🔄 Iframe loaded');
-                if (sessionId) {
-                  console.log('🆔 Voice session started with session ID:', sessionId);
-                }
-                // Diagram data is already sent via API, no postMessage needed
-                console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
-              }}
-            />
+            >
+              <iframe
+                ref={iframeRef}
+                src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
+                width="280"
+                height="280"
+                style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                  borderRadius: '0',
+                  position: 'absolute',
+                  top: '0',
+                  left: '0',
+                  transform: 'translateY(-8px)',
+                }}
+                title="Hexa Voice Agent"
+                allow="microphone"
+                onLoad={() => {
+                  console.log('🔄 Iframe loaded');
+                  if (sessionId) {
+                    console.log('🆔 Voice session started with session ID:', sessionId);
+                  }
+                  // Diagram data is already sent via API, no postMessage needed
+                  console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
+                }}
+              />
+              {/* Hexagon border */}
+              <div 
+                className="hexagon-border"
+                style={{
+                  position: 'absolute',
+                  top: '0',
+                  left: '0',
+                  width: '280px',
+                  height: '280px',
+                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                  border: '3px solid #10b981',
+                  borderRadius: '0',
+                  pointerEvents: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
           </div>
 
           {/* Code Flow Status */}

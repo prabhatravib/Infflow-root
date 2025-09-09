@@ -99,7 +99,7 @@ export default function SearchResults({
           />
         </div>
         
-        <main className="flex-1 transition-all duration-500">
+        <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
           <div className="flex justify-center pt-2 pb-4 px-4">
             <div className="w-full max-w-6xl space-y-2">
 

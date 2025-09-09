@@ -40,7 +40,7 @@ export const Header = ({
           </div>
         </div>
 
-        <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+        <div className={`flex-1 max-w-2xl mx-8 hidden md:block ${showResults ? 'ml-36 lg:ml-40' : ''}`}>
           <div className="relative">
             <div className={`flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 ${showResults ? 'shadow-md' : 'shadow-none'}`}>
               <input 
