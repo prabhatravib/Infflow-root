@@ -88,8 +88,6 @@ export default function SearchResults({
         onBackToHome={onBackToHome}
       />
       
-      <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} />
-      
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
@@ -105,21 +103,8 @@ export default function SearchResults({
           <div className="flex justify-center p-4">
             <div className="w-full max-w-6xl space-y-2">
 
-              {/* Tab Content */}
-              {currentTab === 'News' ? (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
-                  <div className="w-full h-[80vh] rounded-lg overflow-hidden">
-                    <iframe
-                      src="https://newsbloom.prabhatravib.workers.dev/"
-                      className="w-full h-full border-0"
-                      title="News"
-                      allowFullScreen
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Diagram Container */
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
+              {/* Diagram Container */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-6">
                 <div className="space-y-4">
                   {/* Sub-tabs for diagram panel */}
                   <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
@@ -207,7 +192,6 @@ export default function SearchResults({
                   )}
                 </div>
               </div>
-              )}
 
               {/* Deep Dive Panel */}
               {selection.hasSelection && (
@@ -224,6 +208,9 @@ export default function SearchResults({
           </div>
         </main>
       </div>
+      
+      {/* Bottom Navigation */}
+      <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} position="bottom" />
     </motion.div>
   );
 }

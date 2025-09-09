@@ -4,6 +4,7 @@ import { Globe, MapPin, Newspaper } from 'lucide-react';
 interface TabsProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  position?: 'top' | 'bottom';
 }
 
 const tabs = [{
@@ -23,10 +24,13 @@ const tabs = [{
 // @component: Tabs
 export const Tabs = ({
   currentTab,
-  setCurrentTab
+  setCurrentTab,
+  position = 'top'
 }: TabsProps) => {
+  const isBottom = position === 'bottom';
+  
   // @return
-  return <nav className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+  return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${isBottom ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
       <div className="px-4">
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
           {tabs.map(tab => {
@@ -36,7 +40,7 @@ export const Tabs = ({
                 <Icon className="w-4 h-4" />
                 <span>{tab.label}</span>
                 
-                {isActive && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400" initial={false} transition={{
+                {isActive && <motion.div layoutId="activeTab" className={`absolute ${isBottom ? 'top-0' : 'bottom-0'} left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400`} initial={false} transition={{
               type: "spring",
               stiffness: 500,
               damping: 30

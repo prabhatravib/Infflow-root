@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { sessionManager } from '../utils/sessionManager';
+import { Minus, Plus } from 'lucide-react';
 
 interface DiagramData {
   mermaidCode: string;
@@ -90,30 +91,64 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     }
   };
 
+
   return (
-    <div className="flex flex-col items-center space-y-4">
-      {/* Code Flow Status */}
-      <div className="text-center">
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
-        </div>
+    <div className="flex flex-col items-center">
+      {/* Voice Control Bar - Positioned at top right */}
+      <div className="relative w-[250px] mb-2">
+        <button
+          onClick={toggleVoice}
+          className={`absolute -top-2 -right-2 z-10 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-lg ${
+            isVoiceEnabled
+              ? 'bg-red-500 hover:bg-red-600 text-white'
+              : 'bg-green-500 hover:bg-green-600 text-white'
+          }`}
+          title={isVoiceEnabled ? 'Disable Voice' : 'Enable Voice'}
+        >
+          {isVoiceEnabled ? (
+            <>
+              <Minus className="w-4 h-4" />
+              <span>Disable Voice</span>
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4" />
+              <span>Enable Voice</span>
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Hexagon Container */}
-      <div className="relative">
-        {isVoiceEnabled ? (
+      {/* Hexagon Container - Shows when voice is disabled */}
+      <div 
+        className={`transition-all duration-500 ease-in-out overflow-hidden flex items-center justify-center ${
+          isVoiceEnabled ? 'h-[250px] mb-4' : 'h-0 mb-0'
+        }`}
+      >
+        {!isVoiceEnabled ? (
+          <div 
+            className="w-[250px] h-[250px] bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center"
+            style={{
+              clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+              transform: 'translateY(8px)',
+            }}
+          >
+            <div className="text-white text-sm font-medium text-center">
+              <div className="text-2xl mb-2">🎤</div>
+              <div>Voice Disabled</div>
+            </div>
+          </div>
+        ) : (
           <iframe
             ref={iframeRef}
             src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-            width="200"
-            height="200"
+            width="250"
+            height="250"
             style={{
               border: 'none',
               backgroundColor: 'transparent',
-              transition: 'opacity 0.3s ease',
-              transform: 'scale(1)',
-              transformOrigin: 'center',
               clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+              transform: 'translateY(8px)',
             }}
             title="Hexa Voice Agent"
             allow="microphone"
@@ -126,32 +161,16 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
             }}
           />
-        ) : (
-          <div 
-            className="w-[200px] h-[200px] bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center"
-            style={{
-              clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-            }}
-          >
-            <div className="text-white text-sm font-medium text-center">
-              <div className="text-2xl mb-2">🎤</div>
-              <div>Voice Disabled</div>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Toggle Button */}
-      <button 
-        onClick={toggleVoice}
-        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-          isVoiceEnabled
-            ? 'bg-red-500 hover:bg-red-600 text-white'
-            : 'bg-green-500 hover:bg-green-600 text-white'
-        }`}
-      >
-        {isVoiceEnabled ? 'Disable Voice' : 'Enable Voice'}
-      </button>
+      {/* Code Flow Status - Moved to bottom */}
+      <div className="text-center mt-6">
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
+        </div>
+      </div>
+
     </div>
   );
 };

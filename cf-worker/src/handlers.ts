@@ -1,6 +1,7 @@
 import { json, sanitizeMermaid } from "./utils";
 import { processDiagramPipeline, generateDeepDiveResponse } from "./diagram";
 import { EnvLike } from "./openai";
+import { createTimer } from "./timing";
 
 type DescribeRequest = { query: string };
 type DiagramResponse = {
@@ -27,33 +28,60 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
     }, 400);
   }
 
+  // Create performance timer for this request
+  const timer = createTimer();
+  timer.markStart("request_validation", { query_length: query.length });
+
   try {
-    console.log(`Processing describe request: ${query.substring(0, 50)}...`);
+    console.log(`🚀 [${timer.getRequestId()}] Processing describe request: ${query.substring(0, 50)}...`);
     
     // Use the sophisticated pipeline from pitext_desktop
-    const result = await processDiagramPipeline(query, env);
+    const result = await timer.timeStep("diagram_pipeline", () => processDiagramPipeline(query, env), {
+      query_length: query.length
+    });
     
     // Sanitize the diagram code
-    const sanitizedDiagram = sanitizeMermaid(result.diagram);
+    const sanitizedDiagram = await timer.timeStep("diagram_sanitization", async () => {
+      return sanitizeMermaid(result.diagram);
+    }, {
+      diagram_length: result.diagram.length,
+      diagram_type: result.diagram_type
+    });
     
-    console.log(`Generated ${result.diagram_type} diagram for query: ${query.substring(0, 50)}`);
+    // Prepare final response
+    const response = await timer.timeStep("response_preparation", async () => {
+      const response: DiagramResponse = {
+        success: true,
+        query,
+        description: result.description,
+        content: result.content,
+        universal_content: result.universal_content,
+        diagram_type: result.diagram_type,
+        diagram: sanitizedDiagram,
+        render_type: "html",
+        rendered_content: sanitizedDiagram,
+      };
+      return response;
+    }, {
+      response_size: JSON.stringify({ success: true, query, diagram_type: result.diagram_type }).length
+    });
     
-    const response: DiagramResponse = {
-      success: true,
-      query,
-      description: result.description,
-      content: result.content,
-      universal_content: result.universal_content,
-      diagram_type: result.diagram_type,
-      diagram: sanitizedDiagram,
-      render_type: "html",
-      rendered_content: sanitizedDiagram,
-    };
+    timer.markEnd("request_validation");
+    
+    // Log performance report
+    timer.logPerformanceReport();
+    
+    console.log(`✅ [${timer.getRequestId()}] Generated ${result.diagram_type} diagram for query: ${query.substring(0, 50)}`);
     
     return json(response, 200);
     
   } catch (error) {
-    console.error("Describe handler error:", error);
+    timer.markEnd("request_validation", { success: false, error: error instanceof Error ? error.message : String(error) });
+    
+    // Log performance report even for errors
+    timer.logPerformanceReport();
+    
+    console.error(`❌ [${timer.getRequestId()}] Describe handler error:`, error);
     console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     console.error("Error details:", JSON.stringify(error, null, 2));
     return json({ 

@@ -12,4 +12,6 @@ Your response should:
 
 Format your response as a well-structured explanation that someone would find genuinely useful and informative. Use subheadings (but no main heading), bullet points, and clear organization to make it easy to read and understand.
 
+IMPORTANT: Do not include summary paragraphs, concluding statements, or "In summary" sections. End your response with the final substantive information without any summary or conclusion.
+
 Do not use the structured format required for diagrams - this is for human reading, not diagram generation.`;

@@ -148,7 +148,7 @@ body {
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   pointer-events: auto !important;
-  font-size: 28px !important;
+  font-size: 16px !important;
   font-weight: 700 !important;
 }
 
@@ -172,7 +172,7 @@ body {
 .mermaid .sequenceDiagram .actor-label,
 .mermaid .participant text,
 .mermaid .sequenceDiagram .participant text {
-  font-size: 22.4px !important;
+  font-size: 16px !important;
   font-weight: bold !important;
   fill: #000000 !important;
   text-shadow: none !important;
@@ -369,4 +369,49 @@ body {
 .mermaid .flowchart .node.element-selected tspan {
   font-weight: 500 !important;
   filter: drop-shadow(0 0 4px #ffb300) !important;
+}
+
+/* Center Mermaid diagrams in their container */
+.mermaid-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-height: 400px !important;
+  max-height: 80vh !important;
+  overflow: auto !important;
+}
+
+.mermaid-container > div {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+.mermaid-container svg {
+  max-width: 100% !important;
+  max-height: 80vh !important;
+  height: auto !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+/* Normalize all Mermaid diagram text sizes */
+.mermaid text,
+.mermaid .node text,
+.mermaid .actor text,
+.mermaid .note text,
+.mermaid .flowchart text,
+.mermaid .sequenceDiagram text,
+.mermaid .mindmap text {
+  font-size: 16px !important;
+  font-family: Arial, sans-serif !important;
+}
+
+/* Ensure consistent sizing for all diagram types */
+.mermaid .node,
+.mermaid .actor,
+.mermaid .note {
+  font-size: 16px !important;
 }

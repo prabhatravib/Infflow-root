@@ -7,7 +7,7 @@ export const diagramFlowchartPrompt = `You are a diagram-making assistant that r
 
 %%{init:{
   "theme":"base",
-  "flowchart":{"useMaxWidth":true,"fontFamily":"sans-serif","fontSize":"14px"},
+  "flowchart":{"useMaxWidth":true,"fontFamily":"sans-serif","fontSize":"16px"},
   "themeVariables":{
     "lineColor":"#fbbf24",
     "arrowheadColor":"#fbbf24",

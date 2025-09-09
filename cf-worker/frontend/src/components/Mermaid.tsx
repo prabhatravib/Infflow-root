@@ -12,12 +12,17 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
 
   useEffect(() => {
     let mounted = true;
+    
     mermaid.initialize({ 
       startOnLoad: false, 
       securityLevel: 'loose', 
       theme: 'base',
       fontFamily: 'Arial, sans-serif',
-      fontSize: 20,
+      fontSize: 16, // Normalized font size for all diagrams
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: false
+      },
       sequence: {
         diagramMarginX: 50,
         diagramMarginY: 30,
@@ -73,10 +78,10 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
                 rect.setAttribute('stroke-width', '3');
                 rect.setAttribute('fill', 'rgba(59, 130, 246, 0.05)');
                 if (text) {
-                  text.style.fontWeight = '500';
-                  text.style.filter = 'brightness(1.1)';
+                  (text as SVGTextElement).style.fontWeight = '500';
+                  (text as SVGTextElement).style.filter = 'brightness(1.1)';
                 }
-                node.style.filter = 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.3))';
+                (node as HTMLElement).style.filter = 'drop-shadow(0 0 8px rgba(59, 130, 246, 0.3))';
               });
               
               node.addEventListener('mouseleave', () => {
@@ -84,10 +89,10 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
                 rect.setAttribute('stroke-width', originalStrokeWidth);
                 rect.setAttribute('fill', originalFill);
                 if (text) {
-                  text.style.fontWeight = '';
-                  text.style.filter = '';
+                  (text as SVGTextElement).style.fontWeight = '';
+                  (text as SVGTextElement).style.filter = '';
                 }
-                node.style.filter = '';
+                (node as HTMLElement).style.filter = '';
               });
             }
           });
@@ -99,5 +104,5 @@ export default function Mermaid({ code, className, onSetupSelection }: Props) {
     return () => { mounted = false; };
   }, [code, onSetupSelection]);
 
-  return <div className={className} ref={ref} />;
+  return <div className={`${className} flex justify-center items-center w-full`} ref={ref} />;
 }

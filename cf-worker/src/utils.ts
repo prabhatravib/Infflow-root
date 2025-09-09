@@ -10,9 +10,16 @@ export function toMessage(err: unknown): string {
 }
 
 export function sanitizeMermaid(input: string): string {
+  const startTime = performance.now();
+  const sanitizeId = `sanitize_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  
+  console.log(`🧹 [${sanitizeId}] Starting Mermaid sanitization...`);
+  console.log(`Input length: ${input.length}`);
+  
   let text = (input || "").trim();
   
   // STEP 1: Extract and preserve the init block
+  const step1Start = performance.now();
   let initBlock: string | null = null;
   const initPattern = /(%%\{init:.*?\}%%)/;
   const initMatch = text.match(initPattern);
@@ -21,16 +28,22 @@ export function sanitizeMermaid(input: string): string {
     initBlock = initMatch[0];
     text = text.replace(initBlock, '###MERMAID_INIT_BLOCK_PLACEHOLDER###');
   }
+  const step1Time = performance.now() - step1Start;
+  console.log(`⏱️  [${sanitizeId}] Step 1 (init block extraction): ${step1Time.toFixed(2)}ms`);
   
   // STEP 2: Apply all sanitization steps
+  const step2Start = performance.now();
   text = removeMarkdownFences(text);
   text = decodeHtmlEntities(text);
   text = sanitizeSpecialChars(text);
   text = normalizeUnicode(text);
   text = fixLineBreaks(text);
   text = fixFlowchartSpacing(text);
+  const step2Time = performance.now() - step2Start;
+  console.log(`⏱️  [${sanitizeId}] Step 2 (basic sanitization): ${step2Time.toFixed(2)}ms`);
   
   // STEP 3: Process line by line
+  const step3Start = performance.now();
   const fixedLines: string[] = [];
   for (const line of text.split('\n')) {
     if (line.includes('###MERMAID_INIT_BLOCK_PLACEHOLDER###')) {
@@ -39,19 +52,41 @@ export function sanitizeMermaid(input: string): string {
       fixedLines.push(processLine(line));
     }
   }
-  
   text = fixedLines.join('\n');
+  const step3Time = performance.now() - step3Start;
+  console.log(`⏱️  [${sanitizeId}] Step 3 (line processing): ${step3Time.toFixed(2)}ms`);
   
   // STEP 4: Final cleanup
+  const step4Start = performance.now();
   text = finalCleanup(text);
+  const step4Time = performance.now() - step4Start;
+  console.log(`⏱️  [${sanitizeId}] Step 4 (final cleanup): ${step4Time.toFixed(2)}ms`);
   
   // STEP 5: Restore the original init block
+  const step5Start = performance.now();
   if (initBlock) {
     text = text.replace('###MERMAID_INIT_BLOCK_PLACEHOLDER###', initBlock);
   }
+  const step5Time = performance.now() - step5Start;
+  console.log(`⏱️  [${sanitizeId}] Step 5 (init block restoration): ${step5Time.toFixed(2)}ms`);
   
   // STEP 6: Final validation
+  const step6Start = performance.now();
   text = validateFlowchartStructure(text);
+  const step6Time = performance.now() - step6Start;
+  console.log(`⏱️  [${sanitizeId}] Step 6 (validation): ${step6Time.toFixed(2)}ms`);
+  
+  const totalTime = performance.now() - startTime;
+  console.log(`✅ [${sanitizeId}] Mermaid sanitization completed`);
+  console.log(`📊 [${sanitizeId}] Performance breakdown:`);
+  console.log(`   • Init block extraction: ${step1Time.toFixed(2)}ms (${((step1Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Basic sanitization: ${step2Time.toFixed(2)}ms (${((step2Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Line processing: ${step3Time.toFixed(2)}ms (${((step3Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Final cleanup: ${step4Time.toFixed(2)}ms (${((step4Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Init block restoration: ${step5Time.toFixed(2)}ms (${((step5Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Validation: ${step6Time.toFixed(2)}ms (${((step6Time / totalTime) * 100).toFixed(1)}%)`);
+  console.log(`   • Total sanitization time: ${totalTime.toFixed(2)}ms`);
+  console.log(`   • Output length: ${text.length}`);
   
   return text;
 }

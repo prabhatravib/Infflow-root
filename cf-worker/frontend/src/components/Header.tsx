@@ -48,7 +48,7 @@ export const Header = ({
                 value={searchQuery} 
                 onChange={e => setSearchQuery(e.target.value)} 
                 onKeyPress={e => e.key === 'Enter' && onSearch(searchQuery)} 
-                placeholder="Search, ask, or explore visually…" 
+                placeholder="Explore visually…" 
                 className="flex-1 px-5 py-3 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm" 
               />
               <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">

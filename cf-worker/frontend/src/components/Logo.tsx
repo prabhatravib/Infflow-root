@@ -23,8 +23,8 @@ const sizeClasses = {
     container: "gap-3"
   },
   xl: {
-    icon: "w-80 h-80",
-    text: "text-7xl",
+    icon: "w-96 h-96",
+    text: "text-5xl",
     container: "gap-3"
   }
 };
@@ -43,8 +43,7 @@ export default function Logo({
         className="w-full h-full object-contain"
         onLoad={() => console.log('Logo loaded successfully')}
         onError={(e) => {
-          console.log('Logo failed to load, trying PNG fallback');
-          e.currentTarget.src = '/infflow-logo.png';
+          console.error('Logo failed to load:', e);
         }}
       />
     </div>;

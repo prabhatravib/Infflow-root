@@ -227,6 +227,8 @@ export default function App() {
             onSearch={handleSearch}
             isDark={isDark}
             toggleTheme={toggleTheme}
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
           />
         ) : (
           <SearchResults

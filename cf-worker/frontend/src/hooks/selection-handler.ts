@@ -13,6 +13,20 @@ export class SelectionHandler {
     this.clearSelection = clearSelection;
   }
 
+  private scrollToDeepDive() {
+    // Add a small delay to ensure the deep dive panel is rendered
+    setTimeout(() => {
+      const deepDivePanel = document.querySelector('.deep-dive-panel');
+      if (deepDivePanel) {
+        deepDivePanel.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
+  }
+
   setupForContainer(container: HTMLElement) {
     this.currentContainer = container;
     const svg = container.querySelector('svg');
@@ -63,6 +77,7 @@ export class SelectionHandler {
         const text = this.extractNodeText(node);
         if (text) {
           this.selectElement(node, text);
+          this.scrollToDeepDive();
         }
       });
     });
@@ -76,6 +91,7 @@ export class SelectionHandler {
         const text = this.extractEdgeText(label);
         if (text) {
           this.selectElement(label, text);
+          this.scrollToDeepDive();
         }
       });
     });
@@ -121,6 +137,7 @@ export class SelectionHandler {
         candidate.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectElement(candidate, labelText);
+          this.scrollToDeepDive();
         });
 
         // Also make the label text clickable for better UX
@@ -129,6 +146,7 @@ export class SelectionHandler {
           labelElement.addEventListener('click', (e) => {
             e.stopPropagation();
             this.selectElement(labelElement, labelText);
+            this.scrollToDeepDive();
           });
         }
       }
@@ -153,6 +171,7 @@ export class SelectionHandler {
         const text = this.extractNoteText(note);
         if (text) {
           this.selectElement(note, text);
+          this.scrollToDeepDive();
         }
       });
       
@@ -166,6 +185,7 @@ export class SelectionHandler {
             const fullText = this.extractNoteText(note);
             if (fullText) {
               this.selectElement(note, fullText);
+              this.scrollToDeepDive();
             }
           });
         }
@@ -182,6 +202,7 @@ export class SelectionHandler {
           e.stopPropagation();
           const fullBulletContent = this.extractBulletPointContent(tspan, svg);
           this.selectElement(tspan, fullBulletContent);
+          this.scrollToDeepDive();
         });
       }
     });
@@ -196,6 +217,7 @@ export class SelectionHandler {
           e.stopPropagation();
           const fullBulletContent = this.extractBulletPointContent(text, svg);
           this.selectElement(text, fullBulletContent);
+          this.scrollToDeepDive();
         });
       }
     });
@@ -210,6 +232,7 @@ export class SelectionHandler {
           const text = this.extractBlockText(rect, svg);
           if (text) {
             this.selectElement(rect, text);
+            this.scrollToDeepDive();
           }
         });
       }
@@ -225,6 +248,7 @@ export class SelectionHandler {
         text.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectElement(text, text.textContent!.trim());
+          this.scrollToDeepDive();
         });
       }
     });
@@ -238,6 +262,7 @@ export class SelectionHandler {
         group.addEventListener('click', (e) => {
           e.stopPropagation();
           this.selectElement(group, text.textContent!.trim());
+          this.scrollToDeepDive();
         });
       }
     });
