@@ -7,74 +7,22 @@ interface CentralSearchBarProps {
   onSearch: (e: React.FormEvent) => void;
   searchQuery?: string;
   setSearchQuery?: (query: string) => void;
-  containerRef: React.RefObject<HTMLDivElement>;
+  position: { x: number, y: number, width: number, height: number } | null;
 }
 
 const CentralSearchBar: React.FC<CentralSearchBarProps> = ({
   onSearch,
   searchQuery,
   setSearchQuery,
-  containerRef
+  position
 }) => {
-  const [position, setPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
-  const [isVisible, setIsVisible] = useState(false);
-  
   // Debug visibility changes
   useEffect(() => {
-    console.log('🔍 CentralSearchBar visibility changed:', isVisible, 'position:', position);
-  }, [isVisible, position]);
+    console.log('🔍 CentralSearchBar position changed:', position);
+  }, [position]);
 
-  useEffect(() => {
-    const updatePosition = () => {
-      console.log('🔍 CentralSearchBar updatePosition called');
-      if (!containerRef.current) {
-        console.log('❌ No container ref');
-        return;
-      }
-
-      const centralNodePosition = (containerRef.current as any).centralNodePosition;
-      console.log('🎯 Central node position:', !!centralNodePosition);
-      
-      if (centralNodePosition) {
-        const { x, y, width, height } = centralNodePosition;
-        
-        console.log('📐 Using stored central node position:', { x, y, width, height });
-        
-        // Use the stored position from the removed central node
-        setPosition({ x, y, width, height });
-        setIsVisible(true);
-        console.log('✅ Search bar positioned where central node was:', { x, y, width, height });
-      } else {
-        console.log('❌ No central node position found');
-      }
-    };
-
-    // Listen for the custom diagram loaded event - this is the reliable way
-    const handleDiagramLoaded = () => {
-      updatePosition();
-    };
-    
-    if (containerRef.current) {
-      containerRef.current.addEventListener('diagramLoaded', handleDiagramLoaded);
-    }
-    
-    // Also update on window resize
-    window.addEventListener('resize', updatePosition);
-    
-    // Fallback: try once after a short delay in case the event doesn't fire
-    const fallbackTimer = setTimeout(updatePosition, 100);
-    
-    return () => {
-      clearTimeout(fallbackTimer);
-      if (containerRef.current) {
-        containerRef.current.removeEventListener('diagramLoaded', handleDiagramLoaded);
-      }
-      window.removeEventListener('resize', updatePosition);
-    };
-  }, [containerRef]);
-
-  if (!isVisible) {
-    console.log('🔍 CentralSearchBar not visible, position:', position);
+  if (!position) {
+    console.log('🔍 CentralSearchBar not visible, no position');
     return null;
   }
 
@@ -142,12 +90,15 @@ export default function Mermaid({
   const ref = useRef<HTMLDivElement>(null);
   const [isRadialDiagram, setIsRadialDiagram] = useState(false);
   const [isDiagramLoaded, setIsDiagramLoaded] = useState(false);
+  const [centralNodePosition, setCentralNodePosition] = useState<{x: number, y: number, width: number, height: number} | null>(null);
 
   useEffect(() => {
     let mounted = true;
     
     // Reset diagram loaded state when code changes
     setIsDiagramLoaded(false);
+    // Reset central node position when code changes
+    setCentralNodePosition(null);
     
     // Check if this is a radial flowchart using the API response
     // Both 'radial_mindmap' and 'flowchart' can be radial flowcharts
@@ -215,11 +166,12 @@ export default function Mermaid({
           onSetupSelection(ref.current);
         }
         
-        // Add hover effects to all nodes and remove central node for radial flowcharts
-        if (ref.current) {
-          const nodes = ref.current.querySelectorAll('.node, .flowchart .node, .mindmap .node, .radial .node');
-          console.log('🔍 Found nodes:', nodes.length, 'isRadialFlowchart:', isRadialFlowchart);
-          let centralNode: Element | null = null;
+          // Add hover effects to all nodes and remove central node for radial flowcharts
+          if (ref.current) {
+            const nodes = ref.current.querySelectorAll('.node, .flowchart .node, .mindmap .node, .radial .node');
+            console.log('🔍 Found nodes:', nodes.length, 'isRadialFlowchart:', isRadialFlowchart);
+            console.log('🔍 Current centralNodePosition state:', centralNodePosition);
+            let centralNode: Element | null = null;
           
           nodes.forEach((node, index) => {
             const rect = node.querySelector('rect');
@@ -240,6 +192,15 @@ export default function Mermaid({
               }
             }
             
+            // Debug: Log all nodes to understand structure
+            console.log(`Node ${index}:`, {
+              hasRect: !!rect,
+              textContent: text?.textContent?.trim(),
+              nodeId: node.getAttribute('id'),
+              isRadialFlowchart: isRadialFlowchart,
+              isNodeA: node.getAttribute('id')?.includes('A') || false
+            });
+            
             // For radial flowcharts, remove the central node but store its position
             if (isRadialFlowchart && index === 0) {
               console.log('🗑️ Removing central node to replace with search bar');
@@ -256,8 +217,10 @@ export default function Mermaid({
                   const height = nodeRect.height;
                   
                   // Store the original central node position for search bar positioning
-                  (ref.current as any).centralNodePosition = { x, y, width, height };
-                  console.log('📍 Stored central node position:', { x, y, width, height });
+                  const position = { x, y, width, height };
+                  (ref.current as any).centralNodePosition = position;
+                  setCentralNodePosition(position);
+                  console.log('📍 Stored central node position:', position);
                 }
               }
               // Remove the node completely
@@ -295,6 +258,7 @@ export default function Mermaid({
             }
           });
           
+          
           // Trigger search bar positioning for radial flowcharts
           if (isRadialFlowchart) {
             console.log('✅ Central node removed, setting up search bar and adjusting arrows');
@@ -308,7 +272,7 @@ export default function Mermaid({
                   const centerX = x + width / 2;
                   const centerY = y + height / 2;
                   
-                  console.log('🎯 Central node position:', { x, y, width, height, centerX, centerY });
+                  console.log('🎯 Central node A position for arrow adjustment:', { x, y, width, height, centerX, centerY });
                   
                   // Find all arrow paths using multiple selectors
                   const arrowSelectors = [
@@ -451,7 +415,16 @@ export default function Mermaid({
       {/* Central Search Bar Overlay for Radial Flowcharts */}
       {/* Show search bar only for radial flowcharts */}
       {/* Show search bar only for radial flowcharts after they're fully loaded */}
-      {isRadialDiagram && isDiagramLoaded && onCentralSearch && (
+      {(() => {
+        console.log('🔍 Search bar visibility check:', {
+          isRadialDiagram,
+          isDiagramLoaded,
+          hasOnCentralSearch: !!onCentralSearch,
+          centralNodePosition,
+          allConditions: isRadialDiagram && isDiagramLoaded && onCentralSearch && centralNodePosition
+        });
+        return isRadialDiagram && isDiagramLoaded && onCentralSearch && centralNodePosition;
+      })() && (
         <div 
           className="absolute inset-0 pointer-events-none z-50"
           style={{ zIndex: 9999 }}
@@ -460,7 +433,7 @@ export default function Mermaid({
             onSearch={handleCentralSearch}
             searchQuery={centralSearchQuery}
             setSearchQuery={setCentralSearchQuery}
-            containerRef={ref}
+            position={centralNodePosition}
           />
         </div>
       )}
