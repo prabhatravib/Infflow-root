@@ -28,6 +28,14 @@ Follow this exact pattern:
         font-size:16px!important;
         line-height:1.2!important;
         padding:8px!important;
+     }
+     .node[id*='A']{
+        min-width:300px!important;
+        min-height:60px!important;
+     }
+     .node[id*='A'] text{
+        padding:15px 20px!important;
+        text-align:center!important;
      }"
 }%%
 
