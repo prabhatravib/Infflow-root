@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
+import { Search, Mic, Image } from 'lucide-react';
 
 // Central Search Bar Component
 interface CentralSearchBarProps {
@@ -31,41 +32,20 @@ const CentralSearchBar: React.FC<CentralSearchBarProps> = ({
         return;
       }
 
-      const centralNode = (containerRef.current as any).centralNode;
-      console.log('🎯 Central node:', !!centralNode);
+      const centralNodePosition = (containerRef.current as any).centralNodePosition;
+      console.log('🎯 Central node position:', !!centralNodePosition);
       
-      if (centralNode) {
-        const rect = centralNode.querySelector('rect');
-        console.log('📦 Rect found:', !!rect);
+      if (centralNodePosition) {
+        const { x, y, width, height } = centralNodePosition;
         
-        if (rect) {
-          const svg = containerRef.current.querySelector('svg');
-          console.log('🖼️ SVG found:', !!svg);
-          
-          if (svg) {
-            const svgRect = svg.getBoundingClientRect();
-            const nodeRect = rect.getBoundingClientRect();
-            
-            // Calculate position relative to the container
-            const x = nodeRect.left - svgRect.left;
-            const y = nodeRect.top - svgRect.top;
-            const width = nodeRect.width;
-            const height = nodeRect.height;
-            
-            console.log('📐 Position calculated:', { x, y, width, height });
-            
-            // Only show if we have valid dimensions
-            if (width > 0 && height > 0) {
-              setPosition({ x, y, width, height });
-              setIsVisible(true);
-              console.log('✅ Search bar should now be visible with position:', { x, y, width, height });
-            } else {
-              console.log('❌ Invalid dimensions, not showing search bar');
-            }
-          }
-        }
+        console.log('📐 Using stored central node position:', { x, y, width, height });
+        
+        // Use the stored position from the removed central node
+        setPosition({ x, y, width, height });
+        setIsVisible(true);
+        console.log('✅ Search bar positioned where central node was:', { x, y, width, height });
       } else {
-        console.log('❌ No central node found');
+        console.log('❌ No central node position found');
       }
     };
 
@@ -114,21 +94,25 @@ const CentralSearchBar: React.FC<CentralSearchBarProps> = ({
       onMouseUp={(e) => e.stopPropagation()}
     >
       <form onSubmit={onSearch} className="w-full h-full flex items-center justify-center">
-        <div className="flex items-center bg-blue-50 dark:bg-blue-900 rounded-lg border-2 border-blue-300 dark:border-blue-600 shadow-xl hover:shadow-2xl transition-all duration-300 backdrop-blur-sm w-full h-full min-w-[200px]">
+        <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-300 dark:border-gray-600 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 shadow-lg w-full h-full min-w-[300px]">
           <input
             type="text"
             value={searchQuery || ''}
             onChange={(e) => setSearchQuery?.(e.target.value)}
-            placeholder="Search..."
-            className="flex-1 px-3 py-2 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm focus:ring-0"
+            placeholder="Explore visually…"
+            className="flex-1 px-5 py-3 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
           />
+          <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
+            <Mic className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          </button>
+          <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
+            <Image className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          </button>
           <button
             type="submit"
-            className="p-2 mr-1 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2.5 mr-1 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-xl transition-colors"
           >
-            <svg className="w-3 h-3 text-white dark:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search className="w-4 h-4 text-white dark:text-gray-900" />
           </button>
         </div>
       </form>
@@ -184,7 +168,9 @@ export default function Mermaid({
       fontSize: 16, // Normalized font size for all diagrams
       flowchart: {
         useMaxWidth: true,
-        htmlLabels: false
+        htmlLabels: false,
+        curve: 'basis',
+        diagramPadding: 20
       },
       sequence: {
         diagramMarginX: 50,
@@ -229,7 +215,7 @@ export default function Mermaid({
           onSetupSelection(ref.current);
         }
         
-        // Add hover effects to all nodes and find the central node for search bar positioning
+        // Add hover effects to all nodes and remove central node for radial flowcharts
         if (ref.current) {
           const nodes = ref.current.querySelectorAll('.node, .flowchart .node, .mindmap .node, .radial .node');
           console.log('🔍 Found nodes:', nodes.length, 'isRadialFlowchart:', isRadialFlowchart);
@@ -248,11 +234,35 @@ export default function Mermaid({
             // Find the central node - for radial flowcharts, it's always the first node (A)
             if (!centralNode && rect && isRadialFlowchart) {
               // For radial flowcharts, the central node is always the first node (A in the flowchart)
-              // This is the node that should contain the search bar
               if (index === 0) {
                 centralNode = node;
-                console.log('🎯 Central node found at index 0');
+                console.log('🎯 Central node found at index 0 - will be removed');
               }
+            }
+            
+            // For radial flowcharts, remove the central node but store its position
+            if (isRadialFlowchart && index === 0) {
+              console.log('🗑️ Removing central node to replace with search bar');
+              // Store the node's position before removing it
+              const rect = node.querySelector('rect');
+              if (rect && ref.current) {
+                const nodeRect = rect.getBoundingClientRect();
+                const svg = ref.current.querySelector('svg');
+                if (svg) {
+                  const svgRect = svg.getBoundingClientRect();
+                  const x = nodeRect.left - svgRect.left;
+                  const y = nodeRect.top - svgRect.top;
+                  const width = nodeRect.width;
+                  const height = nodeRect.height;
+                  
+                  // Store the original central node position for search bar positioning
+                  (ref.current as any).centralNodePosition = { x, y, width, height };
+                  console.log('📍 Stored central node position:', { x, y, width, height });
+                }
+              }
+              // Remove the node completely
+              node.remove();
+              return;
             }
             
             if (rect) {
@@ -285,18 +295,132 @@ export default function Mermaid({
             }
           });
           
-          // Store central node reference for positioning and hide its text
-          if (centralNode && isRadialFlowchart) {
-            console.log('✅ Setting up central node for search bar');
-            (ref.current as any).centralNode = centralNode;
-            // Hide the text of the central node since we'll overlay the search bar
-            const text = (centralNode as Element).querySelector('text');
-            if (text) {
-              (text as SVGTextElement).style.visibility = 'hidden';
-              console.log('👁️ Hidden central node text');
-            }
+          // Trigger search bar positioning for radial flowcharts
+          if (isRadialFlowchart) {
+            console.log('✅ Central node removed, setting up search bar and adjusting arrows');
             
-            // Now that we have the central node, trigger the search bar positioning
+            // Adjust arrow endpoints using coordinate system approach
+            setTimeout(() => {
+              if (ref.current) {
+                const centralNodePosition = (ref.current as any).centralNodePosition;
+                if (centralNodePosition) {
+                  const { x, y, width, height } = centralNodePosition;
+                  const centerX = x + width / 2;
+                  const centerY = y + height / 2;
+                  
+                  console.log('🎯 Central node position:', { x, y, width, height, centerX, centerY });
+                  
+                  // Find all arrow paths using multiple selectors
+                  const arrowSelectors = [
+                    'path[id*="flowchart"]',
+                    'path[class*="flowchart"]', 
+                    'path[class*="edge"]',
+                    'path[class*="arrow"]',
+                    '.flowchart .edge path',
+                    '.mindmap .edge path'
+                  ];
+                  
+                  let paths: NodeListOf<SVGPathElement> | null = null;
+                  for (const selector of arrowSelectors) {
+                    paths = ref.current.querySelectorAll(selector);
+                    if (paths.length > 0) {
+                      console.log(`🔗 Found ${paths.length} arrow paths with selector: ${selector}`);
+                      break;
+                    }
+                  }
+                  
+                  if (paths && paths.length > 0) {
+                    paths.forEach((path, index) => {
+                      try {
+                        // Get the path's bounding box to find current endpoints
+                        const bbox = path.getBBox();
+                        const pathRect = path.getBoundingClientRect();
+                        const svg = ref.current!.querySelector('svg');
+                        
+                        if (svg) {
+                          const svgRect = svg.getBoundingClientRect();
+                          
+                          // Convert to SVG coordinates
+                          const pathX = pathRect.left - svgRect.left;
+                          const pathY = pathRect.top - svgRect.top;
+                          
+                          // Check if this arrow is pointing towards the center area
+                          const distanceToCenter = Math.sqrt(
+                            Math.pow((pathX + bbox.width) - centerX, 2) + 
+                            Math.pow((pathY + bbox.height) - centerY, 2)
+                          );
+                          
+                          // Only adjust arrows that are close to the center (within 100px)
+                          if (distanceToCenter < 100) {
+                            console.log(`🎯 Adjusting arrow ${index}, distance to center: ${distanceToCenter}`);
+                            
+                            // Get the path data to modify only the endpoint
+                            const pathData = path.getAttribute('d');
+                            if (pathData) {
+                              // Parse the path to find coordinates
+                              const commands = pathData.match(/[MLCQ][^MLCQ]*/g) || [];
+                              if (commands.length > 0) {
+                                // Find the last command (which should be the endpoint)
+                                const lastCommand = commands[commands.length - 1];
+                                const coords = lastCommand.match(/-?\d+\.?\d*/g);
+                                
+                                if (coords && coords.length >= 2) {
+                                  const currentEndX = parseFloat(coords[coords.length - 2]);
+                                  const currentEndY = parseFloat(coords[coords.length - 1]);
+                                  
+                                  // Check if this endpoint is close to the center (was connected to central node)
+                                  const distanceToCenter = Math.sqrt(
+                                    Math.pow(currentEndX - centerX, 2) + 
+                                    Math.pow(currentEndY - centerY, 2)
+                                  );
+                                  
+                                  if (distanceToCenter < 50) { // Only modify if close to center
+                                    // Calculate new endpoint on search bar border
+                                    const deltaX = centerX - currentEndX;
+                                    const deltaY = centerY - currentEndY;
+                                    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                                    
+                                    if (distance > 0) {
+                                      // Calculate intersection with search bar border
+                                      const borderRadius = Math.min(width, height) / 2 + 10; // 10px padding
+                                      const ratio = (distance - borderRadius) / distance;
+                                      
+                                      const newEndX = currentEndX + deltaX * ratio;
+                                      const newEndY = currentEndY + deltaY * ratio;
+                                      
+                                      // Update only the last coordinates in the path
+                                      const newCoords = [...coords];
+                                      newCoords[newCoords.length - 2] = newEndX.toString();
+                                      newCoords[newCoords.length - 1] = newEndY.toString();
+                                      
+                                      // Reconstruct the last command with new coordinates
+                                      const commandType = lastCommand[0];
+                                      const newLastCommand = commandType + newCoords.join(',');
+                                      
+                                      // Update the path data
+                                      const newPathData = [...commands];
+                                      newPathData[newPathData.length - 1] = newLastCommand;
+                                      path.setAttribute('d', newPathData.join(' '));
+                                      
+                                      console.log(`✅ Arrow ${index} endpoint moved from (${currentEndX}, ${currentEndY}) to (${newEndX}, ${newEndY})`);
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      } catch (error) {
+                        console.log(`❌ Error adjusting arrow ${index}:`, error);
+                      }
+                    });
+                  } else {
+                    console.log('❌ No arrow paths found');
+                  }
+                }
+              }
+            }, 200);
+            
             requestAnimationFrame(() => {
               if (ref.current) {
                 console.log('🚀 Triggering diagramLoaded event');
@@ -305,7 +429,7 @@ export default function Mermaid({
               }
             });
           } else {
-            console.log('❌ No central node found or not a radial flowchart', { centralNode: !!centralNode, isRadialFlowchart });
+            console.log('❌ Not a radial flowchart, no search bar needed');
           }
         }
       } catch (e) {
