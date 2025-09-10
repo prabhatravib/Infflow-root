@@ -153,7 +153,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               <iframe
                 ref={iframeRef}
                 src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-                width="320"
+                width="300"
                 height="320"
                 style={{
                   border: 'none',
