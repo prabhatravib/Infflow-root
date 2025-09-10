@@ -68,13 +68,20 @@ export class SelectionHandler {
   }
 
   private setupFlowchartSelection(svg: SVGElement) {
-    // Nodes
+    // Nodes - exclude the central node (first node) from selection
     const nodes = svg.querySelectorAll('g.node, .node');
-    nodes.forEach(node => {
+    nodes.forEach((node, index) => {
+      // Skip the central node (index 0) as it has the search bar overlay
+      if (index === 0) {
+        console.log('🚫 Skipping central node from selection to preserve search bar');
+        return;
+      }
+      
       (node as HTMLElement).style.cursor = 'pointer';
       node.addEventListener('click', (e) => {
         e.stopPropagation();
         const text = this.extractNodeText(node);
+        console.log('🖱️ Node clicked:', text);
         if (text) {
           this.selectElement(node, text);
           this.scrollToDeepDive();
@@ -366,7 +373,8 @@ export class SelectionHandler {
   private extractBlockText(rect: Element, svg: SVGElement): string {
     const bbox = (rect as SVGRectElement).getBBox();
     
-    const texts = Array.from(svg.querySelectorAll('text')).filter(text => {
+    // Find the main text element that contains the node text
+    const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
       const textBox = (text as SVGTextElement).getBBox();
       return (
         textBox.x >= bbox.x - 5 &&
@@ -376,10 +384,49 @@ export class SelectionHandler {
       );
     });
     
-    const text = texts
+    if (textElements.length === 0) {
+      return '';
+    }
+    
+    // If there's only one text element, get its full content
+    if (textElements.length === 1) {
+      const textElement = textElements[0];
+      // Get the full text content including all child tspan elements
+      const fullText = textElement.textContent || '';
+      return this.cleanTextContent(fullText);
+    }
+    
+    // If there are multiple text elements, try to find the parent text element
+    // that contains all the text for this node
+    const parentText = textElements.find(text => {
+      // Look for a text element that contains other text elements as children
+      return text.querySelector('tspan') !== null;
+    });
+    
+    if (parentText) {
+      // Get the full text content from the parent element
+      const fullText = parentText.textContent || '';
+      return this.cleanTextContent(fullText);
+    }
+    
+    // Fallback: sort and join the text elements
+    const sortedTexts = textElements.sort((a, b) => {
+      const aBox = (a as SVGTextElement).getBBox();
+      const bBox = (b as SVGTextElement).getBBox();
+      
+      // First sort by Y position (top to bottom)
+      if (Math.abs(aBox.y - bBox.y) > 5) {
+        return aBox.y - bBox.y;
+      }
+      // Then sort by X position (left to right)
+      return aBox.x - bBox.x;
+    });
+    
+    const text = sortedTexts
       .map(t => t.textContent || '')
       .filter(Boolean)
       .join(' ');
+    
     return this.cleanTextContent(text);
   }
 

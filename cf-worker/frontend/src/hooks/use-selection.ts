@@ -48,21 +48,23 @@ export function useSelection() {
   }, []);
 
   const selectElement = useCallback((element: Element, text: string) => {
-    // Clear previous selection
-    if (selection.selectedElement) {
-      removeSelectionStyling(selection.selectedElement);
-    }
+    setSelection(prevSelection => {
+      // Clear previous selection
+      if (prevSelection.selectedElement) {
+        removeSelectionStyling(prevSelection.selectedElement);
+      }
 
-    // Apply selection styling
-    applySelectionStyling(element);
+      // Apply selection styling
+      applySelectionStyling(element);
 
-    // Update state
-    setSelection({
-      selectedElement: element,
-      selectedText: text,
-      hasSelection: true,
+      // Update state
+      return {
+        selectedElement: element,
+        selectedText: text,
+        hasSelection: true,
+      };
     });
-  }, [selection.selectedElement]);
+  }, []); // Remove dependency on selection.selectedElement to make it stable
 
   const setupSelectionHandler = useCallback((container: HTMLElement) => {
     if (selectionHandlerRef.current) {

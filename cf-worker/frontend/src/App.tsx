@@ -15,7 +15,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
   const [CodeFlowStatus, setCodeFlowStatus] = useState<'sent' | 'not-sent'>('not-sent');
-  const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string} | null>(null);
+  const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   // Selection and deep dive functionality
   const {
@@ -56,7 +56,8 @@ export default function App() {
         const newDiagramData = {
           mermaidCode: res.diagram,
           diagramImage: res.diagram, // For now, using the same value
-          prompt: query
+          prompt: query,
+          diagramType: res.diagram_type
         };
         setDiagramData(newDiagramData);
         
@@ -209,7 +210,10 @@ export default function App() {
   // Handle click outside to close deep dive
   const handlePageClick = (e: React.MouseEvent) => {
     // Only close if there's an active selection and we're not clicking on the deep dive panel itself
-    if (selection.hasSelection && !(e.target as Element).closest('.deep-dive-panel')) {
+    // Also exclude the central search bar from closing the selection
+    if (selection.hasSelection && 
+        !(e.target as Element).closest('.deep-dive-panel') &&
+        !(e.target as Element).closest('[data-central-search-bar]')) {
       clearSelection();
     }
   };

@@ -132,7 +132,7 @@ export function DeepDive({
         <div className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Deep Dive ({selectedText.length > 50 ? `${selectedText.substring(0, 50)}...` : selectedText})
+            Deep Dive ({selectedText.length > 50 ? `${selectedText.substring(0, 50).replace(/\s+\S*$/, '')}...` : selectedText})
           </h3>
         </div>
         <button

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
@@ -19,7 +19,7 @@ interface SearchResultsProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
   diagram: string | null;
-  diagramData: {mermaidCode: string; diagramImage: string; prompt: string} | null;
+  diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null;
   contentData: {content: string; description: string; universal_content: string} | null;
   codeFlowStatus: 'sent' | 'not-sent';
   selection: {
@@ -67,6 +67,13 @@ export default function SearchResults({
   handleSavePNG
 }: SearchResultsProps) {
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
+  const [centralSearchQuery, setCentralSearchQuery] = useState(searchQuery);
+  
+  // Update central search query when search query changes
+  useEffect(() => {
+    setCentralSearchQuery(searchQuery);
+  }, [searchQuery]);
+  
   return (
     <motion.div 
       key="search"
@@ -138,6 +145,10 @@ export default function SearchResults({
                           <Mermaid 
                             code={diagram} 
                             onSetupSelection={setupSelectionHandler}
+                            onCentralSearch={onSearch}
+                            centralSearchQuery={centralSearchQuery}
+                            setCentralSearchQuery={setCentralSearchQuery}
+                            diagramType={diagramData?.diagramType}
                           />
                         </div>
                         {/* Save PNG Button - positioned on the right side */}
