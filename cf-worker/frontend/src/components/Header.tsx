@@ -42,12 +42,12 @@ export const Header = ({
               <Logo size={showResults ? "sm" : "md"} variant="full" isDark={isDark} />
             </button>
             
-            {/* Visual/Text tabs - only show on results page */}
+            {/* Visual/Text tabs - beside Infflow logo, above chart section, double horizontal length */}
             {showResults && diagramViewTab && setDiagramViewTab && (
-              <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 ml-6">
+              <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 ml-6 w-[1200px]">
                 <button
                   onClick={() => setDiagramViewTab('visual')}
-                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 px-48 text-sm font-medium rounded-md transition-colors ${
                     diagramViewTab === 'visual'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -57,7 +57,7 @@ export const Header = ({
                 </button>
                 <button
                   onClick={() => setDiagramViewTab('text')}
-                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 px-48 text-sm font-medium rounded-md transition-colors ${
                     diagramViewTab === 'text'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
