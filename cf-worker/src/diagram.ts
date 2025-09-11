@@ -96,7 +96,12 @@ Content details:
 ${contentDescription}`;
   } else { // radial_mindmap
     userMessage = `Create a radial Mermaid mind-map from this content:
-${contentDescription}`;
+${contentDescription}
+
+IMPORTANT: The central node A must contain exactly this text: "${originalQuery}"
+Use the format: A("${originalQuery}")
+
+Make sure the central node A is visible and contains the exact query text.`;
   }
   
   console.log(`🟡 [${timer.getRequestId()}] User message for diagram generation: ${userMessage.substring(0, 300)}...`);

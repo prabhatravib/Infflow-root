@@ -40,7 +40,7 @@ Follow this exact pattern:
 }%%
 
 flowchart TD
-    A(Topic Name)
+    A("User's Search Query")
 
     B("First fact<br>with line break")
     C("Second fact<br>with line break")
@@ -61,7 +61,9 @@ flowchart TD
 \`\`\`
 
 Rules:
-- Use \`A(Topic)\` for the main topic
+- Use \`A("Exact Query Text")\` for the main topic - this MUST be the exact user's search query/input
+- The central node A must always be visible and contain the exact query text provided
+- Replace "User's Search Query" in the template with the actual user's query text
 - For abbreviations with explanations, use dashes instead of parentheses: \`A(RAM - Random Access Memory)\` not \`A(RAM(Random Access Memory))\`
 - For A GENERIC NODE B(Node description), the node description should not have '(' or ')' at all in the node description for any reason. The parantheses is strictly resrved for the node definition.
 - To achieve radial distribution: Write the first 2-3 connections with fact nodes first (FactNode <==> CenterNode), then write the remaining connections with the center node first (CenterNode <==> FactNode)
