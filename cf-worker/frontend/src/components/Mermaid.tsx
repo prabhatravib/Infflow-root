@@ -160,12 +160,15 @@ export default function Mermaid({
   useEffect(() => {
     let mounted = true;
     
-  // Reset ALL state when code changes - no persistence between searches
+  // Reset state when code changes
   setIsDiagramLoaded(false);
-  setCentralNodePosition(null);
-  // Clear any cached position from previous searches
-  if (ref.current) {
-    (ref.current as any).centralNodePosition = null;
+  // For radial diagrams, NEVER reset the position - it's always the same
+  // Only reset position for non-radial diagrams
+  if (diagramType !== 'radial_mindmap' && diagramType !== 'flowchart') {
+    setCentralNodePosition(null);
+    if (ref.current) {
+      (ref.current as any).centralNodePosition = null;
+    }
   }
     
     // Recompute position on resize/scroll to keep search bar visible while editing
@@ -233,21 +236,23 @@ export default function Mermaid({
         const { svg } = await mermaid.render(`m_${Date.now()}`, code);
         ref.current.innerHTML = svg;
 
-        // Compute position SYNCHRONOUSLY after DOM is painted
-        // No async operations - position must be available immediately
-        const position = computeCentralNodePosition();
-        console.log('🔍 Computed central node position:', position);
-        
-        // For radial flowcharts, always hide central node visuals - search bar overlay must work
+        // For radial flowcharts, compute position only if we don't have one
         if (isRadialFlowchart) {
           console.log('🔍 Hiding central node visuals for search bar overlay');
           hideCentralNodeVisuals(null);
           
-          // Verify search bar will be visible - if not, this is a hard failure
-          if (!position || !onCentralSearch) {
-            console.error('❌ HARD FAILURE: Search bar overlay cannot be displayed');
-            console.error('Position:', position, 'onCentralSearch:', !!onCentralSearch);
-            throw new Error('Search bar overlay failed to initialize - position computation failed');
+          // Only compute position if we don't already have one
+          if (!centralNodePosition) {
+            const position = computeCentralNodePosition();
+            console.log('🔍 Computed central node position:', position);
+            
+            if (!position || !onCentralSearch) {
+              console.error('❌ HARD FAILURE: Search bar overlay cannot be displayed');
+              console.error('Position:', position, 'onCentralSearch:', !!onCentralSearch);
+              throw new Error('Search bar overlay failed to initialize - position computation failed');
+            }
+          } else {
+            console.log('🔍 Using existing position for radial diagram:', centralNodePosition);
           }
         }
         

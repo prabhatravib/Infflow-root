@@ -44,10 +44,10 @@ export const Header = ({
             
             {/* Visual/Text tabs - only show on results page */}
             {showResults && diagramViewTab && setDiagramViewTab && (
-              <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 ml-4">
+              <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 ml-6">
                 <button
                   onClick={() => setDiagramViewTab('visual')}
-                  className={`py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
                     diagramViewTab === 'visual'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -57,7 +57,7 @@ export const Header = ({
                 </button>
                 <button
                   onClick={() => setDiagramViewTab('text')}
-                  className={`py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                  className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
                     diagramViewTab === 'text'
                       ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
