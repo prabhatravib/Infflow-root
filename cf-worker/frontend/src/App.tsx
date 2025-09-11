@@ -17,6 +17,7 @@ export default function App() {
   const [CodeFlowStatus, setCodeFlowStatus] = useState<'sent' | 'not-sent'>('not-sent');
   const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
+  const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
   // Selection and deep dive functionality
   const {
     selection,
@@ -79,6 +80,7 @@ export default function App() {
     setDiagramData(null);
     setContentData(null);
     setCodeFlowStatus('not-sent');
+    setDiagramViewTab('visual');
     clearSelection();
   };
 
@@ -271,6 +273,8 @@ export default function App() {
             clearSelection={clearSelection}
             handleSaveText={handleSaveText}
             handleSavePNG={handleSavePNG}
+            diagramViewTab={diagramViewTab}
+            setDiagramViewTab={setDiagramViewTab}
           />
         )}
           </AnimatePresence>

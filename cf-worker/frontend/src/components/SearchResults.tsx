@@ -41,6 +41,8 @@ interface SearchResultsProps {
   clearSelection: () => void;
   handleSaveText: () => void;
   handleSavePNG: () => void;
+  diagramViewTab: 'visual' | 'text';
+  setDiagramViewTab: (tab: 'visual' | 'text') => void;
 }
 
 export default function SearchResults({
@@ -64,9 +66,10 @@ export default function SearchResults({
   handleDeepDiveAsk,
   clearSelection,
   handleSaveText,
-  handleSavePNG
+  handleSavePNG,
+  diagramViewTab,
+  setDiagramViewTab
 }: SearchResultsProps) {
-  const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
   const [centralSearchQuery, setCentralSearchQuery] = useState(searchQuery);
   
   // Update central search query when search query changes
@@ -93,6 +96,8 @@ export default function SearchResults({
         setSidebarOpen={setSidebarOpen}
         showResults={true}
         onBackToHome={onBackToHome}
+        diagramViewTab={diagramViewTab}
+        setDiagramViewTab={setDiagramViewTab}
       />
       
       <div className="flex">
@@ -113,30 +118,6 @@ export default function SearchResults({
               {/* Diagram Container */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6">
                 <div className="space-y-2">
-                  {/* Sub-tabs for diagram panel */}
-                  <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
-                    <button
-                      onClick={() => setDiagramViewTab('visual')}
-                      className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-                        diagramViewTab === 'visual'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      Visual
-                    </button>
-                    <button
-                      onClick={() => setDiagramViewTab('text')}
-                      className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-                        diagramViewTab === 'text'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      Text
-                    </button>
-                  </div>
-
                   {/* Content based on selected tab */}
                   {diagramViewTab === 'visual' ? (
                     diagram ? (
