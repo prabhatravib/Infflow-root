@@ -7,6 +7,7 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
+import { injectSearchBarIntoNodeA } from '../utils/svg-inject-search';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -74,6 +75,7 @@ export default function SearchResults({
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
+  const radialEnabled = diagramData?.diagramType === "radial_mindmap";
 
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
@@ -131,18 +133,33 @@ export default function SearchResults({
                               // Update the SVG ref for the overlay
                               (svgRef as any).current = svgElement;
                               console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
+
+                              // Inject search bar directly into SVG (replace node A visuals)
+                              if (radialEnabled && svgElement) {
+                                try {
+                                  injectSearchBarIntoNodeA(svgElement, {
+                                    defaultValue: searchQuery,
+                                    onSubmit: onSearch,
+                                  });
+                                } catch (e) {
+                                  console.warn('injectSearchBarIntoNodeA failed:', e);
+                                }
+                              }
                             }}
                             onSetupSelection={(container) => {
                               setupSelectionHandler(container);
                             }}
                           />
-                          <RadialSearchOverlay
-                            enabled={diagramData?.diagramType === "radial_mindmap"}
-                            svgRef={svgRef}
-                            hostRef={hostRef}
-                            lastQuery={searchQuery}
-                            onSubmit={onSearch}
-                          />
+                          {/* Overlay disabled when SVG injection is active */}
+                          {false && (
+                            <RadialSearchOverlay
+                              enabled={radialEnabled}
+                              svgRef={svgRef}
+                              hostRef={hostRef}
+                              lastQuery={searchQuery}
+                              onSubmit={onSearch}
+                            />
+                          )}
                         </div>
                         {/* Save PNG Button - positioned on the right side */}
                         <div className="absolute bottom-2 right-2">

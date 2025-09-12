@@ -111,6 +111,9 @@ async function svgToBlob(
   quality: number
 ): Promise<Blob> {
   const clone = svg.cloneNode(true) as SVGElement;
+  // Remove any elements flagged not to export (e.g., overlays or foreignObject search bar)
+  clone.querySelectorAll('[data-export-exclude]')
+    .forEach(el => el.parentElement?.removeChild(el));
   const viewBox = (clone.getAttribute('viewBox') || '').split(' ').map(Number);
   let width, height;
 
