@@ -88,26 +88,30 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   const container = doc.createElementNS(XHTML_NS, 'div');
   container.setAttribute('xmlns', XHTML_NS);
   container.setAttribute('class', 'mermaid-search-bar');
-
-  // Structure: form + input + button (simple, no external icons)
-  const form = doc.createElementNS(XHTML_NS, 'form');
-  form.setAttribute('class', 'msb-form');
+  // Structure: wrapper div + input + button (avoid <form> to prevent navigation)
+  const formLike = doc.createElementNS(XHTML_NS, 'div');
+  formLike.setAttribute('class', 'msb-form');
 
   const input = doc.createElementNS(XHTML_NS, 'input');
   input.setAttribute('type', 'text');
   input.setAttribute('class', 'msb-input');
   input.setAttribute('placeholder', 'Explore visually…');
-  if (opts.defaultValue) input.setAttribute('value', opts.defaultValue);
+  input.setAttribute('autocomplete', 'off');
+  if (opts.defaultValue) {
+    // Set both attribute and property to ensure visible value and programmatic value match
+    input.setAttribute('value', opts.defaultValue);
+    try { (input as HTMLInputElement).value = opts.defaultValue; } catch {}
+  }
 
   const button = doc.createElementNS(XHTML_NS, 'button');
   // Use explicit button type to avoid native form navigation
   button.setAttribute('type', 'button');
   button.setAttribute('class', 'msb-button');
   button.textContent = 'Search';
-
-  form.appendChild(input);
-  form.appendChild(button);
-  container.appendChild(form);
+  
+  formLike.appendChild(input);
+  formLike.appendChild(button);
+  container.appendChild(formLike);
   fo.appendChild(container);
 
   const triggerSubmit = () => {
@@ -120,13 +124,12 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
       }
     }
   };
-  // Prevent default navigation and bubbling on submit
-  form.addEventListener('submit', (e) => {
+  // Hard-stop any accidental submit-like behaviors
+  container.addEventListener('submit', (e: any) => {
     e.preventDefault();
     e.stopPropagation();
-    triggerSubmit();
-  });
-  // Also intercept Enter key directly on the input
+  }, true);
+  // Intercept Enter key directly on the input
   input.addEventListener('keydown', (e: any) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -134,16 +137,45 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
       triggerSubmit();
     }
   });
-  // On value change, bubble to app state for sync
-  input.addEventListener('input', (e: any) => {
+  input.addEventListener('keypress', (e: any) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+  // Unified change handler across multiple events (input/change/keyup)
+  const handleValueChange = (src?: any) => {
     try {
+      const current = (input as HTMLInputElement).value || '';
+      // Debug: surface event path and value for diagnosis
+      try { console.debug('[central-search] value changed:', current, 'src:', src?.type); } catch {}
+
       if (opts.onChange) {
-        opts.onChange((e.target as HTMLInputElement).value || '');
+        try { opts.onChange(current); } catch (e) { console.error('onChange failed', e); }
+      }
+      // Also mirror into the URL immediately so the address bar updates live
+      try {
+        const url = new URL(window.location.href);
+        if (current) url.searchParams.set('q', current); else url.searchParams.delete('q');
+        // Do NOT force path during typing; only update query params
+        window.history.replaceState(null, '', url.toString());
+      } catch (uerr) {
+        // ignore
       }
     } catch (err) {
       console.error('Search change handler failed:', err);
     }
+  };
+
+  // On value change, bubble to app state for sync
+  input.addEventListener('input', (e: any) => handleValueChange(e));
+  input.addEventListener('change', (e: any) => handleValueChange(e));
+  input.addEventListener('keyup', (e: any) => {
+    // ensure we read post-key value
+    if (!e || e.key !== 'Enter') handleValueChange(e);
   });
+  // Capture at container level as a safety net (some browsers retarget events inside foreignObject)
+  container.addEventListener('input', (e: any) => handleValueChange(e), true);
   // And intercept button clicks
   button.addEventListener('click', (e: any) => {
     e.preventDefault();
@@ -172,5 +204,42 @@ export function injectSearchBarIntoNodeA(svg: SVGSVGElement, opts: InjectOptions
 
   const fo = buildSearchFO(svg.ownerDocument || document, box, opts);
   nodeA.appendChild(fo);
+}
+
+/**
+ * Ensure the search bar exists; if present, just sync its value and callbacks
+ * without tearing it down (prevents event loss while typing).
+ */
+export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions = {}) {
+  if (!svg) return;
+  const nodeA = findNodeA(svg);
+  if (!nodeA) return;
+
+  const existing = nodeA.querySelector('foreignObject[data-search-bar]');
+  if (!existing) {
+    // Not present — inject fresh
+    const box = getNodeBox(nodeA);
+    const fo = buildSearchFO(svg.ownerDocument || document, box, opts);
+    nodeA.appendChild(fo);
+    return;
+  }
+
+  // Already present — sync the input value
+  try {
+    const input = existing.querySelector('input.msb-input') as HTMLInputElement | null;
+    if (input && typeof opts.defaultValue === 'string') {
+      if (input.value !== opts.defaultValue) {
+        input.value = opts.defaultValue;
+        // Also reflect into URL via same logic
+        try {
+          const url = new URL(window.location.href);
+          if (opts.defaultValue) url.searchParams.set('q', opts.defaultValue); else url.searchParams.delete('q');
+          window.history.replaceState(null, '', url.toString());
+        } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('ensureSearchBarInNodeA: failed to sync value', e);
+  }
 }
 

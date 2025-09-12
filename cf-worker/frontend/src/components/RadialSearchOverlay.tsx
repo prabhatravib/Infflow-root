@@ -7,9 +7,10 @@ type Props = {
   hostRef: React.RefObject<HTMLElement>; // the positioned wrapper around the SVG
   lastQuery: string;
   onSubmit: (q: string) => void;    // same handler as normal search
+  onChange?: (q: string) => void;   // keep URL/state in sync while typing
 };
 
-export default function RadialSearchOverlay({ enabled, svgRef, hostRef, lastQuery, onSubmit }: Props) {
+export default function RadialSearchOverlay({ enabled, svgRef, hostRef, lastQuery, onSubmit, onChange }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
   const [barWidth, setBarWidth] = useState<number>(360);
 
@@ -210,7 +211,8 @@ export default function RadialSearchOverlay({ enabled, svgRef, hostRef, lastQuer
       <SearchBar
         size="compact"
         width={barWidth}
-        defaultValue={lastQuery}
+        value={lastQuery}
+        onChange={(q) => onChange?.(q)}
         onSubmit={onSubmit}
         autoFocus={false}
       />

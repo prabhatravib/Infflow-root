@@ -7,7 +7,7 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
-import { injectSearchBarIntoNodeA } from '../utils/svg-inject-search';
+import { injectSearchBarIntoNodeA, ensureSearchBarInNodeA } from '../utils/svg-inject-search';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -255,9 +255,39 @@ function useSyncInjectedSearch(
     const svg = svgRef.current;
     if (!svg) return;
     try {
-      injectSearchBarIntoNodeA(svg, { defaultValue: searchQuery, onSubmit, onChange });
+      // Do not tear down/recreate — just ensure and sync value
+      ensureSearchBarInNodeA(svg, { defaultValue: searchQuery, onSubmit, onChange });
     } catch (e) {
       console.warn('injectSearchBarIntoNodeA sync failed:', e);
     }
   }, [enabled, searchQuery, svgRef.current]);
+
+  // As a safety net, poll the injected input value and reflect it into state/URL
+  // in case native events inside foreignObject misbehave in some browsers.
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    let lastSent = searchQuery;
+    const tick = () => {
+      if (cancelled) return;
+      const svg = svgRef.current;
+      if (!svg) return;
+      try {
+        const input = svg.querySelector('foreignObject[data-search-bar] input.msb-input') as HTMLInputElement | null;
+        if (!input) return;
+        const val = input.value || '';
+        if (val !== lastSent) {
+          lastSent = val;
+          try { onChange(val); } catch {}
+          try {
+            const url = new URL(window.location.href);
+            if (val) url.searchParams.set('q', val); else url.searchParams.delete('q');
+            window.history.replaceState(null, '', url.toString());
+          } catch {}
+        }
+      } catch {}
+    };
+    const id = window.setInterval(tick, 200);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [enabled, svgRef.current]);
 }

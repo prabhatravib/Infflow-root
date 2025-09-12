@@ -38,7 +38,7 @@ export default function App() {
     // Ensure UI state mirrors the first successful search every time
     const cleaned = query.trim();
     setSearchQuery(cleaned);
-    // Push route to /search with query when requested
+    // Ensure URL reflects the query. Also update when already on /search.
     if (options.navigate !== false) {
       const params = new URLSearchParams(location.search);
       params.set('q', cleaned);
