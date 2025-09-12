@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
@@ -80,6 +80,9 @@ export default function SearchResults({
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
   
+  // Keep SVG-injected search value synced with shared query
+  useSyncInjectedSearch(svgRef, radialEnabled, searchQuery, onSearch, setSearchQuery);
+  
   return (
     <motion.div 
       key="search"
@@ -140,6 +143,7 @@ export default function SearchResults({
                                   injectSearchBarIntoNodeA(svgElement, {
                                     defaultValue: searchQuery,
                                     onSubmit: onSearch,
+                                    onChange: setSearchQuery,
                                   });
                                 } catch (e) {
                                   console.warn('injectSearchBarIntoNodeA failed:', e);
@@ -234,4 +238,26 @@ export default function SearchResults({
       <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} position="bottom" />
     </motion.div>
   );
+}
+
+// Keep the injected search input in sync when `searchQuery` changes (e.g., user types in header)
+// by re-injecting the input with the updated defaultValue
+// Note: kept inside this file to avoid over-abstracting
+function useSyncInjectedSearch(
+  svgRef: React.RefObject<SVGSVGElement>,
+  enabled: boolean,
+  searchQuery: string,
+  onSubmit: (q: string) => void,
+  onChange: (q: string) => void,
+) {
+  useEffect(() => {
+    if (!enabled) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    try {
+      injectSearchBarIntoNodeA(svg, { defaultValue: searchQuery, onSubmit, onChange });
+    } catch (e) {
+      console.warn('injectSearchBarIntoNodeA sync failed:', e);
+    }
+  }, [enabled, searchQuery, svgRef.current]);
 }

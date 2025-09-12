@@ -9,6 +9,8 @@ export type InjectOptions = {
   defaultValue?: string;
   /** Called when user submits (press Enter or clicks button) */
   onSubmit?: (query: string) => void;
+  /** Called on each input change (for URL/state sync) */
+  onChange?: (query: string) => void;
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -130,6 +132,16 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
       e.preventDefault();
       e.stopPropagation();
       triggerSubmit();
+    }
+  });
+  // On value change, bubble to app state for sync
+  input.addEventListener('input', (e: any) => {
+    try {
+      if (opts.onChange) {
+        opts.onChange((e.target as HTMLInputElement).value || '');
+      }
+    } catch (err) {
+      console.error('Search change handler failed:', err);
     }
   });
   // And intercept button clicks

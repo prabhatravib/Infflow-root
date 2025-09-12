@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
 import { useSelection } from './hooks/use-selection';
 import { describe, callDeepDiveApi } from './lib/api';
 import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 // @component: InfflowApp
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [currentTab, setCurrentTab] = useState('Web');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showResults, setShowResults] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
@@ -18,6 +22,8 @@ export default function App() {
   const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
+  const debouncedTimer = useRef<number | null>(null);
+  const lastInitialSearchDone = useRef(false);
   // Selection and deep dive functionality
   const {
     selection,
@@ -27,12 +33,17 @@ export default function App() {
     askDeepDive,
   } = useSelection();
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
     if (!query.trim()) return;
     // Ensure UI state mirrors the first successful search every time
     const cleaned = query.trim();
     setSearchQuery(cleaned);
-    setShowResults(true);
+    // Push route to /search with query when requested
+    if (options.navigate !== false) {
+      const params = new URLSearchParams(location.search);
+      params.set('q', cleaned);
+      navigate(`/search?${params.toString()}`, { replace: false });
+    }
     clearSelection();
     setCodeFlowStatus('not-sent');
     setDiagramViewTab('visual');
@@ -79,7 +90,7 @@ export default function App() {
   };
 
   const handleBackToHome = () => {
-    setShowResults(false);
+    navigate('/visual', { replace: false });
     setSearchQuery('');
     setDiagram(null);
     setDiagramData(null);
@@ -88,6 +99,41 @@ export default function App() {
     setDiagramViewTab('visual');
     clearSelection();
   };
+
+  // Keep searchQuery in sync with URL `q` (initialize and on back/forward)
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    setSearchQuery(q);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
+  // Debounce writing `searchQuery` back to URL while typing
+  useEffect(() => {
+    // Only replace the URL; avoid stacking history entries while typing
+    if (debouncedTimer.current) window.clearTimeout(debouncedTimer.current);
+    debouncedTimer.current = window.setTimeout(() => {
+      const q = searchParams.get('q') || '';
+      if (searchQuery !== q) {
+        const params = new URLSearchParams(searchParams);
+        if (searchQuery) params.set('q', searchQuery); else params.delete('q');
+        // Use replace so typing doesn't pollute history
+        navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+      }
+    }, 300);
+    return () => {
+      if (debouncedTimer.current) window.clearTimeout(debouncedTimer.current);
+    };
+  }, [searchQuery]);
+
+  // On direct navigation to /search with q, perform initial search once
+  useEffect(() => {
+    const path = location.pathname || '';
+    const q = searchParams.get('q') || '';
+    if (path === '/search' && q && !lastInitialSearchDone.current) {
+      lastInitialSearchDone.current = true;
+      handleSearch(q, { navigate: false });
+    }
+  }, [location.pathname]);
 
   // Send diagram data to hexagon worker via HTTP API
   const handleDiscussionRequest = async (diagramContext: {mermaidCode: string; diagramImage: string; prompt: string}) => {
@@ -225,6 +271,8 @@ export default function App() {
   };
 
   // @return
+  const showResults = location.pathname === '/search';
+
   return <div 
     className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
     onClick={handlePageClick}
