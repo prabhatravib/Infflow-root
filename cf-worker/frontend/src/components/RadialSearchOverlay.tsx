@@ -15,123 +15,176 @@ export default function RadialSearchOverlay({ enabled, svgRef, hostRef, lastQuer
 
   console.log('🔍 RadialSearchOverlay: Component rendered, enabled:', enabled, 'lastQuery:', lastQuery);
 
-  const findRoot = () => {
+  const findANode = () => {
     const svg = svgRef.current;
     if (!svg) {
       console.log('🔍 RadialSearchOverlay: No SVG ref');
       return null;
     }
 
-    console.log('🔍 RadialSearchOverlay: Searching for root node, lastQuery:', lastQuery);
+    console.log('🔍 RadialSearchOverlay: Searching for node A, lastQuery:', lastQuery);
 
-    // 1) try Mermaid's common id forms for node A
-    let g: SVGGElement | null =
+    // Try multiple selectors for node A
+    let node: SVGGElement | null =
+      (svg.querySelector('g[id^="flowchart-A"]') as SVGGElement) ||
       (svg.querySelector('[data-id="A"]') as SVGGElement) ||
       (svg.querySelector('[id$="-A"]') as SVGGElement) ||
       (svg.querySelector('#A') as SVGGElement) ||
       (svg.querySelector('[id*="A"]') as SVGGElement);
 
-    console.log('🔍 RadialSearchOverlay: Found by ID:', g);
+    console.log('🔍 RadialSearchOverlay: Found by ID:', node);
     
     // Also try to find by class or other attributes
-    if (!g) {
-      g = svg.querySelector('.node[id*="A"]') as SVGGElement;
-      console.log('🔍 RadialSearchOverlay: Found by class+ID:', g);
+    if (!node) {
+      node = svg.querySelector('.node[id*="A"]') as SVGGElement;
+      console.log('🔍 RadialSearchOverlay: Found by class+ID:', node);
     }
 
-    // 2) fallback: label text equals lastQuery
-    if (!g) {
+    // Fallback: label text equals lastQuery
+    if (!node) {
       const allGroups = Array.from(svg.querySelectorAll('g'));
       console.log('🔍 RadialSearchOverlay: All groups:', allGroups.length);
       
-      // Log all group IDs and text content for debugging
-      allGroups.forEach((group, index) => {
-        console.log(`🔍 RadialSearchOverlay: Group ${index}:`, {
-          id: group.id,
-          className: group.className,
-          textContent: group.textContent?.trim(),
-          tagName: group.tagName
-        });
-      });
-      
-      g = allGroups.find(
+      node = allGroups.find(
         el => (el.textContent || '').trim() === lastQuery.trim()
       ) as SVGGElement | null;
       
-      console.log('🔍 RadialSearchOverlay: Found by text:', g);
+      console.log('🔍 RadialSearchOverlay: Found by text:', node);
     }
     
-    if (g) {
-      console.log('🔍 RadialSearchOverlay: Root node found:', g.textContent);
+    if (node) {
+      console.log('🔍 RadialSearchOverlay: Node A found:', node.textContent);
     } else {
-      console.log('🔍 RadialSearchOverlay: No root node found');
+      console.log('🔍 RadialSearchOverlay: No node A found');
     }
     
-    return g;
+    return node;
   };
 
-  const hideRootVisuals = (g: SVGGElement | null, hide: boolean) => {
-    if (!g) return;
-    g.querySelectorAll('rect, text, foreignObject').forEach(el => {
-      (el as SVGElement).style.opacity = hide ? "0" : "1";
-    });
-  };
-
-  const place = () => {
-    console.log('🔍 RadialSearchOverlay: place() called, enabled:', enabled, 'overlayRef:', !!overlayRef.current, 'hostRef:', !!hostRef.current);
+  // Hide node A in the SVG (keeps layout)
+  useEffect(() => {
+    if (!enabled || !svgRef.current) return;
     
-    if (!enabled || !overlayRef.current || !hostRef.current) {
-      console.log('🔍 RadialSearchOverlay: place() early return');
-      return;
-    }
+    const hideNodeA = () => {
+      const nodeA = findANode();
+      if (nodeA) {
+        nodeA.querySelectorAll('rect, .label, text, foreignObject').forEach(el => {
+          (el as HTMLElement).style.opacity = "0";
+        });
+      }
+    };
 
-    const svg = svgRef.current;
-    const hostRect = hostRef.current.getBoundingClientRect();
-    const root = findRoot();
+    hideNodeA();
     
-    console.log('🔍 RadialSearchOverlay: place() - svg:', !!svg, 'root:', !!root);
+    // Also hide on mutations
+    const observer = new MutationObserver(hideNodeA);
+    observer.observe(svgRef.current, { childList: true, subtree: true, attributes: true });
     
-    if (!svg || !root) {
-      console.log('🔍 RadialSearchOverlay: place() - missing svg or root');
-      return;
-    }
-
-    // keep edges intact but hide the node visuals
-    hideRootVisuals(root, true);
-
-    // measure in CSS pixels (no pan/zoom used)
-    const r = (root as any).getBoundingClientRect();
-    const cx = r.left - hostRect.left + r.width / 2;
-    const cy = r.top - hostRect.top + r.height / 2;
-
-    const barWrap = overlayRef.current.querySelector<HTMLElement>("[data-bar]");
-    if (!barWrap) return;
-
-    // match bar width to node width (desktop only per requirement)
-    setBarWidth(r.width);
-    // position
-    barWrap.style.left = `${Math.round(cx - r.width / 2)}px`;
-    barWrap.style.top = `${Math.round(cy - barWrap.offsetHeight / 2)}px`;
-  };
-
-  useLayoutEffect(() => { if (enabled) requestAnimationFrame(place); }, [enabled, lastQuery]);
+    return () => {
+      observer.disconnect();
+      // Restore visuals when unmounting
+      const nodeA = findANode();
+      if (nodeA) {
+        nodeA.querySelectorAll('rect, .label, text, foreignObject').forEach(el => {
+          (el as HTMLElement).style.opacity = "1";
+        });
+      }
+    };
+  }, [enabled, svgRef.current, lastQuery]);
 
   useEffect(() => {
-    if (!enabled) return;
-    const onResize = () => place();
-    window.addEventListener("resize", onResize);
+    if (!enabled || !hostRef.current || !svgRef.current || !overlayRef.current) return;
 
-    // react to mermaid re-render
-    const obs = new MutationObserver(place);
-    if (svgRef.current) obs.observe(svgRef.current, { childList: true, subtree: true, attributes: true });
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      obs.disconnect();
-      // restore visuals if we unmount
-      hideRootVisuals(findRoot(), false);
+    const position = () => {
+      const host = hostRef.current!;
+      const overlay = overlayRef.current!;
+      const nodeA = findANode();
+      
+      console.log('🔍 RadialSearchOverlay: position() called, nodeA:', !!nodeA);
+      
+      if (!nodeA) {
+        console.log('🔍 RadialSearchOverlay: No nodeA found in position()');
+        return;
+      }
+      
+      const nodeRect = nodeA.getBoundingClientRect();
+      const hostRect = host.getBoundingClientRect();
+      
+      console.log('🔍 RadialSearchOverlay: nodeRect:', nodeRect);
+      console.log('🔍 RadialSearchOverlay: hostRect:', hostRect);
+      
+      // Position overlay relative to host container
+      const left = nodeRect.left - hostRect.left;
+      const top = nodeRect.top - hostRect.top;
+      
+      console.log('🔍 RadialSearchOverlay: Calculated position - left:', left, 'top:', top, 'width:', nodeRect.width, 'height:', nodeRect.height);
+      
+      overlay.style.left = `${left}px`;
+      overlay.style.top = `${top}px`;
+      overlay.style.width = `${nodeRect.width}px`;
+      overlay.style.height = `${nodeRect.height}px`;
+      
+      // Update bar width to match node width (ensure minimum width)
+      const width = Math.max(nodeRect.width, 200);
+      setBarWidth(width);
+      
+      console.log('🔍 RadialSearchOverlay: Overlay positioned with width:', width);
     };
-  }, [enabled, svgRef.current]);
+
+    // Set up observers
+    const roHost = new ResizeObserver(position);
+    const roSvg = new ResizeObserver(position);
+    
+    roHost.observe(hostRef.current);
+    roSvg.observe(svgRef.current);
+
+    const mo = new MutationObserver(position);
+    mo.observe(svgRef.current, { attributes: true, childList: true, subtree: true });
+
+    // Event listeners
+    window.addEventListener("resize", position);
+    window.visualViewport?.addEventListener("resize", position);
+
+    // Initial positioning
+    position();
+    
+    return () => {
+      roHost.disconnect();
+      roSvg.disconnect();
+      mo.disconnect();
+      window.removeEventListener("resize", position);
+      window.visualViewport?.removeEventListener("resize", position);
+    };
+  }, [enabled, lastQuery]);
+
+  // Immediate positioning after render
+  useLayoutEffect(() => {
+    if (!enabled || !hostRef.current || !svgRef.current || !overlayRef.current) return;
+    
+    const position = () => {
+      const host = hostRef.current!;
+      const overlay = overlayRef.current!;
+      const nodeA = findANode();
+      
+      if (!nodeA) return;
+      
+      const nodeRect = nodeA.getBoundingClientRect();
+      const hostRect = host.getBoundingClientRect();
+      
+      const left = nodeRect.left - hostRect.left;
+      const top = nodeRect.top - hostRect.top;
+      
+      overlay.style.left = `${left}px`;
+      overlay.style.top = `${top}px`;
+      overlay.style.width = `${nodeRect.width}px`;
+      overlay.style.height = `${nodeRect.height}px`;
+      
+      const width = Math.max(nodeRect.width, 200);
+      setBarWidth(width);
+    };
+    
+    position();
+  }, [enabled, lastQuery]);
 
   if (!enabled) {
     console.log('🔍 RadialSearchOverlay: Not enabled, returning null');
@@ -143,18 +196,24 @@ export default function RadialSearchOverlay({ enabled, svgRef, hostRef, lastQuer
   return (
     <div
       ref={overlayRef}
-      className="radial-overlay"
-      style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 5, filter: "drop-shadow(0 0 6px rgba(255,255,255,0.9))" }}
+      className="absolute z-50"
+      data-export-exclude
+      aria-hidden={false}
+      style={{ 
+        pointerEvents: "auto",
+        minWidth: "200px",
+        minHeight: "40px",
+        backgroundColor: "rgba(255, 255, 255, 0.1)", // Temporary background for debugging
+        border: "2px solid red" // Temporary border for debugging
+      }}
     >
-      <div data-bar style={{ position: "absolute", pointerEvents: "auto" }}>
-        <SearchBar
-          size="compact"                // your "results page" style
-          width={barWidth}              // match node width
-          defaultValue={lastQuery}
-          onSubmit={onSubmit}
-          autoFocus={false}
-        />
-      </div>
+      <SearchBar
+        size="compact"
+        width={barWidth}
+        defaultValue={lastQuery}
+        onSubmit={onSubmit}
+        autoFocus={false}
+      />
     </div>
   );
 }

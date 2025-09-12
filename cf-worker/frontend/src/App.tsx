@@ -195,30 +195,16 @@ export default function App() {
       return;
     }
     try {
-      // Find the diagram viewport container
-      const diagramViewport = document.querySelector('.diagram-viewport');
-      if (!diagramViewport) {
-        alert('No diagram container found to save');
+      // Find the SVG element directly (overlay is excluded automatically)
+      const svg = document.querySelector('.diagram-viewport svg') as SVGSVGElement;
+      if (!svg) {
+        alert('No SVG element found to save');
         return;
       }
-
-      // Hide overlay during export
-      diagramViewport.classList.add('exporting');
-      
-      try {
-        const svg = diagramViewport.querySelector('svg');
-        if (!svg) {
-          alert('No diagram image found to save');
-          return;
-        }
-        await exportDiagramAsPNG(svg);
-      } finally {
-        // Always remove the exporting class
-        diagramViewport.classList.remove('exporting');
-      }
+      await exportDiagramAsPNG(svg);
     } catch (error) {
       console.error('Failed to save PNG:', error);
-      alert('Failed to save diagram as PNG');
+      alert('Failed to save PNG image');
     }
   };
 

@@ -127,17 +127,13 @@ export default function SearchResults({
                           <Mermaid 
                             ref={mermaidRef}
                             code={diagram} 
+                            onRender={(svgElement) => {
+                              // Update the SVG ref for the overlay
+                              (svgRef as any).current = svgElement;
+                              console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
+                            }}
                             onSetupSelection={(container) => {
                               setupSelectionHandler(container);
-                              // Update SVG ref when Mermaid renders
-                              const svgElement = mermaidRef.current?.getSvgElement();
-                              if (svgElement) {
-                                // Update the SVG ref for the overlay
-                                (svgRef as any).current = svgElement;
-                                console.log('🔍 SearchResults: SVG ref updated:', svgElement);
-                              } else {
-                                console.log('🔍 SearchResults: No SVG element found');
-                              }
                             }}
                           />
                           <RadialSearchOverlay

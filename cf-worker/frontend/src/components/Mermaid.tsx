@@ -5,6 +5,7 @@ type Props = {
   code: string;
   className?: string;
   onSetupSelection?: (container: HTMLElement) => void;
+  onRender?: (svgElement: SVGSVGElement) => void;
 };
 
 export interface MermaidRef {
@@ -14,7 +15,8 @@ export interface MermaidRef {
 const Mermaid = forwardRef<MermaidRef, Props>(({ 
   code, 
   className, 
-  onSetupSelection
+  onSetupSelection,
+  onRender
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -77,6 +79,11 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
         const svgElement = containerRef.current.querySelector('svg') as SVGSVGElement;
         svgRef.current = svgElement;
         console.log('🔍 Mermaid: SVG element stored:', svgElement);
+
+        // Call onRender callback with SVG element
+        if (onRender && svgElement) {
+          onRender(svgElement);
+        }
 
         // Setup selection handling after rendering
         if (onSetupSelection && containerRef.current) {

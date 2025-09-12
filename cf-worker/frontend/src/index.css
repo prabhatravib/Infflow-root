@@ -420,3 +420,14 @@ body {
 .diagram-viewport.exporting .radial-overlay { 
   display: none !important; 
 }
+
+/* Keep overlay above SVG at all zoom levels */
+[data-export-exclude] { 
+  pointer-events: auto !important; 
+  z-index: 50 !important;
+}
+
+/* Ensure export excludes overlay: export only the SVG element */
+.diagram-viewport {
+  position: relative;
+}
