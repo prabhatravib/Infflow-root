@@ -7,7 +7,7 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
-import { injectSearchBarIntoNodeA, ensureSearchBarInNodeA } from '../utils/svg-inject-search';
+import { injectSearchBarIntoNodeA, setupCentralSearchListeners, updateCentralSearchValue } from '../utils/svg-inject-search';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -80,8 +80,59 @@ export default function SearchResults({
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
   
-  // Keep SVG-injected search value synced with shared query
-  useSyncInjectedSearch(svgRef, radialEnabled, searchQuery, onSearch, setSearchQuery);
+  // Set up global event listeners for central search
+  useEffect(() => {
+    if (radialEnabled) {
+      console.log('[SearchResults] Setting up central search listeners');
+      setupCentralSearchListeners(
+        (value: string) => {
+          console.log('[SearchResults] Central search onChange:', value);
+          setSearchQuery(value);
+        },
+        (value: string) => {
+          console.log('[SearchResults] Central search onSubmit:', value);
+          onSearch(value);
+        }
+      );
+    }
+  }, [radialEnabled, setSearchQuery, onSearch]);
+
+  // Sync the injected search bar value when searchQuery changes
+  useEffect(() => {
+    if (!radialEnabled) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    
+    console.log('[SearchResults] Syncing central search value:', searchQuery);
+    updateCentralSearchValue(svg, searchQuery);
+  }, [radialEnabled, searchQuery]);
+
+  // Re-inject when SVG changes
+  useEffect(() => {
+    if (!radialEnabled) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const observer = new MutationObserver(() => {
+      const input = svg.querySelector('input[data-central-search-input]');
+      if (!input) {
+        console.log('[SearchResults] Re-injecting search bar after SVG change');
+        injectSearchBarIntoNodeA(svg, {
+          defaultValue: searchQuery,
+          onSubmit: onSearch,
+          onChange: setSearchQuery
+        });
+      }
+    });
+
+    observer.observe(svg, {
+      childList: true,
+      subtree: true,
+      attributes: false
+    });
+
+    return () => observer.disconnect();
+  }, [radialEnabled, searchQuery, svgRef.current, onSearch, setSearchQuery]);
   
   return (
     <motion.div 
@@ -240,54 +291,3 @@ export default function SearchResults({
   );
 }
 
-// Keep the injected search input in sync when `searchQuery` changes (e.g., user types in header)
-// by re-injecting the input with the updated defaultValue
-// Note: kept inside this file to avoid over-abstracting
-function useSyncInjectedSearch(
-  svgRef: React.RefObject<SVGSVGElement>,
-  enabled: boolean,
-  searchQuery: string,
-  onSubmit: (q: string) => void,
-  onChange: (q: string) => void,
-) {
-  useEffect(() => {
-    if (!enabled) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    try {
-      // Do not tear down/recreate — just ensure and sync value
-      ensureSearchBarInNodeA(svg, { defaultValue: searchQuery, onSubmit, onChange });
-    } catch (e) {
-      console.warn('injectSearchBarIntoNodeA sync failed:', e);
-    }
-  }, [enabled, searchQuery, svgRef.current]);
-
-  // As a safety net, poll the injected input value and reflect it into state/URL
-  // in case native events inside foreignObject misbehave in some browsers.
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    let lastSent = searchQuery;
-    const tick = () => {
-      if (cancelled) return;
-      const svg = svgRef.current;
-      if (!svg) return;
-      try {
-        const input = svg.querySelector('foreignObject[data-search-bar] input.msb-input') as HTMLInputElement | null;
-        if (!input) return;
-        const val = input.value || '';
-        if (val !== lastSent) {
-          lastSent = val;
-          try { onChange(val); } catch {}
-          try {
-            const url = new URL(window.location.href);
-            if (val) url.searchParams.set('q', val); else url.searchParams.delete('q');
-            window.history.replaceState(null, '', url.toString());
-          } catch {}
-        }
-      } catch {}
-    };
-    const id = window.setInterval(tick, 200);
-    return () => { cancelled = true; window.clearInterval(id); };
-  }, [enabled, svgRef.current]);
-}

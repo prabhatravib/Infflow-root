@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
@@ -11,7 +11,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [currentTab, setCurrentTab] = useState('Web');
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,6 +114,7 @@ export default function App() {
     debouncedTimer.current = window.setTimeout(() => {
       const q = searchParams.get('q') || '';
       if (searchQuery !== q) {
+        console.log('[App] Updating URL with query:', searchQuery); // Add debug line
         const params = new URLSearchParams(searchParams);
         if (searchQuery) params.set('q', searchQuery); else params.delete('q');
         // Use replace so typing doesn't pollute history

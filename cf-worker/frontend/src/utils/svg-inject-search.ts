@@ -1,7 +1,6 @@
 /**
  * Inject a search bar into the SVG by replacing the visuals of node A
- * with an <foreignObject>. Keeps the outer <g> node and its transform
- * so edges remain intact.
+ * with an <foreignObject>. Uses a global event dispatcher for reliable communication.
  */
 
 export type InjectOptions = {
@@ -15,6 +14,49 @@ export type InjectOptions = {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';
+
+// Global event dispatcher for reliable communication between SVG and React
+const CENTRAL_SEARCH_EVENT = 'central-search-change';
+const CENTRAL_SEARCH_SUBMIT_EVENT = 'central-search-submit';
+
+// Store callbacks globally to ensure they persist
+let globalOnChange: ((value: string) => void) | null = null;
+let globalOnSubmit: ((value: string) => void) | null = null;
+
+/**
+ * Set up global event listeners for central search
+ */
+export function setupCentralSearchListeners(
+  onChange: (value: string) => void,
+  onSubmit: (value: string) => void
+) {
+  globalOnChange = onChange;
+  globalOnSubmit = onSubmit;
+  
+  // Remove any existing listeners
+  window.removeEventListener(CENTRAL_SEARCH_EVENT, handleCentralSearchChange as any);
+  window.removeEventListener(CENTRAL_SEARCH_SUBMIT_EVENT, handleCentralSearchSubmit as any);
+  
+  // Add new listeners
+  window.addEventListener(CENTRAL_SEARCH_EVENT, handleCentralSearchChange as any);
+  window.addEventListener(CENTRAL_SEARCH_SUBMIT_EVENT, handleCentralSearchSubmit as any);
+}
+
+function handleCentralSearchChange(event: CustomEvent) {
+  const value = event.detail.value;
+  console.log('[central-search] Global change event received:', value);
+  if (globalOnChange) {
+    globalOnChange(value);
+  }
+}
+
+function handleCentralSearchSubmit(event: CustomEvent) {
+  const value = event.detail.value;
+  console.log('[central-search] Global submit event received:', value);
+  if (globalOnSubmit) {
+    globalOnSubmit(value);
+  }
+}
 
 /**
  * Try to locate the central node "A" in various Mermaid outputs.
@@ -40,8 +82,7 @@ function findNodeA(svg: SVGSVGElement): SVGGElement | null {
 }
 
 /**
- * Remove visual children of a node (rect, text, label, foreignObject, etc.)
- * but keep the outer <g> so links/edges stay attached.
+ * Remove visual children of a node
  */
 function clearNodeVisuals(node: SVGGElement) {
   const visuals = node.querySelectorAll('rect, text, .label, foreignObject, path, polygon, ellipse, circle');
@@ -49,15 +90,13 @@ function clearNodeVisuals(node: SVGGElement) {
 }
 
 /**
- * Read node box from its primary rect if present, else fallback to bbox.
- * Returns coordinates in the node's local coordinate space.
+ * Read node box from its primary rect if present
  */
 function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; height: number } {
   const rect = node.querySelector('rect') as SVGRectElement | null;
   if (rect) {
     const width = Number(rect.getAttribute('width') || '0');
     const height = Number(rect.getAttribute('height') || '0');
-    // Mermaid usually centers rects at (-w/2, -h/2)
     const xAttr = rect.getAttribute('x');
     const yAttr = rect.getAttribute('y');
     const x = xAttr !== null ? Number(xAttr) : -width / 2;
@@ -65,7 +104,6 @@ function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; h
     return { x, y, width, height };
   }
 
-  // Fallback to bbox and center around (0,0)
   const bbox = node.getBBox();
   const width = bbox.width;
   const height = bbox.height;
@@ -73,7 +111,7 @@ function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; h
 }
 
 /**
- * Build the foreignObject subtree with a minimal, theme-aware search bar.
+ * Build the foreignObject with search bar
  */
 function buildSearchFO(doc: Document, box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
   const fo = doc.createElementNS(SVG_NS, 'foreignObject');
@@ -88,7 +126,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   const container = doc.createElementNS(XHTML_NS, 'div');
   container.setAttribute('xmlns', XHTML_NS);
   container.setAttribute('class', 'mermaid-search-bar');
-  // Structure: wrapper div + input + button (avoid <form> to prevent navigation)
+  
   const formLike = doc.createElementNS(XHTML_NS, 'div');
   formLike.setAttribute('class', 'msb-form');
 
@@ -97,14 +135,13 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   input.setAttribute('class', 'msb-input');
   input.setAttribute('placeholder', 'Explore visually…');
   input.setAttribute('autocomplete', 'off');
+  input.setAttribute('data-central-search-input', 'true');
+  
   if (opts.defaultValue) {
-    // Set both attribute and property to ensure visible value and programmatic value match
     input.setAttribute('value', opts.defaultValue);
-    try { (input as HTMLInputElement).value = opts.defaultValue; } catch {}
   }
 
   const button = doc.createElementNS(XHTML_NS, 'button');
-  // Use explicit button type to avoid native form navigation
   button.setAttribute('type', 'button');
   button.setAttribute('class', 'msb-button');
   button.textContent = 'Search';
@@ -114,80 +151,63 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   container.appendChild(formLike);
   fo.appendChild(container);
 
-  const triggerSubmit = () => {
-    const val = (input as HTMLInputElement).value.trim();
-    if (val && opts.onSubmit) {
-      try {
-        opts.onSubmit(val);
-      } catch (err) {
-        console.error('Search submit handler failed:', err);
-      }
+  // Set initial value after DOM insertion
+  setTimeout(() => {
+    if (opts.defaultValue) {
+      (input as HTMLInputElement).value = opts.defaultValue;
     }
-  };
-  // Hard-stop any accidental submit-like behaviors
-  container.addEventListener('submit', (e: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, true);
-  // Intercept Enter key directly on the input
-  input.addEventListener('keydown', (e: any) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      triggerSubmit();
-    }
-  });
-  input.addEventListener('keypress', (e: any) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  });
-  // Unified change handler across multiple events (input/change/keyup)
-  const handleValueChange = (src?: any) => {
-    try {
-      const current = (input as HTMLInputElement).value || '';
-      // Debug: surface event path and value for diagnosis
-      try { console.debug('[central-search] value changed:', current, 'src:', src?.type); } catch {}
+  }, 0);
 
-      if (opts.onChange) {
-        try { opts.onChange(current); } catch (e) { console.error('onChange failed', e); }
-      }
-      // Also mirror into the URL immediately so the address bar updates live
-      try {
-        const url = new URL(window.location.href);
-        if (current) url.searchParams.set('q', current); else url.searchParams.delete('q');
-        // Do NOT force path during typing; only update query params
-        window.history.replaceState(null, '', url.toString());
-      } catch (uerr) {
-        // ignore
-      }
-    } catch (err) {
-      console.error('Search change handler failed:', err);
+  // Dispatch custom events instead of calling callbacks directly
+  const dispatchChange = () => {
+    const value = (input as HTMLInputElement).value || '';
+    console.log('[central-search] Dispatching change event with value:', value);
+    window.dispatchEvent(new CustomEvent(CENTRAL_SEARCH_EVENT, {
+      detail: { value }
+    }));
+  };
+
+  const dispatchSubmit = () => {
+    const value = (input as HTMLInputElement).value.trim();
+    if (value) {
+      console.log('[central-search] Dispatching submit event with value:', value);
+      window.dispatchEvent(new CustomEvent(CENTRAL_SEARCH_SUBMIT_EVENT, {
+        detail: { value }
+      }));
     }
   };
 
-  // On value change, bubble to app state for sync
-  input.addEventListener('input', (e: any) => handleValueChange(e));
-  input.addEventListener('change', (e: any) => handleValueChange(e));
-  input.addEventListener('keyup', (e: any) => {
-    // ensure we read post-key value
-    if (!e || e.key !== 'Enter') handleValueChange(e);
+  // Attach event listeners
+  let inputTimeout: number | null = null;
+  
+  input.addEventListener('input', () => {
+    // Debounce the input events slightly
+    if (inputTimeout) clearTimeout(inputTimeout);
+    inputTimeout = window.setTimeout(() => {
+      dispatchChange();
+    }, 50);
   });
-  // Capture at container level as a safety net (some browsers retarget events inside foreignObject)
-  container.addEventListener('input', (e: any) => handleValueChange(e), true);
-  // And intercept button clicks
-  button.addEventListener('click', (e: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    triggerSubmit();
+  
+  input.addEventListener('change', () => {
+    dispatchChange();
+  });
+  
+  input.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      dispatchSubmit();
+    }
+  });
+  
+  button.addEventListener('click', () => {
+    dispatchSubmit();
   });
 
   return fo;
 }
 
 /**
- * Injects the search bar into node A. No-ops if not found.
+ * Inject the search bar into node A
  */
 export function injectSearchBarIntoNodeA(svg: SVGSVGElement, opts: InjectOptions = {}) {
   if (!svg) return;
@@ -195,7 +215,7 @@ export function injectSearchBarIntoNodeA(svg: SVGSVGElement, opts: InjectOptions
   const nodeA = findNodeA(svg);
   if (!nodeA) return;
 
-  // If already injected, clear and re-inject to sync sizing/content
+  // Remove existing if present
   const existing = nodeA.querySelector('foreignObject[data-search-bar]');
   if (existing) existing.parentElement?.removeChild(existing);
 
@@ -207,8 +227,17 @@ export function injectSearchBarIntoNodeA(svg: SVGSVGElement, opts: InjectOptions
 }
 
 /**
- * Ensure the search bar exists; if present, just sync its value and callbacks
- * without tearing it down (prevents event loss while typing).
+ * Update the value of the central search input
+ */
+export function updateCentralSearchValue(svg: SVGSVGElement, value: string) {
+  const input = svg.querySelector('input[data-central-search-input]') as HTMLInputElement;
+  if (input && input.value !== value) {
+    input.value = value;
+  }
+}
+
+/**
+ * Ensure the search bar exists and is synced
  */
 export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions = {}) {
   if (!svg) return;
@@ -217,29 +246,13 @@ export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions =
 
   const existing = nodeA.querySelector('foreignObject[data-search-bar]');
   if (!existing) {
-    // Not present — inject fresh
+    // Not present - inject fresh
     const box = getNodeBox(nodeA);
     const fo = buildSearchFO(svg.ownerDocument || document, box, opts);
+    clearNodeVisuals(nodeA);
     nodeA.appendChild(fo);
-    return;
-  }
-
-  // Already present — sync the input value
-  try {
-    const input = existing.querySelector('input.msb-input') as HTMLInputElement | null;
-    if (input && typeof opts.defaultValue === 'string') {
-      if (input.value !== opts.defaultValue) {
-        input.value = opts.defaultValue;
-        // Also reflect into URL via same logic
-        try {
-          const url = new URL(window.location.href);
-          if (opts.defaultValue) url.searchParams.set('q', opts.defaultValue); else url.searchParams.delete('q');
-          window.history.replaceState(null, '', url.toString());
-        } catch {}
-      }
-    }
-  } catch (e) {
-    console.warn('ensureSearchBarInNodeA: failed to sync value', e);
+  } else {
+    // Just update the value
+    updateCentralSearchValue(svg, opts.defaultValue || '');
   }
 }
-
