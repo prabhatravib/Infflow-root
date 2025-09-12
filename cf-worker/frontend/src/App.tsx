@@ -29,11 +29,16 @@ export default function App() {
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
+    // Ensure UI state mirrors the first successful search every time
+    const cleaned = query.trim();
+    setSearchQuery(cleaned);
     setShowResults(true);
     clearSelection();
+    setCodeFlowStatus('not-sent');
+    setDiagramViewTab('visual');
  // Reset status when starting new search
     try {
-      const res = await describe(query);
+      const res = await describe(cleaned);
       console.log('API Response:', res); // Debug logging
       
       // Set the diagram
@@ -57,7 +62,7 @@ export default function App() {
         const newDiagramData = {
           mermaidCode: res.diagram,
           diagramImage: res.diagram, // For now, using the same value
-          prompt: query,
+          prompt: cleaned,
           diagramType: res.diagram_type
         };
         setDiagramData(newDiagramData);

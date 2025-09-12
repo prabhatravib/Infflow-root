@@ -72,10 +72,35 @@ export const Header = ({
 
         {/* Center spacer for results page when search bar is hidden */}
         {showResults && <div className="flex-1"></div>}
-
+        {/* Results page compact search in header */}
+        {showResults && (
+          <div className="flex-1 max-w-xl mx-8 hidden md:block" data-central-search-bar>
+            <div className="relative">
+              <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 shadow-none">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyPress={e => e.key === 'Enter' && onSearch(searchQuery)}
+                  placeholder="Explore visually…"
+                  className="flex-1 px-5 py-2.5 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                />
+                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                  <Mic className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                  <Image className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                </button>
+                <button onClick={() => onSearch(searchQuery)} className="p-2 mr-1 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-xl transition-colors">
+                  <Search className="w-4 h-4 text-white dark:text-gray-900" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Hide search bar on results page - only show on landing page */}
         {!showResults && (
-          <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+          <div className="flex-1 max-w-2xl mx-8 hidden md:block" data-central-search-bar>
             <div className="relative">
               <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 shadow-none">
                 <input 

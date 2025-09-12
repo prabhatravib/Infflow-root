@@ -98,7 +98,8 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   if (opts.defaultValue) input.setAttribute('value', opts.defaultValue);
 
   const button = doc.createElementNS(XHTML_NS, 'button');
-  button.setAttribute('type', 'submit');
+  // Use explicit button type to avoid native form navigation
+  button.setAttribute('type', 'button');
   button.setAttribute('class', 'msb-button');
   button.textContent = 'Search';
 
@@ -107,13 +108,35 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   container.appendChild(form);
   fo.appendChild(container);
 
-  // Wire events
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  const triggerSubmit = () => {
     const val = (input as HTMLInputElement).value.trim();
     if (val && opts.onSubmit) {
-      opts.onSubmit(val);
+      try {
+        opts.onSubmit(val);
+      } catch (err) {
+        console.error('Search submit handler failed:', err);
+      }
     }
+  };
+  // Prevent default navigation and bubbling on submit
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerSubmit();
+  });
+  // Also intercept Enter key directly on the input
+  input.addEventListener('keydown', (e: any) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerSubmit();
+    }
+  });
+  // And intercept button clicks
+  button.addEventListener('click', (e: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    triggerSubmit();
   });
 
   return fo;
