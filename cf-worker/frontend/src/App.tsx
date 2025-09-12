@@ -195,14 +195,27 @@ export default function App() {
       return;
     }
     try {
-      // Find the SVG element in the diagram container
-      const diagramContainer = document.querySelector('.mermaid-container');
-      const svg = diagramContainer?.querySelector('svg');
-      if (!svg) {
-        alert('No diagram image found to save');
+      // Find the diagram viewport container
+      const diagramViewport = document.querySelector('.diagram-viewport');
+      if (!diagramViewport) {
+        alert('No diagram container found to save');
         return;
       }
-      await exportDiagramAsPNG(svg);
+
+      // Hide overlay during export
+      diagramViewport.classList.add('exporting');
+      
+      try {
+        const svg = diagramViewport.querySelector('svg');
+        if (!svg) {
+          alert('No diagram image found to save');
+          return;
+        }
+        await exportDiagramAsPNG(svg);
+      } finally {
+        // Always remove the exporting class
+        diagramViewport.classList.remove('exporting');
+      }
     } catch (error) {
       console.error('Failed to save PNG:', error);
       alert('Failed to save diagram as PNG');

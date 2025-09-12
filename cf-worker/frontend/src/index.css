@@ -415,3 +415,8 @@ body {
 .mermaid .note {
   font-size: 16px !important;
 }
+
+/* Hide radial overlay during PNG export */
+.diagram-viewport.exporting .radial-overlay { 
+  display: none !important; 
+}

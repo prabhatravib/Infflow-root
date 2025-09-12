@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useRef } from 'react';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
-import Mermaid from './Mermaid';
+import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
+import RadialSearchOverlay from './RadialSearchOverlay';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -70,12 +71,12 @@ export default function SearchResults({
   diagramViewTab,
   setDiagramViewTab
 }: SearchResultsProps) {
-  const [centralSearchQuery, setCentralSearchQuery] = useState(searchQuery);
-  
-  // Update central search query when search query changes
-  useEffect(() => {
-    setCentralSearchQuery(searchQuery);
-  }, [searchQuery]);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const mermaidRef = useRef<MermaidRef>(null);
+
+  // Debug logging
+  console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
   
   return (
     <motion.div 
@@ -122,14 +123,29 @@ export default function SearchResults({
                   {diagramViewTab === 'visual' ? (
                     diagram ? (
                       <div className="relative">
-                        <div className="rounded bg-white dark:bg-gray-900 p-2 mermaid-container">
+                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative" }}>
                           <Mermaid 
+                            ref={mermaidRef}
                             code={diagram} 
-                            onSetupSelection={setupSelectionHandler}
-                            onCentralSearch={onSearch}
-                            centralSearchQuery={centralSearchQuery}
-                            setCentralSearchQuery={setCentralSearchQuery}
-                            diagramType={diagramData?.diagramType}
+                            onSetupSelection={(container) => {
+                              setupSelectionHandler(container);
+                              // Update SVG ref when Mermaid renders
+                              const svgElement = mermaidRef.current?.getSvgElement();
+                              if (svgElement) {
+                                // Update the SVG ref for the overlay
+                                (svgRef as any).current = svgElement;
+                                console.log('🔍 SearchResults: SVG ref updated:', svgElement);
+                              } else {
+                                console.log('🔍 SearchResults: No SVG element found');
+                              }
+                            }}
+                          />
+                          <RadialSearchOverlay
+                            enabled={diagramData?.diagramType === "radial_mindmap"}
+                            svgRef={svgRef}
+                            hostRef={hostRef}
+                            lastQuery={searchQuery}
+                            onSubmit={onSearch}
                           />
                         </div>
                         {/* Save PNG Button - positioned on the right side */}
