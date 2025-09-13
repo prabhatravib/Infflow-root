@@ -7,7 +7,7 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
-import { injectSearchBarIntoNodeA, setupCentralSearchListeners, updateCentralSearchValue } from '../utils/svg-inject-search';
+import { injectSearchOverlay, setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -84,7 +84,7 @@ export default function SearchResults({
   useEffect(() => {
     if (radialEnabled) {
       console.log('[SearchResults] Setting up central search listeners');
-      setupCentralSearchListeners(
+      const { inject } = setupCentralSearchListeners(
         (value: string) => {
           console.log('[SearchResults] Central search onChange:', value);
           setSearchQuery(value);
@@ -94,8 +94,13 @@ export default function SearchResults({
           onSearch(value);
         }
       );
+      
+      // Store the inject function for later use
+      (window as any).injectCentralSearch = (svg: SVGSVGElement) => {
+        return inject(svg, searchQuery);
+      };
     }
-  }, [radialEnabled, setSearchQuery, onSearch]);
+  }, [radialEnabled, setSearchQuery, onSearch, searchQuery]);
 
   // Sync the injected search bar value when searchQuery changes
   useEffect(() => {
@@ -104,7 +109,14 @@ export default function SearchResults({
     if (!svg) return;
     
     console.log('[SearchResults] Syncing central search value:', searchQuery);
-    updateCentralSearchValue(svg, searchQuery);
+    // Update the overlay input value if it exists
+    const overlay = svg.parentElement?.querySelector('.central-search-overlay');
+    if (overlay) {
+      const input = overlay.querySelector('input');
+      if (input && input.value !== searchQuery) {
+        input.value = searchQuery;
+      }
+    }
   }, [radialEnabled, searchQuery]);
 
   // Re-inject when SVG changes
@@ -117,11 +129,9 @@ export default function SearchResults({
       const input = svg.querySelector('input[data-central-search-input]');
       if (!input) {
         console.log('[SearchResults] Re-injecting search bar after SVG change');
-        injectSearchBarIntoNodeA(svg, {
-          defaultValue: searchQuery,
-          onSubmit: onSearch,
-          onChange: setSearchQuery
-        });
+        if ((window as any).injectCentralSearch) {
+          (window as any).injectCentralSearch(svg);
+        }
       }
     });
 
@@ -191,13 +201,11 @@ export default function SearchResults({
                               // Inject search bar directly into SVG (replace node A visuals)
                               if (radialEnabled && svgElement) {
                                 try {
-                                  injectSearchBarIntoNodeA(svgElement, {
-                                    defaultValue: searchQuery,
-                                    onSubmit: onSearch,
-                                    onChange: setSearchQuery,
-                                  });
+                                  if ((window as any).injectCentralSearch) {
+                                    (window as any).injectCentralSearch(svgElement);
+                                  }
                                 } catch (e) {
-                                  console.warn('injectSearchBarIntoNodeA failed:', e);
+                                  console.warn('injectCentralSearch failed:', e);
                                 }
                               }
                             }}
