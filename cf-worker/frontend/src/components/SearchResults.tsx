@@ -203,17 +203,17 @@ export default function SearchResults({
         </div>
         
         <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
-          <div className="flex justify-center pt-2 pb-4 px-4">
-            <div className="w-full max-w-6xl space-y-2">
+          <div className="flex justify-start pt-2 pb-4 px-4">
+            <div className="w-full space-y-2" style={{ marginRight: '20px' }}>
 
               {/* Diagram Container */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6" style={{ marginRight: '10px' }}>
                 <div className="space-y-2">
                   {/* Content based on selected tab */}
                   {diagramViewTab === 'visual' ? (
                     clusters ? (
                       <div className="relative">
-                        <div className="h-[70vh] rounded bg-white dark:bg-gray-900">
+                        <div className="h-[70vh] rounded bg-white dark:bg-gray-900" style={{ marginRight: '5px' }}>
                           <FoamTreeView
                             data={clusters}
                             onSelect={setSelectedClusterIds}
@@ -250,7 +250,7 @@ export default function SearchResults({
                       </div>
                     ) : diagram ? (
                       <div className="relative">
-                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative" }}>
+                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative", marginRight: '5px' }}>
                           <Mermaid 
                             ref={mermaidRef}
                             code={diagram} 
@@ -309,7 +309,7 @@ export default function SearchResults({
                       </div>
                     )
                   ) : (
-                    <div className="relative rounded bg-white dark:bg-gray-900 p-6">
+                    <div className="relative rounded bg-white dark:bg-gray-900 p-6" style={{ marginRight: '5px' }}>
                       {contentData && contentData.universal_content ? (
                         <div className="space-y-4">
                           <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">

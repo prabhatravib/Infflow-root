@@ -86,6 +86,9 @@ export function FoamTreeView({
       foamTreeRef.current = new FoamTree({
         element: containerRef.current,
         pixelRatio: window.devicePixelRatio || 1,
+        // Hide the library title bar overlay
+        maxLabelSizeForTitleBar: 0,
+        titleBarDecorator: () => {},
         // Disable zoom functionality
         zoomMin: 1,
         zoomMax: 1,

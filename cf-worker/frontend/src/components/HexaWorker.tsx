@@ -18,6 +18,26 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   const [isExpanded, setIsExpanded] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Layout constants for the expanded hexagon
+  const EXPANDED_SCALE = 0.8;            // reduce size to 80%
+  const EXTRA_DOWN_OFFSET_PX = 40;       // nudge down to avoid overlap
+  const BASE = {
+    container: 280,        // px
+    iframeWidth: 300,      // px
+    iframeHeight: 320,     // px
+    iframeTop: -40,        // px
+    iframeLeft: -20        // px
+  } as const;
+  
+  // Derived sizes for 80% scale
+  const SCALED = {
+    container: Math.round(BASE.container * EXPANDED_SCALE),
+    iframeWidth: Math.round(BASE.iframeWidth * EXPANDED_SCALE),
+    iframeHeight: Math.round(BASE.iframeHeight * EXPANDED_SCALE),
+    iframeTop: Math.round(BASE.iframeTop * EXPANDED_SCALE),
+    iframeLeft: Math.round(BASE.iframeLeft * EXPANDED_SCALE)
+  } as const;
 
   // Subscribe to session changes
   useEffect(() => {
@@ -144,26 +164,27 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
             <div 
               className="hexagon-container"
               style={{
-                width: '280px',
-                height: '280px',
+                width: `${SCALED.container}px`,
+                height: `${SCALED.container}px`,
                 position: 'relative',
-                transform: 'translateY(20px)',
+                // Pull the worker a bit further down to avoid overlap with top panels
+                transform: `translateY(${20 + EXTRA_DOWN_OFFSET_PX}px)`,
               }}
             >
               <iframe
                 ref={iframeRef}
                 src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-                width="300"
-                height="320"
+                width={SCALED.iframeWidth}
+                height={SCALED.iframeHeight}
                 style={{
                   border: 'none',
                   backgroundColor: 'transparent',
                   clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                   borderRadius: '0',
                   position: 'absolute',
-                  top: '-40px',
-                  left: '-20px',
-                  transform: 'translateY(0px)',  // Center the iframe within the container
+                  top: `${SCALED.iframeTop}px`,
+                  left: `${SCALED.iframeLeft}px`,
+                  transform: 'translateY(0px)',  // Keep centered within the container
                 }}
                 title="Hexa Voice Agent"
                 allow="microphone"
