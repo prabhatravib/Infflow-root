@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
@@ -7,7 +7,7 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
-import { injectSearchBarIntoNodeA } from '../utils/svg-inject-search';
+import { injectSearchOverlay, setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -80,6 +80,70 @@ export default function SearchResults({
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
   
+  // Set up global event listeners for central search
+  useEffect(() => {
+    if (radialEnabled) {
+      console.log('[SearchResults] Setting up central search listeners');
+      const { inject } = setupCentralSearchListeners(
+        (value: string) => {
+          console.log('[SearchResults] Central search onChange:', value);
+          setSearchQuery(value);
+        },
+        (value: string) => {
+          console.log('[SearchResults] Central search onSubmit:', value);
+          onSearch(value);
+        }
+      );
+      
+      // Store the inject function for later use
+      (window as any).injectCentralSearch = (svg: SVGSVGElement) => {
+        return inject(svg, searchQuery);
+      };
+    }
+  }, [radialEnabled, setSearchQuery, onSearch, searchQuery]);
+
+  // Sync the injected search bar value when searchQuery changes
+  useEffect(() => {
+    if (!radialEnabled) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    
+    console.log('[SearchResults] Syncing central search value:', searchQuery);
+    // Update the overlay input value if it exists
+    const overlay = svg.parentElement?.querySelector('.central-search-overlay');
+    if (overlay) {
+      const input = overlay.querySelector('input');
+      if (input && input.value !== searchQuery) {
+        input.value = searchQuery;
+      }
+    }
+  }, [radialEnabled, searchQuery]);
+
+  // Re-inject when SVG changes
+  useEffect(() => {
+    if (!radialEnabled) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const observer = new MutationObserver(() => {
+      const input = svg.querySelector('input[data-central-search-input]');
+      if (!input) {
+        console.log('[SearchResults] Re-injecting search bar after SVG change');
+        if ((window as any).injectCentralSearch) {
+          (window as any).injectCentralSearch(svg);
+        }
+      }
+    });
+
+    observer.observe(svg, {
+      childList: true,
+      subtree: true,
+      attributes: false
+    });
+
+    return () => observer.disconnect();
+  }, [radialEnabled, searchQuery, svgRef.current, onSearch, setSearchQuery]);
+  
   return (
     <motion.div 
       key="search"
@@ -137,12 +201,11 @@ export default function SearchResults({
                               // Inject search bar directly into SVG (replace node A visuals)
                               if (radialEnabled && svgElement) {
                                 try {
-                                  injectSearchBarIntoNodeA(svgElement, {
-                                    defaultValue: searchQuery,
-                                    onSubmit: onSearch,
-                                  });
+                                  if ((window as any).injectCentralSearch) {
+                                    (window as any).injectCentralSearch(svgElement);
+                                  }
                                 } catch (e) {
-                                  console.warn('injectSearchBarIntoNodeA failed:', e);
+                                  console.warn('injectCentralSearch failed:', e);
                                 }
                               }
                             }}
@@ -235,3 +298,4 @@ export default function SearchResults({
     </motion.div>
   );
 }
+
