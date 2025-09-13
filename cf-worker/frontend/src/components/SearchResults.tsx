@@ -331,38 +331,10 @@ export default function SearchResults({
 
   // No longer need mutation observer since search bar is created directly and persists
 
-  // Cleanup overlay when component unmounts or radial is disabled
-  useEffect(() => {
-    return () => {
-      // Clean up the fixed position overlay when component unmounts
-      const overlay = document.querySelector('.central-search-overlay');
-      if (overlay) {
-        if ((overlay as any)._cleanup) {
-          (overlay as any)._cleanup();
-        }
-        overlay.remove();
-        console.log('[SearchResults] Cleaned up search bar on component unmount');
-      }
-    };
-  }, []);
+  // Don't cleanup on component unmount - keep search bar persistent
+  // Only cleanup when explicitly switching to text tab or radial is disabled
 
-  // Additional cleanup on page navigation - remove search bar when leaving search results
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      const overlay = document.querySelector('.central-search-overlay');
-      if (overlay) {
-        overlay.remove();
-        console.log('[SearchResults] Cleaned up search bar on page navigation');
-      }
-    };
-
-    // Clean up on page visibility change (when user navigates away)
-    document.addEventListener('visibilitychange', handleBeforeUnload);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleBeforeUnload);
-    };
-  }, []);
+  // Keep search bar persistent - don't cleanup on page navigation
 
   // Cleanup overlay when radial is disabled
   useEffect(() => {
@@ -412,26 +384,20 @@ export default function SearchResults({
         </div>
         
         <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
-          <div className="flex justify-start pt-2 pb-4 px-4">
-            <div className="w-full space-y-2" style={{ marginRight: '20px' }}>
-
-              {/* Diagram Container */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6" style={{ marginRight: '10px' }}>
-                <div className="space-y-2">
-                  {/* Content based on selected tab */}
-                  {diagramViewTab === 'visual' ? (
-                    clusters ? (
-                      <div className="relative">
-                        <div className="h-[70vh] rounded bg-white dark:bg-gray-900" style={{ marginRight: '5px' }}>
-                          <FoamTreeView
-                            data={clusters}
-                            onSelect={setSelectedClusterIds}
-                            onOpen={loadClusterChildren}
-                            onExpose={() => {}}
-                            onSetupSelection={setupSelectionHandler}
-                            className="w-full h-full"
-                          />
-                        </div>
+          {/* Content based on selected tab */}
+          {diagramViewTab === 'visual' ? (
+            clusters ? (
+              <div className="relative">
+                <div className="h-[70vh]">
+                  <FoamTreeView
+                    data={clusters}
+                    onSelect={setSelectedClusterIds}
+                    onOpen={loadClusterChildren}
+                    onExpose={() => {}}
+                    onSetupSelection={setupSelectionHandler}
+                    className="w-full h-full"
+                  />
+                </div>
                         {selectedClusterIds.length > 0 && (
                           <div className="absolute top-4 right-4 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
                             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
@@ -456,16 +422,16 @@ export default function SearchResults({
                             </div>
                           </div>
                         )}
-                      </div>
-                    ) : diagram ? (
-                      <div className="relative">
-                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative", marginRight: '5px', minHeight: '400px', width: '100%' }}>
-                          <Mermaid 
-                            ref={mermaidRef}
-                            code={diagram} 
-                            onRender={handleMermaidRender}
-                            onSetupSelection={setupSelectionHandler}
-                          />
+              </div>
+            ) : diagram ? (
+              <div className="relative">
+                <div ref={hostRef} className="diagram-viewport mermaid-container" style={{ position: "relative", minHeight: '400px', width: '100%' }}>
+                  <Mermaid 
+                    ref={mermaidRef}
+                    code={diagram} 
+                    onRender={handleMermaidRender}
+                    onSetupSelection={setupSelectionHandler}
+                  />
                           {/* Overlay disabled when SVG injection is active */}
                           {false && (
                             <RadialSearchOverlay
@@ -476,78 +442,74 @@ export default function SearchResults({
                               onSubmit={onSearch}
                             />
                           )}
-                        </div>
-                        {/* Save PNG Button - positioned on the right side */}
-                        <div className="absolute bottom-2 right-2">
-                          <button
-                            onClick={handleSavePNG}
-                            className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
-                            title="Save as PNG image"
-                          >
-                            Save PNG
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded bg-white dark:bg-gray-900 p-8 text-center" style={{ minHeight: '400px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-                        {/* Icon positioned above search bar */}
-                        <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)' }}>
-                          <img 
-                            src="/textchart-icon.png" 
-                            alt="Textchart" 
-                            className="w-16 h-16 mx-auto"
-                          />
-                        </div>
-                        
-                        {/* Loading text positioned below search bar */}
-                        <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)' }}>
-                          <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <div className="relative rounded bg-white dark:bg-gray-900 p-6" style={{ marginRight: '5px' }}>
-                      {contentData && contentData.universal_content ? (
-                        <div className="space-y-4">
-                          <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">
-                            {contentData.universal_content}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center text-gray-500 dark:text-gray-400">
-                          <p>No text content available</p>
-                        </div>
-                      )}
-                      {/* Save Text Button - positioned in bottom right corner */}
-                      {contentData && contentData.universal_content && (
-                        <div className="absolute bottom-4 right-4">
-                          <button
-                            onClick={handleSaveText}
-                            className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
-                            title="Save as text file"
-                          >
-                            Save text
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                </div>
+                {/* Save PNG Button - positioned lower */}
+                <div className="absolute bottom-8 right-8">
+                  <button
+                    onClick={handleSavePNG}
+                    className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
+                    title="Save as PNG image"
+                  >
+                    Save PNG
+                  </button>
                 </div>
               </div>
-
-              {/* Deep Dive Panel */}
-              {selection.hasSelection && (
-                <DeepDive
-                  selectedText={selection.selectedText}
-                  isProcessing={deepDive.isProcessing}
-                  response={deepDive.response}
-                  history={deepDive.history}
-                  onAsk={handleDeepDiveAsk}
-                  onClose={clearSelection}
-                />
+            ) : (
+              <div className="p-8 text-center" style={{ minHeight: '400px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                {/* Icon positioned above search bar */}
+                <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)' }}>
+                  <img 
+                    src="/textchart-icon.png" 
+                    alt="Textchart" 
+                    className="w-16 h-16 mx-auto"
+                  />
+                </div>
+                
+                {/* Loading text positioned below search bar */}
+                <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)' }}>
+                  <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="relative p-6">
+              {contentData && contentData.universal_content ? (
+                <div className="space-y-4">
+                  <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">
+                    {contentData.universal_content}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 dark:text-gray-400">
+                  <p>No text content available</p>
+                </div>
+              )}
+              {/* Save Text Button - positioned in bottom right corner */}
+              {contentData && contentData.universal_content && (
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={handleSaveText}
+                    className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
+                    title="Save as text file"
+                  >
+                    Save text
+                  </button>
+                </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Deep Dive Panel */}
+          {selection.hasSelection && (
+            <DeepDive
+              selectedText={selection.selectedText}
+              isProcessing={deepDive.isProcessing}
+              response={deepDive.response}
+              history={deepDive.history}
+              onAsk={handleDeepDiveAsk}
+              onClose={clearSelection}
+            />
+          )}
         </main>
       </div>
       
