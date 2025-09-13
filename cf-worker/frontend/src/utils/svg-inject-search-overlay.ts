@@ -138,10 +138,16 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, _box: { x: numbe
 export function injectSearchOverlay(svg: SVGSVGElement, opts: InjectOptions = {}) {
   if (!svg) return null;
 
-  // Remove any existing overlay
+  // Check if overlay already exists
   const existingOverlay = svg.parentElement?.querySelector('.central-search-overlay');
   if (existingOverlay) {
-    existingOverlay.remove();
+    // Just update the value if overlay exists
+    const input = existingOverlay.querySelector('input');
+    if (input && opts.defaultValue !== undefined && input.value !== opts.defaultValue) {
+      input.value = opts.defaultValue;
+    }
+    console.log('[central-search] Updated existing HTML overlay value');
+    return existingOverlay;
   }
 
   // Create overlay positioned at the center of the SVG (no need to find Node A)

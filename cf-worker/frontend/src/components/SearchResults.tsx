@@ -9,9 +9,9 @@ import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
 import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
-import { injectSearchOverlay, setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
+import { setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -85,7 +85,6 @@ export default function SearchResults({
   const mermaidRef = useRef<MermaidRef>(null);
   const radialEnabled = diagramData?.diagramType === "radial_mindmap";
   const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>([]);
-  const [exposedClusterId, setExposedClusterId] = useState<string | null>(null);
   const { loadClusterChildren } = useClusterLazyLoading(clusters, setClusters);
 
   const findClusterById = useMemo(() => {
@@ -100,6 +99,24 @@ export default function SearchResults({
     };
     return fn;
   }, []);
+
+  // Memoize the onRender callback to prevent Mermaid re-renders
+  const handleMermaidRender = useCallback((svgElement: SVGSVGElement) => {
+    // Update the SVG ref for the overlay
+    (svgRef as any).current = svgElement;
+    console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
+
+    // Inject search bar directly into SVG (replace node A visuals)
+    if (radialEnabled && svgElement) {
+      try {
+        if ((window as any).injectCentralSearch) {
+          (window as any).injectCentralSearch(svgElement);
+        }
+      } catch (e) {
+        console.warn('injectCentralSearch failed:', e);
+      }
+    }
+  }, [radialEnabled]);
 
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
@@ -124,7 +141,7 @@ export default function SearchResults({
         return inject(svg, searchQuery);
       };
     }
-  }, [radialEnabled, setSearchQuery, onSearch, searchQuery]);
+  }, [radialEnabled, setSearchQuery, onSearch]);
 
   // Sync the injected search bar value when searchQuery changes
   useEffect(() => {
@@ -166,7 +183,7 @@ export default function SearchResults({
     });
 
     return () => observer.disconnect();
-  }, [radialEnabled, searchQuery, svgRef.current, onSearch, setSearchQuery]);
+  }, [radialEnabled]);
   
   return (
     <motion.div 
@@ -218,7 +235,7 @@ export default function SearchResults({
                             data={clusters}
                             onSelect={setSelectedClusterIds}
                             onOpen={loadClusterChildren}
-                            onExpose={(id) => setExposedClusterId(id)}
+                            onExpose={() => {}}
                             onSetupSelection={setupSelectionHandler}
                             className="w-full h-full"
                           />
@@ -254,25 +271,8 @@ export default function SearchResults({
                           <Mermaid 
                             ref={mermaidRef}
                             code={diagram} 
-                            onRender={(svgElement) => {
-                              // Update the SVG ref for the overlay
-                              (svgRef as any).current = svgElement;
-                              console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
-
-                              // Inject search bar directly into SVG (replace node A visuals)
-                              if (radialEnabled && svgElement) {
-                                try {
-                                  if ((window as any).injectCentralSearch) {
-                                    (window as any).injectCentralSearch(svgElement);
-                                  }
-                                } catch (e) {
-                                  console.warn('injectCentralSearch failed:', e);
-                                }
-                              }
-                            }}
-                            onSetupSelection={(container) => {
-                              setupSelectionHandler(container);
-                            }}
+                            onRender={handleMermaidRender}
+                            onSetupSelection={setupSelectionHandler}
                           />
                           {/* Overlay disabled when SVG injection is active */}
                           {false && (

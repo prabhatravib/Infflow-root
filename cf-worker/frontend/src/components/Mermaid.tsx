@@ -95,7 +95,7 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
     })();
 
     return () => { mounted = false; };
-  }, [code, onSetupSelection]);
+  }, [code, onSetupSelection, onRender]);
 
   return (
     <div className={`${className} flex justify-center items-center w-full relative`} ref={containerRef}>
