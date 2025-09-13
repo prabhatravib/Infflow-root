@@ -362,6 +362,10 @@ export default function SearchResults({
         diagramViewTab={diagramViewTab}
         setDiagramViewTab={setDiagramViewTab}
         showResults={true}
+        showSearch={true}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onSearch={onSearch}
       />
     </motion.div>
   );

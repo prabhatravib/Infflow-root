@@ -37,7 +37,7 @@ export default function LandingPage({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="flex flex-col items-center justify-start px-8 relative -mt-16 pb-8 min-h-screen"
+      className="flex flex-col items-center justify-start px-8 relative -mt-24 pb-8 min-h-screen"
     >
       {/* Floating theme toggle for landing page */}
       <button 
@@ -50,15 +50,13 @@ export default function LandingPage({
       {/* Main content container with better vertical centering */}
       <div className="w-full max-w-4xl flex flex-col items-center">
         <div className="text-center mb-0">
-          <div className="flex items-center justify-center" style={{ marginBottom: '-4.5rem' }}>
+          <div className="flex items-center justify-center" style={{ marginBottom: '-6rem' }}>
             <Logo size="xl" variant="full" isDark={isDark} />
           </div>
           <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Answers, you can See and Hear!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-2xl font-light mb-8">
-            Ask anything. Get responses in Textcharts.
-          </p>
+          
         </div>
         
         {/* Suggestion chips with "Try:" text */}
@@ -70,7 +68,7 @@ export default function LandingPage({
               onClick={() => {
                 setSearchQuery(chip);
               }} 
-              className="px-8 py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl text-base font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-lg hover:scale-105"
+              className="px-[1.6rem] py-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl text-base font-medium text-gray-700 dark:text-gray-300 transition-all duration-200 hover:shadow-lg hover:scale-105"
             >
               {chip}
             </button>
@@ -85,23 +83,28 @@ export default function LandingPage({
               value={searchQuery} 
               onChange={e => setSearchQuery(e.target.value)} 
               onKeyPress={e => e.key === 'Enter' && onSearch(searchQuery)} 
-              placeholder="Explore visually…" 
-              className="flex-1 px-10 py-6 text-xl bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400" 
+              placeholder="Explore visually..."
+              className="flex-1 px-6 py-3.5 text-lg bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400" 
             />
-            <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
-              <Mic className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
+              <Mic className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
-            <button className="p-4 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
-              <Image className="w-6 h-6 text-gray-500 dark:text-gray-400" />
+            <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-2xl transition-colors">
+              <Image className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
             <button 
               onClick={() => onSearch(searchQuery)} 
-              className="p-4 mr-3 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-2xl transition-colors"
+              className="p-2.5 mr-2 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-2xl transition-colors"
             >
-              <Search className="w-6 h-6 text-white dark:text-gray-900" />
+              <Search className="w-5 h-5 text-white dark:text-gray-900" />
             </button>
           </div>
         </div>
+
+        {/* Tagline moved below search */}
+        <p className="text-gray-600 dark:text-gray-400 text-2xl font-light mt-6">
+          Ask anything. Get responses in Textcharts.
+        </p>
       </div>
       
       {/* Bottom Navigation */}
@@ -116,3 +119,6 @@ export default function LandingPage({
     </motion.div>
   );
 }
+
+
+

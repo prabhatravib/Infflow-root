@@ -8,6 +8,11 @@ interface TabsProps {
   diagramViewTab?: 'visual' | 'text';
   setDiagramViewTab?: (tab: 'visual' | 'text') => void;
   showResults?: boolean;
+  // Optional search-in-nav
+  showSearch?: boolean;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
+  onSearch?: (q: string) => void;
 }
 
 const tabs = [{
@@ -41,12 +46,16 @@ export const Tabs = ({
   position = 'top',
   diagramViewTab,
   setDiagramViewTab,
-  showResults = false
+  showResults = false,
+  showSearch = false,
+  searchQuery,
+  setSearchQuery,
+  onSearch
 }: TabsProps) => {
   const isBottom = position === 'bottom';
   
   // @return
-  return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${isBottom ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
+  return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 ${isBottom ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
       <div className="px-4">
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
           {/* Web/Map/News tabs */}
@@ -65,8 +74,8 @@ export const Tabs = ({
               </button>;
         })}
         
-        {/* Visual/Text tabs - only show when results are displayed */}
-        {showResults && diagramViewTab && setDiagramViewTab && (
+        {/* Visual/Text tabs - only when not bottom nav */}
+        {showResults && !showSearch && !isBottom && diagramViewTab && setDiagramViewTab && (
           <>
             <div className="w-px h-8 bg-gray-300 dark:bg-gray-600 mx-2"></div>
             <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 w-[400px]">
@@ -80,6 +89,26 @@ export const Tabs = ({
                       {tab.label}
                     </button>;
               })}
+            </div>
+          </>
+        )}
+
+        {/* Search bar inside bottom nav when requested */}
+        {showSearch && searchQuery !== undefined && setSearchQuery && onSearch && (
+          <>
+            <div className="w-px h-8 bg-gray-300 dark:bg-gray-600 mx-2"></div>
+            <div className="ml-auto mr-3 flex items-center bg-white dark:bg-gray-800 rounded-lg border border-gray-200/60 dark:border-gray-700/60 px-2.5 py-1.5 max-w-md shadow-sm">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && onSearch(searchQuery)}
+                placeholder="Search..."
+                className="flex-1 bg-transparent outline-none text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 px-1 py-0.5"
+              />
+              <button onClick={() => onSearch(searchQuery)} className="ml-2 px-2 py-1 rounded-lg bg-gray-900 dark:bg-white">
+                <span className="text-white dark:text-gray-900 text-[11px] leading-none">Go</span>
+              </button>
             </div>
           </>
         )}

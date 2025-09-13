@@ -57,7 +57,7 @@ export const SearchBar = ({
           value={searchQuery} 
           onChange={handleChange}
           onKeyPress={handleKeyPress}
-          placeholder="Explore visuallyâ€¦" 
+          placeholder="Explore visually..." 
           autoFocus={autoFocus}
           className={`flex-1 ${sizeClasses} bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
         />
