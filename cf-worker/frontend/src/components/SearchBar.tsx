@@ -5,8 +5,6 @@ interface SearchBarProps {
   size?: 'default' | 'compact';
   width?: number;
   defaultValue?: string;
-  value?: string; // controlled value (optional)
-  onChange?: (query: string) => void; // controlled change (optional)
   onSubmit: (query: string) => void;
   autoFocus?: boolean;
 }
@@ -15,14 +13,10 @@ export const SearchBar = ({
   size = 'default', 
   width, 
   defaultValue = '', 
-  value,
-  onChange,
   onSubmit, 
   autoFocus = false 
 }: SearchBarProps) => {
-  // Support controlled and uncontrolled modes
-  const [internalQuery, setInternalQuery] = useState(defaultValue);
-  const searchQuery = value !== undefined ? value : internalQuery;
+  const [searchQuery, setSearchQuery] = useState(defaultValue);
 
   const handleSubmit = () => {
     if (searchQuery.trim()) {
@@ -34,12 +28,6 @@ export const SearchBar = ({
     if (e.key === 'Enter') {
       handleSubmit();
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const next = e.target.value;
-    if (onChange) onChange(next);
-    if (value === undefined) setInternalQuery(next);
   };
 
   const sizeClasses = size === 'compact' 
@@ -55,9 +43,9 @@ export const SearchBar = ({
         <input 
           type="text" 
           value={searchQuery} 
-          onChange={handleChange}
+          onChange={e => setSearchQuery(e.target.value)} 
           onKeyPress={handleKeyPress}
-          placeholder="Explore visuallyâ€¦" 
+          placeholder="Explore visually…" 
           autoFocus={autoFocus}
           className={`flex-1 ${sizeClasses} bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400`}
         />
@@ -74,4 +62,3 @@ export const SearchBar = ({
     </div>
   );
 };
-
