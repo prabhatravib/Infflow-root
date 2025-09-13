@@ -11,7 +11,6 @@ import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { useState, useMemo, useCallback } from 'react';
 import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
-import { setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -80,6 +79,14 @@ export default function SearchResults({
   clusters,
   setClusters
 }: SearchResultsProps) {
+  // Clean up any existing search bars immediately when component mounts
+  useEffect(() => {
+    const existingOverlay = document.querySelector('.central-search-overlay');
+    if (existingOverlay) {
+      existingOverlay.remove();
+      console.log('[SearchResults] Cleaned up existing search bar on component mount');
+    }
+  }, []);
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
@@ -106,42 +113,206 @@ export default function SearchResults({
     (svgRef as any).current = svgElement;
     console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
 
-    // Inject search bar directly into SVG (replace node A visuals)
-    if (radialEnabled && svgElement) {
-      try {
-        if ((window as any).injectCentralSearch) {
-          (window as any).injectCentralSearch(svgElement);
+    // Don't inject old-style search bar - the new styled one is already created
+    // The SVG will render behind the existing fixed search bar
+  }, [radialEnabled]);
+
+  // Create persistent search bar immediately when radial is enabled and visual tab is active
+  useEffect(() => {
+    if (radialEnabled && diagramViewTab === 'visual') {
+      // Check if search bar already exists, if so, just update its value instead of recreating
+      const existingOverlay = document.querySelector('.central-search-overlay');
+      if (existingOverlay) {
+        const input = existingOverlay.querySelector('input');
+        if (input && input.value !== searchQuery) {
+          input.value = searchQuery;
         }
-      } catch (e) {
-        console.warn('injectCentralSearch failed:', e);
+        console.log('[SearchResults] Updated existing search bar value');
+        return; // Don't recreate, just update
+      }
+      console.log('[SearchResults] Creating persistent search bar at screen center');
+      
+      // Create search bar directly without waiting for SVG
+      const searchBar = document.createElement('div');
+      searchBar.className = 'central-search-overlay';
+      
+      // Calculate screen center position (shorter width than landing page)
+      const searchBarWidth = 400; // Shorter than landing page but wider than before
+      const searchBarHeight = 56; // Match landing page height
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const left = (viewportWidth - searchBarWidth) / 2;
+      const top = (viewportHeight - searchBarHeight) / 2;
+      
+      // Match landing page styling
+      searchBar.style.cssText = `
+        position: fixed;
+        left: ${left}px;
+        top: ${top}px;
+        width: ${searchBarWidth}px;
+        height: ${searchBarHeight}px;
+        display: flex;
+        align-items: center;
+        z-index: 10000;
+        pointer-events: auto;
+        background: white;
+        border-radius: 24px;
+        border: 1px solid rgba(229, 231, 235, 0.6);
+        transition: all 0.3s ease;
+      `;
+      
+      // Create input matching landing page
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = 'Explore visually...';
+      input.value = searchQuery;
+      input.setAttribute('data-central-search-input', 'true');
+      input.style.cssText = `
+        flex: 1;
+        padding: 14px 24px;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 18px;
+        color: #111827;
+        font-weight: 400;
+      `;
+      
+      // Create mic button
+      const micButton = document.createElement('button');
+      micButton.innerHTML = `
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        </svg>
+      `;
+      micButton.style.cssText = `
+        padding: 10px;
+        background: transparent;
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      `;
+      micButton.addEventListener('mouseenter', () => {
+        micButton.style.backgroundColor = '#f3f4f6';
+      });
+      micButton.addEventListener('mouseleave', () => {
+        micButton.style.backgroundColor = 'transparent';
+      });
+      
+      // Create image button
+      const imageButton = document.createElement('button');
+      imageButton.innerHTML = `
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+      `;
+      imageButton.style.cssText = `
+        padding: 10px;
+        background: transparent;
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      `;
+      imageButton.addEventListener('mouseenter', () => {
+        imageButton.style.backgroundColor = '#f3f4f6';
+      });
+      imageButton.addEventListener('mouseleave', () => {
+        imageButton.style.backgroundColor = 'transparent';
+      });
+      
+      // Create search button matching landing page
+      const searchButton = document.createElement('button');
+      searchButton.innerHTML = `
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      `;
+      searchButton.style.cssText = `
+        padding: 10px;
+        margin-right: 8px;
+        background: #111827;
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      `;
+      searchButton.addEventListener('mouseenter', () => {
+        searchButton.style.backgroundColor = '#374151';
+      });
+      searchButton.addEventListener('mouseleave', () => {
+        searchButton.style.backgroundColor = '#111827';
+      });
+      
+      // Assemble the search bar (matching landing page order)
+      searchBar.appendChild(input);
+      searchBar.appendChild(micButton);
+      searchBar.appendChild(imageButton);
+      searchBar.appendChild(searchButton);
+      
+      // Add event handlers
+      input.addEventListener('input', (e) => {
+        setSearchQuery((e.target as HTMLInputElement).value);
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          onSearch(input.value);
+        }
+      });
+      
+      // Search button click handler
+      searchButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onSearch(input.value);
+      };
+      
+      // Mic button click handler (placeholder)
+      micButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // TODO: Implement voice input
+        console.log('Voice input clicked');
+      };
+      
+      // Image button click handler (placeholder)
+      imageButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // TODO: Implement image input
+        console.log('Image input clicked');
+      };
+      
+      // Add to document body
+      document.body.appendChild(searchBar);
+      
+      // Store cleanup function
+      (searchBar as any)._cleanup = () => {
+        // No additional cleanup needed for this simple approach
+      };
+      
+      console.log('[SearchResults] Persistent search bar created at screen center');
+    }
+  }, [radialEnabled, diagramViewTab, setSearchQuery, onSearch]);
+
+  // Remove search bar when switching to text tab
+  useEffect(() => {
+    if (radialEnabled && diagramViewTab === 'text') {
+      const existingOverlay = document.querySelector('.central-search-overlay');
+      if (existingOverlay) {
+        existingOverlay.remove();
+        console.log('[SearchResults] Removed search bar for text tab');
       }
     }
-  }, [radialEnabled]);
+  }, [radialEnabled, diagramViewTab]);
 
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
   
-  // Set up global event listeners for central search
-  useEffect(() => {
-    if (radialEnabled) {
-      console.log('[SearchResults] Setting up central search listeners');
-      const { inject } = setupCentralSearchListeners(
-        (value: string) => {
-          console.log('[SearchResults] Central search onChange:', value);
-          setSearchQuery(value);
-        },
-        (value: string) => {
-          console.log('[SearchResults] Central search onSubmit:', value);
-          onSearch(value);
-        }
-      );
-      
-      // Store the inject function for later use
-      (window as any).injectCentralSearch = (svg: SVGSVGElement) => {
-        return inject(svg, searchQuery);
-      };
-    }
-  }, [radialEnabled, setSearchQuery, onSearch]);
+  // No longer need the old setupCentralSearchListeners since we create search bar directly
 
   // Sync the injected search bar value when searchQuery changes
   useEffect(() => {
@@ -158,30 +329,7 @@ export default function SearchResults({
     }
   }, [radialEnabled, searchQuery]);
 
-  // Re-inject when SVG changes
-  useEffect(() => {
-    if (!radialEnabled) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    const observer = new MutationObserver(() => {
-      const input = document.querySelector('input[data-central-search-input]');
-      if (!input) {
-        console.log('[SearchResults] Re-injecting search bar after SVG change');
-        if ((window as any).injectCentralSearch) {
-          (window as any).injectCentralSearch(svg);
-        }
-      }
-    });
-
-    observer.observe(svg, {
-      childList: true,
-      subtree: true,
-      attributes: false
-    });
-
-    return () => observer.disconnect();
-  }, [radialEnabled]);
+  // No longer need mutation observer since search bar is created directly and persists
 
   // Cleanup overlay when component unmounts or radial is disabled
   useEffect(() => {
@@ -193,7 +341,26 @@ export default function SearchResults({
           (overlay as any)._cleanup();
         }
         overlay.remove();
+        console.log('[SearchResults] Cleaned up search bar on component unmount');
       }
+    };
+  }, []);
+
+  // Additional cleanup on page navigation - remove search bar when leaving search results
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const overlay = document.querySelector('.central-search-overlay');
+      if (overlay) {
+        overlay.remove();
+        console.log('[SearchResults] Cleaned up search bar on page navigation');
+      }
+    };
+
+    // Clean up on page visibility change (when user navigates away)
+    document.addEventListener('visibilitychange', handleBeforeUnload);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleBeforeUnload);
     };
   }, []);
 
@@ -292,7 +459,7 @@ export default function SearchResults({
                       </div>
                     ) : diagram ? (
                       <div className="relative">
-                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative", marginRight: '5px' }}>
+                        <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative", marginRight: '5px', minHeight: '400px', width: '100%' }}>
                           <Mermaid 
                             ref={mermaidRef}
                             code={diagram} 
@@ -322,15 +489,20 @@ export default function SearchResults({
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded bg-white dark:bg-gray-900 p-8 text-center">
-                        <div className="mb-2">
+                      <div className="rounded bg-white dark:bg-gray-900 p-8 text-center" style={{ minHeight: '400px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                        {/* Icon positioned above search bar */}
+                        <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)' }}>
                           <img 
                             src="/textchart-icon.png" 
                             alt="Textchart" 
                             className="w-16 h-16 mx-auto"
                           />
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
+                        
+                        {/* Loading text positioned below search bar */}
+                        <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)' }}>
+                          <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
+                        </div>
                       </div>
                     )
                   ) : (
