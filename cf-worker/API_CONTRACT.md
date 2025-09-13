@@ -19,6 +19,15 @@ POST /api/deep-dive
 - Request JSON: { "selected_text": "...", "question": "...", "original_query": "..." }
 - Response JSON (200): { "success": true, "response": "explanation text" }
 
+POST /api/cluster
+- Request JSON: { "clusterId": "..." }
+- Response JSON (200):
+  {
+    "success": true,
+    "cluster": { /* ClusterNode root with children */ },
+    "universal_content": "Plain-text summary to display in Text tab"
+  }
+
 Frontend snippet (calls from Infflow-magicpath):
 
 ```ts

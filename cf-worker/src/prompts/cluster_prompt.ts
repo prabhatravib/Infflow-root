@@ -43,13 +43,19 @@ Return **only** a valid JSON object with the following structure:
 
 1. **Structure**: Create only 2 levels - a root cluster and 3-6 main sub-clusters (no deeper nesting)
 2. **Labels**: Use clear, descriptive labels for clusters (5-15 characters ideal)
-3. **Headlines**: Create engaging, specific titles (3-8 words) that capture the essence of each cluster
-4. **Descriptions**: Write 2-3 sentences (40-80 words) in a natural, conversational tone that directly explains what this topic covers and why it matters
+3. **Headlines (tone & style)**: Use neutral, professional noun phrases (2–6 words). Do NOT use verbs or imperatives. Examples: "Ancient Monuments", "Art and Architecture", "Local Districts".
+4. **Descriptions (tone & length)**: 1–2 sentences (20–50 words), objective and factual. Write about the subject itself, NOT about the panel. Do not mention "this cluster/section/panel" and do not use meta verbs such as "explores", "covers", "describes", "details", "focuses", "highlights", "examines", "presents", "outlines". Start the sentence with the subject (e.g., "Roman cuisine includes…", "Ancient monuments include…"). Use present simple and concrete wording.
 5. **Weights**: Use integers 1-10, where higher numbers represent more important/larger clusters
 6. **Balance**: Ensure clusters are reasonably balanced in size and relevance
 7. **Relevance**: All content should be directly related to the query topic
 8. **IDs**: Use kebab-case for all IDs (e.g., "machine-learning", "neural-networks")
 9. **Simplicity**: Focus on main topic areas only - no internal items or sub-clusters
+
+### Style guardrails
+- Avoid marketing or dramatic verbs: "explore", "discover", "marvel", "immerse", "journey", "unveil", "celebrate"
+- Avoid meta verbs: "explores", "covers", "describes", "details", "focuses", "highlights", "examines", "presents", "outlines"
+- Avoid hype adjectives: "iconic", "vibrant", "world‑class", "breathtaking", "amazing", "unforgettable", "dazzling"
+- Prefer matter‑of‑fact wording: "Overview of Roman monuments", "Art and architecture", "Local districts and neighborhoods"
 
 ### Examples
 
@@ -58,7 +64,7 @@ For "machine learning":
 - Sub-clusters: "Algorithm Types", "Applications", "Tools & Frameworks", "Research Areas"
 
 For "Paris landmarks":
-- Root: "Iconic Monuments" - "Paris has incredible world-famous landmarks like the Eiffel Tower and Louvre Museum. These monuments define the city's character and attract millions of visitors every year."
+- Root: "Major Monuments" - "Paris landmarks include the Eiffel Tower, Louvre, and Notre‑Dame. These sites illustrate changes in engineering and urban design and show how political and cultural periods shaped the city."
 - Sub-clusters: "Historic Sites", "Museums", "Architecture", "Cultural Heritage"
 
 For "climate change":

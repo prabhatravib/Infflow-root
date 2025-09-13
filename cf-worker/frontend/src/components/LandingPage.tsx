@@ -11,6 +11,9 @@ interface LandingPageProps {
   toggleTheme: () => void;
   currentTab: string;
   setCurrentTab: (tab: string) => void;
+  diagramViewTab?: 'visual' | 'text';
+  setDiagramViewTab?: (tab: 'visual' | 'text') => void;
+  showResults?: boolean;
 }
 
 export default function LandingPage({
@@ -20,9 +23,12 @@ export default function LandingPage({
   isDark,
   toggleTheme,
   currentTab,
-  setCurrentTab
+  setCurrentTab,
+  diagramViewTab,
+  setDiagramViewTab,
+  showResults = false
 }: LandingPageProps) {
-  const suggestionChips = ['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake'];
+  const suggestionChips = ['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake','Rome Foamtree'];
 
   return (
     <motion.div 
@@ -99,7 +105,14 @@ export default function LandingPage({
       </div>
       
       {/* Bottom Navigation */}
-      <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} position="bottom" />
+      <Tabs 
+        currentTab={currentTab} 
+        setCurrentTab={setCurrentTab} 
+        position="bottom"
+        diagramViewTab={diagramViewTab}
+        setDiagramViewTab={setDiagramViewTab}
+        showResults={showResults}
+      />
     </motion.div>
   );
 }

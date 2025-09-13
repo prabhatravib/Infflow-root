@@ -3,7 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
 import { useSelection } from './hooks/use-selection';
-import { describe, callDeepDiveApi } from './lib/api';
+import { describe, callDeepDiveApi, fetchClusterChildren } from './lib/api';
 import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -22,6 +22,7 @@ export default function App() {
   const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
+  const [clusters, setClusters] = useState<import('./types/cluster').ClusterNode | null>(null);
   const debouncedTimer = useRef<number | null>(null);
   const lastInitialSearchDone = useRef(false);
   // Selection and deep dive functionality
@@ -38,6 +39,16 @@ export default function App() {
     // Ensure UI state mirrors the first successful search every time
     const cleaned = query.trim();
     setSearchQuery(cleaned);
+    const qLower = cleaned.toLowerCase();
+    const wantsFoamTree = (
+      qLower.includes('foamtree') ||
+      qLower.includes('foam tree') ||
+      qLower.includes('foam-tree') ||
+      qLower.includes('topic map') ||
+      qLower.includes('topic maps') ||
+      qLower.includes('topic-map') ||
+      qLower.includes('topicmap')
+    );
     // Ensure URL reflects the query. Also update when already on /search.
     if (options.navigate !== false) {
       const params = new URLSearchParams(location.search);
@@ -47,54 +58,91 @@ export default function App() {
     clearSelection();
     setCodeFlowStatus('not-sent');
     setDiagramViewTab('visual');
+    // Reset diagram and clusters immediately to avoid showing stale visuals
+    setDiagram(null);
+    setClusters(null);
  // Reset status when starting new search
     try {
-      const res = await describe(cleaned);
-      console.log('API Response:', res); // Debug logging
-      
-      // Set the diagram
-      if (res.render_type === 'html') {
-        setDiagram(res.rendered_content);
+      if (wantsFoamTree) {
+        // FoamTree-only path: generate clusters and skip Mermaid entirely
+        try {
+          const clusterRes = await fetchClusterChildren(cleaned);
+          if (clusterRes.success && clusterRes.cluster) {
+            setClusters(clusterRes.cluster as any);
+            // Populate Text tab with universal content if provided
+            if (clusterRes.universal_content) {
+              setContentData({ content: '', description: '', universal_content: clusterRes.universal_content });
+            } else {
+              setContentData({ content: '', description: '', universal_content: '' });
+            }
+
+            // Send basic details to Hexa voice worker similar to Mermaid
+            const foamTreePayload = {
+              mermaidCode: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
+              diagramImage: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
+              prompt: cleaned
+            };
+            setDiagramData(foamTreePayload);
+            await handleDiscussionRequest(foamTreePayload);
+          } else {
+            console.warn('Cluster API returned no cluster');
+            setContentData({ content: '', description: '', universal_content: '' });
+          }
+        } catch (e) {
+          console.warn('Cluster generation failed:', e);
+          setContentData({ content: '', description: '', universal_content: '' });
+        }
       } else {
-        setDiagram(res.diagram || res.rendered_content || null);
-      }
+        // Default path: generate Mermaid diagram + content
+        const res = await describe(cleaned);
+        console.log('API Response:', res); // Debug logging
 
-      // Set content data for text tab
-      if (res.content || res.description || res.universal_content) {
-        setContentData({
-          content: res.content || '',
-          description: res.description || '',
-          universal_content: res.universal_content || ''
-        });
-      }
+        // Set the diagram
+        if (res.render_type === 'html') {
+          setDiagram(res.rendered_content);
+        } else {
+          setDiagram(res.diagram || res.rendered_content || null);
+        }
 
-      // Set diagram data for HexaWorker
-      if (res.diagram) {
-        const newDiagramData = {
-          mermaidCode: res.diagram,
-          diagramImage: res.diagram, // For now, using the same value
-          prompt: cleaned,
-          diagramType: res.diagram_type
-        };
-        setDiagramData(newDiagramData);
-        
-        // Send external data to hexa worker
-        handleDiscussionRequest(newDiagramData);
+        // Set content data for text tab
+        if (res.content || res.description || res.universal_content) {
+          setContentData({
+            content: res.content || '',
+            description: res.description || '',
+            universal_content: res.universal_content || ''
+          });
+        }
+
+        // Set diagram data for HexaWorker
+        if (res.diagram) {
+          const newDiagramData = {
+            mermaidCode: res.diagram,
+            diagramImage: res.diagram, // For now, using the same value
+            prompt: cleaned,
+            diagramType: res.diagram_type
+          };
+          setDiagramData(newDiagramData);
+
+          // Send external data to hexa worker
+          handleDiscussionRequest(newDiagramData);
+        }
       }
     } catch (e) {
       console.error('Search error:', e); // Debug logging
       setDiagram(null);
       setDiagramData(null);
       setContentData(null);
+      setClusters(null);
     }
   };
 
   const handleBackToHome = () => {
-    navigate('/visual', { replace: false });
+    navigate('/', { replace: false });
     setSearchQuery('');
     setDiagram(null);
     setDiagramData(null);
     setContentData(null);
+    setClusters(null);
     setCodeFlowStatus('not-sent');
     setDiagramViewTab('visual');
     clearSelection();
@@ -302,6 +350,9 @@ export default function App() {
             toggleTheme={toggleTheme}
             currentTab={currentTab}
             setCurrentTab={setCurrentTab}
+            diagramViewTab={diagramViewTab}
+            setDiagramViewTab={setDiagramViewTab}
+            showResults={showResults}
           />
         ) : (
           <SearchResults
@@ -328,6 +379,8 @@ export default function App() {
             handleSavePNG={handleSavePNG}
             diagramViewTab={diagramViewTab}
             setDiagramViewTab={setDiagramViewTab}
+            clusters={clusters}
+            setClusters={setClusters}
           />
         )}
           </AnimatePresence>

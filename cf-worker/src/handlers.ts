@@ -1,5 +1,5 @@
 import { json, sanitizeMermaid } from "./utils";
-import { processDiagramPipeline, generateDeepDiveResponse } from "./diagram";
+import { processDiagramPipeline, generateDeepDiveResponse, generateClusterData, generateCombinedContent } from "./diagram";
 import { EnvLike } from "./openai";
 import { createTimer } from "./timing";
 
@@ -33,6 +33,32 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
   timer.markStart("request_validation", { query_length: query.length });
 
   try {
+    // If FoamTree/topic map is explicitly requested, skip Mermaid pipeline.
+    const q = query.toLowerCase();
+    if (
+      q.includes('foamtree') ||
+      q.includes('foam tree') ||
+      q.includes('foam-tree') ||
+      q.includes('topic map') ||
+      q.includes('topic maps') ||
+      q.includes('topic-map') ||
+      q.includes('topicmap')
+    ) {
+      console.log(`FoamTree requested; skipping diagram pipeline for query: ${query}`);
+      const response: DiagramResponse = {
+        success: true,
+        query,
+        description: '',
+        content: '',
+        universal_content: '',
+        diagram_type: 'radial_mindmap',
+        diagram: '',
+        render_type: 'html',
+        rendered_content: '',
+      };
+      timer.logPerformanceReport();
+      return json(response, 200);
+    }
     console.log(`🚀 [${timer.getRequestId()}] Processing describe request: ${query.substring(0, 50)}...`);
     
     // Use the sophisticated pipeline from pitext_desktop
@@ -122,6 +148,49 @@ export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Prom
       success: false, 
       detail: `Error generating deep dive response: ${error instanceof Error ? error.message : 'Unknown error'}`, 
       error_type: "internal_error" 
+    }, 500);
+  }
+}
+
+type ClusterRequest = { clusterId: string };
+
+export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promise<Response> {
+  const clusterId = (body?.clusterId || '').trim();
+
+  if (!clusterId) {
+    return json({
+      success: false,
+      detail: 'clusterId is required',
+      error_type: 'validation_error',
+    }, 400);
+  }
+
+  try {
+    console.log(`Cluster request - ID: ${clusterId}`);
+
+    const cluster = await generateClusterData(clusterId, env);
+
+    // Also generate universal text content to populate the Text tab
+    let universal_content = '';
+    try {
+      const { universalContent } = await generateCombinedContent(clusterId, 'radial_mindmap', env);
+      universal_content = universalContent || '';
+    } catch (e) {
+      console.warn('Universal content generation failed for cluster:', e);
+      universal_content = '';
+    }
+
+    return json({
+      success: true,
+      cluster,
+      universal_content,
+    }, 200);
+  } catch (error) {
+    console.error('Cluster handler error:', error);
+    return json({
+      success: false,
+      detail: `Error generating cluster data: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error_type: 'server_error',
     }, 500);
   }
 }

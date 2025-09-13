@@ -21,6 +21,9 @@ export type DeepDiveResponse = {
   response: string;
 };
 
+// Cluster API types
+import type { ClusterNode } from '../types/cluster';
+
 export async function describe(query: string): Promise<DiagramResponse> {
   const res = await fetch('/api/describe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ query }) });
   if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -34,5 +37,18 @@ export async function callDeepDiveApi(params: DeepDiveRequest): Promise<DeepDive
     body: JSON.stringify(params) 
   });
   if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+export async function fetchClusterChildren(clusterId: string): Promise<{ success: boolean; cluster?: ClusterNode; detail?: string; universal_content?: string }>{
+  const res = await fetch('/api/cluster', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clusterId })
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`API error ${res.status}${detail ? `: ${detail}` : ''}`);
+  }
   return res.json();
 }

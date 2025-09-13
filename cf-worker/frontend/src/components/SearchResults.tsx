@@ -7,6 +7,10 @@ import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
 import RadialSearchOverlay from './RadialSearchOverlay';
+import { FoamTreeView } from './visual/FoamTreeView';
+import type { ClusterNode } from '../types/cluster';
+import { useState, useMemo } from 'react';
+import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
 import { injectSearchOverlay, setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
 
 interface SearchResultsProps {
@@ -45,6 +49,8 @@ interface SearchResultsProps {
   handleSavePNG: () => void;
   diagramViewTab: 'visual' | 'text';
   setDiagramViewTab: (tab: 'visual' | 'text') => void;
+  clusters: ClusterNode | null;
+  setClusters: (c: ClusterNode | null) => void;
 }
 
 export default function SearchResults({
@@ -70,12 +76,30 @@ export default function SearchResults({
   handleSaveText,
   handleSavePNG,
   diagramViewTab,
-  setDiagramViewTab
+  setDiagramViewTab,
+  clusters,
+  setClusters
 }: SearchResultsProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
   const radialEnabled = diagramData?.diagramType === "radial_mindmap";
+  const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>([]);
+  const [exposedClusterId, setExposedClusterId] = useState<string | null>(null);
+  const { loadClusterChildren } = useClusterLazyLoading(clusters, setClusters);
+
+  const findClusterById = useMemo(() => {
+    const fn = (root: ClusterNode | null, id: string): ClusterNode | null => {
+      if (!root) return null;
+      if (root.id === id) return root;
+      for (const child of root.children || []) {
+        const found = fn(child, id);
+        if (found) return found;
+      }
+      return null;
+    };
+    return fn;
+  }, []);
 
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
@@ -187,7 +211,44 @@ export default function SearchResults({
                 <div className="space-y-2">
                   {/* Content based on selected tab */}
                   {diagramViewTab === 'visual' ? (
-                    diagram ? (
+                    clusters ? (
+                      <div className="relative">
+                        <div className="h-[70vh] rounded bg-white dark:bg-gray-900">
+                          <FoamTreeView
+                            data={clusters}
+                            onSelect={setSelectedClusterIds}
+                            onOpen={loadClusterChildren}
+                            onExpose={(id) => setExposedClusterId(id)}
+                            onSetupSelection={setupSelectionHandler}
+                            className="w-full h-full"
+                          />
+                        </div>
+                        {selectedClusterIds.length > 0 && (
+                          <div className="absolute top-4 right-4 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                              Selected Cluster Items
+                            </h3>
+                            <div className="space-y-2">
+                              {selectedClusterIds.map(clusterId => {
+                                const cluster = findClusterById(clusters, clusterId);
+                                return cluster?.items?.map(item => (
+                                  <div key={item.id} className="p-2 border border-gray-200 dark:border-gray-700 rounded">
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline block">
+                                      {item.title}
+                                    </a>
+                                    {item.score && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        Score: {(item.score * 100).toFixed(0)}%
+                                      </div>
+                                    )}
+                                  </div>
+                                ));
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : diagram ? (
                       <div className="relative">
                         <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative" }}>
                           <Mermaid 
@@ -294,7 +355,14 @@ export default function SearchResults({
       </div>
       
       {/* Bottom Navigation */}
-      <Tabs currentTab={currentTab} setCurrentTab={setCurrentTab} position="bottom" />
+      <Tabs 
+        currentTab={currentTab} 
+        setCurrentTab={setCurrentTab} 
+        position="bottom"
+        diagramViewTab={diagramViewTab}
+        setDiagramViewTab={setDiagramViewTab}
+        showResults={true}
+      />
     </motion.div>
   );
 }

@@ -25,6 +25,16 @@ export function FoamTreeView({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const resizeTimeoutRef = useRef<number | null>(null);
 
+  // Deterministic string hash for stable color assignment
+  const hashString = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  };
+
   // Debounced resize handler
   const handleResize = useCallback(() => {
     if (resizeTimeoutRef.current) {
@@ -81,21 +91,35 @@ export function FoamTreeView({
         zoomMax: 1,
         wheelZoom: false,
         doubleClickZoom: false,
-        // Professional subtle color palette
-        groupColorDecorator: (opts: any, params: any, vars: any) => {
-          // Define professional, muted colors
-          const colors = [
-            '#F8F9FA', // Very light gray
-            '#F1F3F4', // Light gray
-            '#E8EAED', // Medium light gray
-            '#F5F5F5', // Neutral gray
-            '#F0F0F0', // Light gray variant
-            '#FAFAFA', // Off-white
-            '#F2F2F2', // Light gray variant 2
-            '#F7F7F7'  // Very light gray variant
+        // Professional subtle color palette with varied muted colors
+        groupColorDecorator: (_opts: any, params: any, vars: any) => {
+          // Carefully curated, low-saturation palette (no yellow or pink)
+          const palette = [
+            '#E3F2FD', // very light blue
+            '#E8EAF6', // very light indigo
+            '#E0F2F1', // very light teal
+            '#E0F7FA', // very light cyan
+            '#E8F5E9', // very light green
+            '#ECEFF1', // cool gray
+            '#F0F4F8', // blue-gray
+            '#F3F4F6'  // neutral gray
           ];
-          return colors[params.groupIndex % colors.length];
+
+          // Derive a stable color per-group using its id + parent id + depth
+          const gid = String(params?.group?.id ?? '');
+          const parentId = String((params && (params.parent?.id || params.group?.parent?.id)) || 'root');
+          const depth = Number((params as any)?.depth ?? 0);
+          const colorIdx = (hashString(gid) + hashString(parentId) + depth) % palette.length;
+          const color = palette[colorIdx];
+          vars.groupColor = color;
+          // Ensure label has strong contrast
+          vars.groupLabelColor = '#1F2937'; // gray-800
+          // Subtle border
+          vars.groupBorderColor = '#E5E7EB'; // gray-200
+          return color;
         },
+        // Prefer plain fills to avoid gradients
+        groupFillType: 'plain' as any,
         groupBorderWidth: 1,
         groupBorderColor: '#E0E0E0',
         groupBorderRadius: 0,
