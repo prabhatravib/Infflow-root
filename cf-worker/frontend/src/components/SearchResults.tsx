@@ -110,7 +110,7 @@ export default function SearchResults({
     
     console.log('[SearchResults] Syncing central search value:', searchQuery);
     // Update the overlay input value if it exists
-    const overlay = svg.parentElement?.querySelector('.central-search-overlay');
+    const overlay = document.querySelector('.central-search-overlay') as HTMLElement | null;
     if (overlay) {
       const input = overlay.querySelector('input');
       if (input && input.value !== searchQuery) {
@@ -126,12 +126,15 @@ export default function SearchResults({
     if (!svg) return;
 
     const observer = new MutationObserver(() => {
-      const input = svg.querySelector('input[data-central-search-input]');
-      if (!input) {
-        console.log('[SearchResults] Re-injecting search bar after SVG change');
-        if ((window as any).injectCentralSearch) {
-          (window as any).injectCentralSearch(svg);
-        }
+      // Using HTML overlay now; check presence globally
+      const overlay = document.querySelector('.central-search-overlay') as HTMLElement | null;
+      if (!overlay) {
+        console.log('[SearchResults] Re-injecting central search overlay after SVG change');
+        injectSearchOverlay(svg, {
+          defaultValue: searchQuery,
+          onChange: (v: string) => setSearchQuery(v),
+          onSubmit: (v: string) => onSearch(v)
+        });
       }
     });
 
@@ -201,9 +204,12 @@ export default function SearchResults({
                               // Inject search bar directly into SVG (replace node A visuals)
                               if (radialEnabled && svgElement) {
                                 try {
-                                  if ((window as any).injectCentralSearch) {
-                                    (window as any).injectCentralSearch(svgElement);
-                                  }
+                                  // Inject overlay immediately on render to avoid timing issues
+                                  injectSearchOverlay(svgElement, {
+                                    defaultValue: searchQuery,
+                                    onChange: (v: string) => setSearchQuery(v),
+                                    onSubmit: (v: string) => onSearch(v)
+                                  });
                                 } catch (e) {
                                   console.warn('injectCentralSearch failed:', e);
                                 }

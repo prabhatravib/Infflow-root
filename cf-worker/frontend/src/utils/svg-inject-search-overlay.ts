@@ -12,61 +12,59 @@ export interface InjectOptions {
 /**
  * Create a simple HTML overlay search bar
  */
-function createSearchOverlay(doc: Document, svg: SVGSVGElement, box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
+function createSearchOverlay(
+  doc: Document,
+  svg: SVGSVGElement,
+  _container: HTMLElement, // kept for signature stability; not used now
+  box: { x: number; y: number; width: number; height: number },
+  opts: InjectOptions
+) {
   // Create HTML overlay
   const overlay = doc.createElement('div');
-  // Get the SVG's position and dimensions on the page
-  const svgRect = svg.getBoundingClientRect();
-  const svgParent = svg.parentElement;
-  
-  // SVG viewBox and dimensions
-  const viewBox = svg.viewBox.baseVal;
-  const svgWidth = svgRect.width;
-  const svgHeight = svgRect.height;
-  
-  // Convert SVG coordinates to screen coordinates
-  const scaleX = svgWidth / viewBox.width;
-  const scaleY = svgHeight / viewBox.height;
-  
-  // Calculate the center of the node in SVG coordinates
-  const nodeCenterX = box.x + box.width/2;
-  const nodeCenterY = box.y + box.height/2;
-  
-  // Convert to screen coordinates
-  const screenX = (nodeCenterX - viewBox.x) * scaleX;
-  const screenY = (nodeCenterY - viewBox.y) * scaleY;
-  
-  // Position relative to the SVG container
-  const left = screenX - 100; // Center the 200px wide overlay
-  const top = screenY - 15;   // Center the 30px high overlay
-  
-  console.log('[central-search] Positioning debug:', {
-    nodeBox: box,
-    nodeCenter: { x: nodeCenterX, y: nodeCenterY },
-    screenPos: { x: screenX, y: screenY },
-    finalPos: { left, top },
-    viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
-    svgSize: { width: svgWidth, height: svgHeight },
-    scale: { x: scaleX, y: scaleY }
-  });
-  
+
+  // Helper to compute overlay position centered over node A
+  const positionOverlay = () => {
+    const nodeRect = (svg.querySelector('[data-id="A"]') || svg) as Element;
+    const nodeBBox = (nodeRect as any).getBoundingClientRect();
+    const overlayWidth = 280;
+    const overlayHeight = 40;
+
+    // Fixed positioning relative to viewport to avoid React DOM wipes
+    const left = nodeBBox.left + nodeBBox.width / 2 - overlayWidth / 2;
+    const top = nodeBBox.top + nodeBBox.height / 2 - overlayHeight / 2;
+
+    overlay.style.left = `${Math.round(left)}px`;
+    overlay.style.top = `${Math.round(top)}px`;
+    overlay.style.width = `${overlayWidth}px`;
+    overlay.style.height = `${overlayHeight}px`;
+
+    // Debug
+    console.log('[central-search] Overlay positioned:', {
+      nodeBBox: {
+        left: nodeBBox.left,
+        top: nodeBBox.top,
+        width: nodeBBox.width,
+        height: nodeBBox.height,
+      },
+      final: { left: overlay.style.left, top: overlay.style.top },
+    });
+  };
+
+  // Base overlay styles
   overlay.style.cssText = `
-    position: absolute;
-    left: ${left}px;
-    top: ${top}px;
-    width: 200px;
-    height: 30px;
+    position: fixed;
     display: flex;
     gap: 8px;
     align-items: center;
     z-index: 10000;
     pointer-events: auto;
     background: white;
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    padding: 4px;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    padding: 6px;
     border: 2px solid #3b82f6;
   `;
+  overlay.setAttribute('data-export-exclude', '');
 
   const input = doc.createElement('input');
   input.type = 'text';
@@ -74,10 +72,10 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, box: { x: number
   input.value = opts.defaultValue || '';
   input.style.cssText = `
     flex: 1;
-    padding: 6px 10px;
+    padding: 8px 10px;
     border: 1px solid #d1d5db;
-    border-radius: 4px;
-    font-size: 12px;
+    border-radius: 6px;
+    font-size: 13px;
     outline: none;
     background: white;
   `;
@@ -88,11 +86,11 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, box: { x: number
     background: #3b82f6;
     color: white;
     border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
   `;
 
   overlay.appendChild(input);
@@ -124,6 +122,25 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, box: { x: number
     }
   };
 
+  // Initial position
+  positionOverlay();
+
+  // Reposition on resize/scroll (and slight delay after layout)
+  const reposition = () => requestAnimationFrame(positionOverlay);
+  window.addEventListener('resize', reposition);
+  window.addEventListener('scroll', reposition, true);
+
+  // Mutation observer to adjust if the SVG layout changes
+  const mo = new MutationObserver(() => reposition());
+  mo.observe(svg, { attributes: true, childList: true, subtree: true });
+
+  // Cleanup hook if removed
+  overlay.addEventListener('DOMNodeRemoved', () => {
+    window.removeEventListener('resize', reposition);
+    window.removeEventListener('scroll', reposition, true);
+    mo.disconnect();
+  });
+
   return overlay;
 }
 
@@ -131,7 +148,18 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, box: { x: number
  * Find the central node (node A) in the SVG
  */
 function findNodeA(svg: SVGSVGElement): Element | null {
-  return svg.querySelector('[data-id="A"]') || svg.querySelector('#flowchart-A-88') || null;
+  const selectors = [
+    '[data-id="A"]',
+    'g[id^="flowchart-A"]',
+    '#A',
+    '.node#A',
+    '.node[id*="-A"], [id$="-A"]'
+  ];
+  for (const sel of selectors) {
+    const el = svg.querySelector(sel);
+    if (el) return el;
+  }
+  return null;
 }
 
 /**
@@ -153,25 +181,27 @@ function getNodeBox(node: Element): { x: number; y: number; width: number; heigh
 export function injectSearchOverlay(svg: SVGSVGElement, opts: InjectOptions = {}) {
   if (!svg) return null;
 
-  // Remove any existing overlay
-  const existingOverlay = svg.parentElement?.querySelector('.central-search-overlay');
-  if (existingOverlay) {
-    existingOverlay.remove();
-  }
-
   const nodeA = findNodeA(svg);
   if (!nodeA) {
     console.log('[central-search] Node A not found');
-    return null;
+    // If there's an existing overlay, keep it instead of removing
+    return document.querySelector('.central-search-overlay') as HTMLElement | null;
   }
 
   const box = getNodeBox(nodeA);
-  const overlay = createSearchOverlay(svg.ownerDocument, svg, box, opts);
+  const container = (svg.parentElement?.parentElement as HTMLElement) || (svg.parentElement as HTMLElement) || undefined;
+  const existingOverlay = document.querySelector('.central-search-overlay');
+  const overlay = createSearchOverlay(svg.ownerDocument, svg, container || (svg.parentElement as HTMLElement), box, opts);
 
   // Add to the SVG's parent container
   overlay.className = 'central-search-overlay';
-  svg.parentElement?.appendChild(overlay);
+  // Append to document body so React re-renders of Mermaid container don't remove it
+  document.body.appendChild(overlay);
 
+  // Remove the old overlay now that the new one exists
+  if (existingOverlay && existingOverlay !== overlay) {
+    try { existingOverlay.remove(); } catch {}
+  }
   console.log('[central-search] HTML overlay created and positioned');
   return overlay;
 }
