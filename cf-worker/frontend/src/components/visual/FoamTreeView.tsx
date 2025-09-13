@@ -8,6 +8,7 @@ type Props = {
   onSelect?: (nodeIds: string[]) => void;          // reflect selection in results panel
   onOpen?: (nodeId: string) => void;               // request lazy load of children
   onExpose?: (nodeId: string) => void;             // sync breadcrumb
+  onSetupSelection?: (container: HTMLElement) => void; // for deep dive functionality
   className?: string;
 };
 
@@ -16,6 +17,7 @@ export function FoamTreeView({
   onSelect, 
   onOpen, 
   onExpose, 
+  onSetupSelection,
   className = '' 
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,6 +41,20 @@ export function FoamTreeView({
     }, 250);
   }, []);
 
+  // Setup text selection for deep dive functionality
+  const setupTextSelection = useCallback(() => {
+    if (!containerRef.current || !onSetupSelection) return;
+
+    // Wait for FoamTree to render
+    setTimeout(() => {
+      const foamTreeContainer = containerRef.current?.querySelector('.foamtree');
+      if (!foamTreeContainer) return;
+
+      // Setup the selection handler for the foam tree container
+      onSetupSelection(foamTreeContainer as HTMLElement);
+    }, 100);
+  }, [onSetupSelection]);
+
   // Initialize FoamTree
   useEffect(() => {
     if (!containerRef.current) return;
@@ -60,6 +76,41 @@ export function FoamTreeView({
       foamTreeRef.current = new FoamTree({
         element: containerRef.current,
         pixelRatio: window.devicePixelRatio || 1,
+        // Disable zoom functionality
+        zoomMin: 1,
+        zoomMax: 1,
+        wheelZoom: false,
+        doubleClickZoom: false,
+        // Professional subtle color palette
+        groupColorDecorator: (opts: any, params: any, vars: any) => {
+          // Define professional, muted colors
+          const colors = [
+            '#F8F9FA', // Very light gray
+            '#F1F3F4', // Light gray
+            '#E8EAED', // Medium light gray
+            '#F5F5F5', // Neutral gray
+            '#F0F0F0', // Light gray variant
+            '#FAFAFA', // Off-white
+            '#F2F2F2', // Light gray variant 2
+            '#F7F7F7'  // Very light gray variant
+          ];
+          return colors[params.groupIndex % colors.length];
+        },
+        groupBorderWidth: 1,
+        groupBorderColor: '#E0E0E0',
+        groupBorderRadius: 0,
+        // Text styling for headlines and descriptions
+        groupLabelVerticalAlignment: 'center',
+        groupLabelHorizontalAlignment: 'center',
+        groupLabelMaxTotalHeight: 0.8,
+        groupLabelMaxFontSize: 22,
+        groupLabelMinFontSize: 12,
+        groupLabelFontFamily: 'system-ui, -apple-system, sans-serif',
+        groupLabelFontWeight: 'normal',
+        groupLabelLineHeight: 1.3,
+        groupLabelMaxLines: 6,
+        groupLabelWordWrap: 'break-word',
+        groupLabelColor: '#2C3E50',
         // Event handlers
         onGroupClick: (event: any) => {
           const nodeIds = event.group ? [event.group.id] : [];
@@ -84,6 +135,11 @@ export function FoamTreeView({
       // Set initial data
       const foamData = toFoamTreeData(data);
       foamTreeRef.current.set({ dataObject: foamData });
+
+      // Setup text selection for deep dive functionality
+      if (onSetupSelection) {
+        setupTextSelection();
+      }
 
       // Setup resize observer
       resizeObserverRef.current = new ResizeObserver(handleResize);
@@ -117,11 +173,16 @@ export function FoamTreeView({
       try {
         const foamData = toFoamTreeData(data);
         foamTreeRef.current.set({ dataObject: foamData });
+        
+        // Setup text selection after data update
+        if (onSetupSelection) {
+          setupTextSelection();
+        }
       } catch (error) {
         console.error('FoamTreeView: Failed to update data:', error);
       }
     }
-  }, [data]);
+  }, [data, onSetupSelection, setupTextSelection]);
 
   // Handle keyboard events
   useEffect(() => {

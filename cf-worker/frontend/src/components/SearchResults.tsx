@@ -180,6 +180,7 @@ export default function SearchResults({
                           onSelect={setSelectedClusterIds}
                           onOpen={loadClusterChildren}
                           onExpose={setExposedClusterId}
+                          onSetupSelection={setupSelectionHandler}
                           className="w-full h-full"
                         />
                       </div>
