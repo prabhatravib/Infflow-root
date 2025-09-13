@@ -6,8 +6,11 @@ import { Sidebar } from './Sidebar';
 import Mermaid, { MermaidRef } from './Mermaid';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
-import RadialSearchOverlay from './RadialSearchOverlay';
-import { injectSearchOverlay, setupCentralSearchListeners } from '../utils/svg-inject-search-overlay';
+// import RadialSearchOverlay from './RadialSearchOverlay';
+import { setupRadialAlignment } from '../utils/radial-align';
+import { FoamTreeView } from './visual/FoamTreeView';
+import { ClusterNode } from '../types/cluster';
+import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
 
 interface SearchResultsProps {
   searchQuery: string;
@@ -45,6 +48,13 @@ interface SearchResultsProps {
   handleSavePNG: () => void;
   diagramViewTab: 'visual' | 'text';
   setDiagramViewTab: (tab: 'visual' | 'text') => void;
+  clusters: ClusterNode | null;
+  setClusters: (clusters: ClusterNode | null) => void;
+  selectedClusterIds: string[];
+  setSelectedClusterIds: (ids: string[]) => void;
+  exposedClusterId?: string;
+  setExposedClusterId: (id?: string) => void;
+  isLoading: boolean;
 }
 
 export default function SearchResults({
@@ -70,82 +80,54 @@ export default function SearchResults({
   handleSaveText,
   handleSavePNG,
   diagramViewTab,
-  setDiagramViewTab
+  setDiagramViewTab,
+  clusters,
+  setClusters,
+  selectedClusterIds,
+  setSelectedClusterIds,
+  setExposedClusterId,
+  isLoading
 }: SearchResultsProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
   const radialEnabled = diagramData?.diagramType === "radial_mindmap";
+  const alignCleanupRef = useRef<null | (() => void)>(null);
+
+  // Cluster lazy loading hook
+  const { loadClusterChildren } = useClusterLazyLoading(clusters, setClusters);
+
+  // Helper function to find cluster by ID
+  const findClusterById = (root: ClusterNode | null, id: string): ClusterNode | null => {
+    if (!root) return null;
+    if (root.id === id) return root;
+    if (root.children) {
+      for (const child of root.children) {
+        const found = findClusterById(child, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
 
   // Debug logging
   console.log('🔍 SearchResults: diagramData?.diagramType:', diagramData?.diagramType, 'enabled:', diagramData?.diagramType === "radial_mindmap");
+  console.log('🔍 SearchResults: diagram:', diagram);
+  console.log('🔍 SearchResults: diagramData?.mermaidCode:', diagramData?.mermaidCode);
+  console.log('🔍 SearchResults: clusters:', clusters);
+  console.log('🔍 SearchResults: diagramViewTab:', diagramViewTab);
+  console.log('🔍 SearchResults: isLoading:', isLoading);
+  console.log('🔍 SearchResults: hasDiagram:', !!(diagram || diagramData?.mermaidCode));
+  console.log('🔍 SearchResults: hasClusters:', !!clusters);
   
-  // Set up global event listeners for central search
+  // Cleanup alignment on unmount
   useEffect(() => {
-    if (radialEnabled) {
-      console.log('[SearchResults] Setting up central search listeners');
-      const { inject } = setupCentralSearchListeners(
-        (value: string) => {
-          console.log('[SearchResults] Central search onChange:', value);
-          setSearchQuery(value);
-        },
-        (value: string) => {
-          console.log('[SearchResults] Central search onSubmit:', value);
-          onSearch(value);
-        }
-      );
-      
-      // Store the inject function for later use
-      (window as any).injectCentralSearch = (svg: SVGSVGElement) => {
-        return inject(svg, searchQuery);
-      };
-    }
-  }, [radialEnabled, setSearchQuery, onSearch, searchQuery]);
+    return () => {
+      try { alignCleanupRef.current?.(); } catch {}
+    };
+  }, []);
 
-  // Sync the injected search bar value when searchQuery changes
-  useEffect(() => {
-    if (!radialEnabled) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-    
-    console.log('[SearchResults] Syncing central search value:', searchQuery);
-    // Update the overlay input value if it exists
-    const overlay = document.querySelector('.central-search-overlay') as HTMLElement | null;
-    if (overlay) {
-      const input = overlay.querySelector('input');
-      if (input && input.value !== searchQuery) {
-        input.value = searchQuery;
-      }
-    }
-  }, [radialEnabled, searchQuery]);
-
-  // Re-inject when SVG changes
-  useEffect(() => {
-    if (!radialEnabled) return;
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    const observer = new MutationObserver(() => {
-      // Using HTML overlay now; check presence globally
-      const overlay = document.querySelector('.central-search-overlay') as HTMLElement | null;
-      if (!overlay) {
-        console.log('[SearchResults] Re-injecting central search overlay after SVG change');
-        injectSearchOverlay(svg, {
-          defaultValue: searchQuery,
-          onChange: (v: string) => setSearchQuery(v),
-          onSubmit: (v: string) => onSearch(v)
-        });
-      }
-    });
-
-    observer.observe(svg, {
-      childList: true,
-      subtree: true,
-      attributes: false
-    });
-
-    return () => observer.disconnect();
-  }, [radialEnabled, searchQuery, svgRef.current, onSearch, setSearchQuery]);
+  // Removed old radial overlay sync/injection; alignment handles positioning
   
   return (
     <motion.div 
@@ -189,29 +171,88 @@ export default function SearchResults({
               <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl pt-2 pb-6 px-6">
                 <div className="space-y-2">
                   {/* Content based on selected tab */}
-                  {diagramViewTab === 'visual' ? (
-                    diagram ? (
+                  {diagramViewTab === 'visual' && clusters ? (
+                    // Show FoamTree when in visual tab and cluster data is available
+                    <div className="relative">
+                      <div className="h-[70vh] rounded bg-white dark:bg-gray-900">
+                        <FoamTreeView
+                          data={clusters}
+                          onSelect={setSelectedClusterIds}
+                          onOpen={loadClusterChildren}
+                          onExpose={setExposedClusterId}
+                          className="w-full h-full"
+                        />
+                      </div>
+                      {/* Cluster items panel */}
+                      {selectedClusterIds.length > 0 && (
+                        <div className="absolute top-4 right-4 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-96 overflow-y-auto">
+                          <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                            Selected Cluster Items
+                          </h3>
+                          <div className="space-y-2">
+                            {selectedClusterIds.map(clusterId => {
+                              const cluster = findClusterById(clusters, clusterId);
+                              return cluster?.items?.map(item => (
+                                <div key={item.id} className="p-2 border border-gray-200 dark:border-gray-700 rounded">
+                                  <a 
+                                    href={item.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 hover:underline block"
+                                  >
+                                    {item.title}
+                                  </a>
+                                  {item.score && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      Score: {(item.score * 100).toFixed(0)}%
+                                    </div>
+                                  )}
+                                </div>
+                              ));
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : diagramViewTab === 'visual' ? (
+                    isLoading ? (
+                      <div className="rounded bg-white dark:bg-gray-900 p-8 text-center">
+                        <div className="mb-2">
+                          <img 
+                            src="/textchart-icon.png" 
+                            alt="Textchart" 
+                            className="w-16 h-16 mx-auto"
+                          />
+                        </div>
+                        <p className="text-gray-500 dark:text-gray-400">Generating visual content...</p>
+                      </div>
+                    ) : (diagram || diagramData?.mermaidCode) ? (
                       <div className="relative">
                         <div ref={hostRef} className="diagram-viewport rounded bg-white dark:bg-gray-900 p-2 mermaid-container" style={{ position: "relative" }}>
                           <Mermaid 
                             ref={mermaidRef}
-                            code={diagram} 
+                            code={diagram || diagramData?.mermaidCode || ''} 
                             onRender={(svgElement) => {
                               // Update the SVG ref for the overlay
                               (svgRef as any).current = svgElement;
                               console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
-
-                              // Inject search bar directly into SVG (replace node A visuals)
-                              if (radialEnabled && svgElement) {
+                              // Ensure any legacy overlay is removed
+                              const legacy = document.querySelector('.central-search-overlay') as HTMLElement | null;
+                              if (legacy) {
+                                try { legacy.remove(); } catch {}
+                              }
+                              // Align radial diagram to sticky search bar (no extra overlay)
+                              const looksRadial = !!svgElement?.querySelector('[data-id="A"], g[id^="flowchart-A"], #A, .node#A, .node[id*="-A"], [id$="-A"]');
+                              if ((radialEnabled || looksRadial) && svgElement && hostRef.current) {
                                 try {
-                                  // Inject overlay immediately on render to avoid timing issues
-                                  injectSearchOverlay(svgElement, {
-                                    defaultValue: searchQuery,
-                                    onChange: (v: string) => setSearchQuery(v),
-                                    onSubmit: (v: string) => onSearch(v)
+                                  // Cleanup any previous alignment observers
+                                  alignCleanupRef.current?.();
+                                  alignCleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
+                                    paddingPercent: 0.05,
+                                    minScale: 0.6,
                                   });
                                 } catch (e) {
-                                  console.warn('injectCentralSearch failed:', e);
+                                  console.warn('[SearchResults] radial alignment failed:', e);
                                 }
                               }
                             }}
@@ -219,16 +260,7 @@ export default function SearchResults({
                               setupSelectionHandler(container);
                             }}
                           />
-                          {/* Overlay disabled when SVG injection is active */}
-                          {false && (
-                            <RadialSearchOverlay
-                              enabled={radialEnabled}
-                              svgRef={svgRef}
-                              hostRef={hostRef}
-                              lastQuery={searchQuery}
-                              onSubmit={onSearch}
-                            />
-                          )}
+                          {/* Radial overlay removed in favor of alignment */}
                         </div>
                         {/* Save PNG Button - positioned on the right side */}
                         <div className="absolute bottom-2 right-2">
@@ -250,7 +282,7 @@ export default function SearchResults({
                             className="w-16 h-16 mx-auto"
                           />
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
+                        <p className="text-gray-500 dark:text-gray-400">Loading visual content...</p>
                       </div>
                     )
                   ) : (

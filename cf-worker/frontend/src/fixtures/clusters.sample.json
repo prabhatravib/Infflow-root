@@ -1,0 +1,101 @@
+{
+  "id": "root",
+  "label": "Machine Learning",
+  "weight": 10,
+  "items": [
+    {
+      "id": "item-1",
+      "title": "Introduction to Machine Learning",
+      "url": "https://example.com/ml-intro",
+      "score": 0.95
+    },
+    {
+      "id": "item-2",
+      "title": "ML Algorithms Overview",
+      "url": "https://example.com/ml-algorithms",
+      "score": 0.9
+    }
+  ],
+  "children": [
+    {
+      "id": "cluster-1",
+      "label": "Core Concepts",
+      "weight": 8,
+      "items": [
+        {
+          "id": "item-3",
+          "title": "Supervised Learning",
+          "url": "https://example.com/supervised-learning",
+          "score": 0.85
+        },
+        {
+          "id": "item-4",
+          "title": "Unsupervised Learning",
+          "url": "https://example.com/unsupervised-learning",
+          "score": 0.8
+        }
+      ],
+      "children": [
+        {
+          "id": "cluster-1-1",
+          "label": "Algorithms",
+          "weight": 6,
+          "items": [
+            {
+              "id": "item-5",
+              "title": "Linear Regression",
+              "url": "https://example.com/linear-regression",
+              "score": 0.75
+            },
+            {
+              "id": "item-6",
+              "title": "Decision Trees",
+              "url": "https://example.com/decision-trees",
+              "score": 0.7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cluster-2",
+      "label": "Applications",
+      "weight": 7,
+      "items": [
+        {
+          "id": "item-7",
+          "title": "Computer Vision",
+          "url": "https://example.com/computer-vision",
+          "score": 0.85
+        },
+        {
+          "id": "item-8",
+          "title": "Natural Language Processing",
+          "url": "https://example.com/nlp",
+          "score": 0.8
+        }
+      ],
+      "children": [
+        {
+          "id": "cluster-2-1",
+          "label": "Deep Learning",
+          "weight": 5,
+          "items": [
+            {
+              "id": "item-9",
+              "title": "Neural Networks",
+              "url": "https://example.com/neural-networks",
+              "score": 0.9
+            },
+            {
+              "id": "item-10",
+              "title": "Convolutional Networks",
+              "url": "https://example.com/cnn",
+              "score": 0.85
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

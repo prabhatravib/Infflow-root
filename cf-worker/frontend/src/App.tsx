@@ -6,6 +6,7 @@ import { useSelection } from './hooks/use-selection';
 import { describe, callDeepDiveApi } from './lib/api';
 import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { ClusterNode } from './types/cluster';
 
 // @component: InfflowApp
 export default function App() {
@@ -22,6 +23,12 @@ export default function App() {
   const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Cluster state for FoamTree Map view
+  const [clusters, setClusters] = useState<ClusterNode | null>(null);
+  const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>([]);
+  const [exposedClusterId, setExposedClusterId] = useState<string | undefined>(undefined);
   const debouncedTimer = useRef<number | null>(null);
   const lastInitialSearchDone = useRef(false);
   // Selection and deep dive functionality
@@ -47,16 +54,23 @@ export default function App() {
     clearSelection();
     setCodeFlowStatus('not-sent');
     setDiagramViewTab('visual');
+    setIsLoading(true);
  // Reset status when starting new search
     try {
       const res = await describe(cleaned);
-      console.log('API Response:', res); // Debug logging
+      console.log('🔍 App: API Response:', res); // Debug logging
+      console.log('🔍 App: res.diagram:', res.diagram);
+      console.log('🔍 App: res.cluster_data:', res.cluster_data);
+      console.log('🔍 App: res.diagram_type:', res.diagram_type);
       
       // Set the diagram
       if (res.render_type === 'html') {
         setDiagram(res.rendered_content);
+        console.log('🔍 App: Set diagram from rendered_content:', res.rendered_content);
       } else {
-        setDiagram(res.diagram || res.rendered_content || null);
+        const diagramValue = res.diagram || res.rendered_content || null;
+        setDiagram(diagramValue);
+        console.log('🔍 App: Set diagram from diagram/rendered_content:', diagramValue);
       }
 
       // Set content data for text tab
@@ -66,6 +80,14 @@ export default function App() {
           description: res.description || '',
           universal_content: res.universal_content || ''
         });
+      }
+      
+      // Set cluster data if available (for foamtree requests)
+      if (res.cluster_data) {
+        setClusters(res.cluster_data);
+        console.log('🔍 Cluster data received:', res.cluster_data);
+      } else {
+        setClusters(null);
       }
 
       // Set diagram data for HexaWorker
@@ -77,15 +99,20 @@ export default function App() {
           diagramType: res.diagram_type
         };
         setDiagramData(newDiagramData);
+        console.log('🔍 App: Set diagramData:', newDiagramData);
         
         // Send external data to hexa worker
         handleDiscussionRequest(newDiagramData);
+      } else {
+        console.log('🔍 App: No diagram data to set for HexaWorker');
       }
     } catch (e) {
       console.error('Search error:', e); // Debug logging
       setDiagram(null);
       setDiagramData(null);
       setContentData(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -328,6 +355,13 @@ export default function App() {
             handleSavePNG={handleSavePNG}
             diagramViewTab={diagramViewTab}
             setDiagramViewTab={setDiagramViewTab}
+            clusters={clusters}
+            setClusters={setClusters}
+            selectedClusterIds={selectedClusterIds}
+            setSelectedClusterIds={setSelectedClusterIds}
+            exposedClusterId={exposedClusterId}
+            setExposedClusterId={setExposedClusterId}
+            isLoading={isLoading}
           />
         )}
           </AnimatePresence>

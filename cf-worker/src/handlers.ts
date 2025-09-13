@@ -14,9 +14,22 @@ type DiagramResponse = {
   diagram: string;
   render_type: "html";
   rendered_content: string;
+  cluster_data?: any;
 };
 
 type DeepDiveRequest = { selected_text: string; question: string; original_query?: string };
+
+type ClusterRequest = { clusterId: string };
+type ClusterResponse = {
+  success: true;
+  cluster: {
+    id: string;
+    label: string;
+    weight?: number;
+    items?: { id: string; url?: string; title?: string; score?: number }[];
+    children?: any[];
+  };
+};
 
 export async function describeHandler(body: DescribeRequest, env: EnvLike): Promise<Response> {
   const query = (body?.query || "").trim();
@@ -50,6 +63,11 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
     
     // Prepare final response
     const response = await timer.timeStep("response_preparation", async () => {
+      console.log(`🔍 [${timer.getRequestId()}] Preparing response with cluster_data:`, !!result.cluster_data);
+      if (result.cluster_data) {
+        console.log(`🔍 [${timer.getRequestId()}] Cluster data preview:`, JSON.stringify(result.cluster_data, null, 2).substring(0, 200));
+      }
+      
       const response: DiagramResponse = {
         success: true,
         query,
@@ -60,6 +78,7 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
         diagram: sanitizedDiagram,
         render_type: "html",
         rendered_content: sanitizedDiagram,
+        cluster_data: result.cluster_data
       };
       return response;
     }, {
@@ -124,4 +143,75 @@ export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Prom
       error_type: "internal_error" 
     }, 500);
   }
+}
+
+export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promise<Response> {
+  const clusterId = (body?.clusterId || "").trim();
+  
+  if (!clusterId) {
+    return json({ 
+      success: false, 
+      detail: "clusterId is required", 
+      error_type: "validation_error" 
+    }, 400);
+  }
+
+  try {
+    console.log(`Cluster request - ID: ${clusterId}`);
+    
+    // TODO: Implement actual cluster data generation based on clusterId
+    // For now, generate sample cluster data based on the ID
+    const cluster = await generateClusterData(clusterId, env);
+    
+    return json({ 
+      success: true, 
+      cluster: cluster 
+    }, 200);
+    
+  } catch (error) {
+    console.error("Cluster handler error:", error);
+    return json({ 
+      success: false, 
+      detail: `Error generating cluster data: ${error instanceof Error ? error.message : 'Unknown error'}`, 
+      error_type: "internal_error" 
+    }, 500);
+  }
+}
+
+// Helper function to generate cluster data
+async function generateClusterData(clusterId: string, env: EnvLike): Promise<ClusterResponse['cluster']> {
+  // This is where you'd implement the actual cluster generation logic
+  // For now, return sample data that demonstrates the structure
+  
+  const baseCluster = {
+    id: clusterId,
+    label: `Cluster ${clusterId}`,
+    weight: Math.floor(Math.random() * 10) + 1,
+    items: [
+      { id: `${clusterId}-item-1`, title: `Item 1 in ${clusterId}`, url: 'https://example.com/1', score: 0.9 },
+      { id: `${clusterId}-item-2`, title: `Item 2 in ${clusterId}`, url: 'https://example.com/2', score: 0.8 },
+      { id: `${clusterId}-item-3`, title: `Item 3 in ${clusterId}`, url: 'https://example.com/3', score: 0.7 },
+    ],
+    children: [
+      {
+        id: `${clusterId}-child-1`,
+        label: `Sub-cluster 1`,
+        weight: 3,
+        items: [
+          { id: `${clusterId}-child-1-1`, title: `Child item 1`, url: 'https://example.com/child1', score: 0.85 },
+          { id: `${clusterId}-child-1-2`, title: `Child item 2`, url: 'https://example.com/child2', score: 0.75 },
+        ]
+      },
+      {
+        id: `${clusterId}-child-2`,
+        label: `Sub-cluster 2`,
+        weight: 2,
+        items: [
+          { id: `${clusterId}-child-2-1`, title: `Another child item`, url: 'https://example.com/child3', score: 0.65 },
+        ]
+      }
+    ]
+  };
+
+  return baseCluster;
 }

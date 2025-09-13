@@ -9,9 +9,10 @@ import { diagramRadialPrompt } from './diagram_radial_prompt';
 import { diagramFlowchartPrompt } from './diagram_flowchart_prompt';
 import { diagramSequencePrompt } from './diagram_sequence_prompt';
 import { deepDivePrompt } from './deep_dive_prompt';
+import { clusterPrompt } from './cluster_prompt';
 
 // Re-export for external use
-export { contentPrompt, contentSequencePrompt, contentUniversalPrompt, diagramRadialPrompt, diagramFlowchartPrompt, diagramSequencePrompt, deepDivePrompt };
+export { contentPrompt, contentSequencePrompt, contentUniversalPrompt, diagramRadialPrompt, diagramFlowchartPrompt, diagramSequencePrompt, deepDivePrompt, clusterPrompt };
 
 // Convenience functions for getting prompts by type
 export function getContentPrompt(diagramType: string): string {
@@ -39,6 +40,10 @@ export function getDeepDivePrompt(): string {
 
 export function getUniversalContentPrompt(): string {
   return contentUniversalPrompt;
+}
+
+export function getClusterPrompt(): string {
+  return clusterPrompt;
 }
 
 export function getCombinedContentPrompt(diagramType: string): string {

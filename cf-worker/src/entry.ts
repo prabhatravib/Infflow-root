@@ -1,4 +1,4 @@
-import { describeHandler, deepDiveHandler } from './handlers';
+import { describeHandler, deepDiveHandler, clusterHandler } from './handlers';
 import { json, toMessage } from './utils';
 
 export interface Env {
@@ -31,6 +31,12 @@ export default {
         console.log("🔵 Handling deep-dive request...");
         const body = await request.json();
         return deepDiveHandler(body as any, env as any);
+      }
+
+      if (request.method === 'POST' && pathname === '/api/cluster') {
+        console.log("🔵 Handling cluster request...");
+        const body = await request.json();
+        return clusterHandler(body as any, env as any);
       }
 
       // Serve static assets configured in wrangler.toml [assets]
