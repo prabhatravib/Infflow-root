@@ -10,54 +10,48 @@ export interface InjectOptions {
 }
 
 /**
- * Create a simple HTML overlay search bar
+ * Create a fixed position HTML overlay search bar
  */
 function createSearchOverlay(doc: Document, svg: SVGSVGElement, _box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
   // Create HTML overlay
   const overlay = doc.createElement('div');
-  // Get the SVG's position and dimensions on the page
-  const svgRect = svg.getBoundingClientRect();
   
-  // SVG viewBox and dimensions
-  const viewBox = svg.viewBox.baseVal;
-  const svgWidth = svgRect.width;
-  const svgHeight = svgRect.height;
+  // Calculate fixed position based on SVG center in viewport
+  const calculateFixedPosition = () => {
+    const svgRect = svg.getBoundingClientRect();
+    
+    // Calculate SVG center in viewport coordinates
+    const svgCenterX = svgRect.left + svgRect.width / 2;
+    const svgCenterY = svgRect.top + svgRect.height / 2;
+    
+    // Position search bar at SVG center, accounting for search bar dimensions
+    const searchBarWidth = 200;
+    const searchBarHeight = 30;
+    const left = svgCenterX - searchBarWidth / 2;
+    const top = svgCenterY - searchBarHeight / 2;
+    
+    // Ensure search bar stays within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const finalLeft = Math.max(10, Math.min(left, viewportWidth - searchBarWidth - 10));
+    const finalTop = Math.max(10, Math.min(top, viewportHeight - searchBarHeight - 10));
+    
+    return { left: finalLeft, top: finalTop };
+  };
   
-  // Calculate the center of the entire SVG instead of just the node
-  const svgCenterX = viewBox.width / 2;
-  const svgCenterY = viewBox.height / 2;
+  // Set initial position
+  const position = calculateFixedPosition();
   
-  // Convert SVG center coordinates to screen coordinates
-  const scaleX = svgWidth / viewBox.width;
-  const scaleY = svgHeight / viewBox.height;
-  
-  const screenX = (svgCenterX - viewBox.x) * scaleX;
-  const screenY = (svgCenterY - viewBox.y) * scaleY;
-  
-  // Position relative to the SVG container - center the search bar in the middle of the flowchart
-  const left = screenX - 100; // Center the 200px wide overlay
-  const top = screenY - 15;   // Center the 30px high overlay
-  
-  // Ensure the search bar is visible within the SVG container bounds
-  const maxLeft = svgWidth - 200; // 200px is the overlay width
-  const maxTop = svgHeight - 30;  // 30px is the overlay height
-  const finalLeft = Math.max(0, Math.min(left, maxLeft));
-  const finalTop = Math.max(0, Math.min(top, maxTop));
-  
-  console.log('[central-search] Positioning debug (centered):', {
-    svgCenter: { x: svgCenterX, y: svgCenterY },
-    screenPos: { x: screenX, y: screenY },
-    calculatedPos: { left, top },
-    finalPos: { left: finalLeft, top: finalTop },
-    viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
-    svgSize: { width: svgWidth, height: svgHeight },
-    scale: { x: scaleX, y: scaleY }
+  console.log('[central-search] Fixed positioning debug:', {
+    svgRect: svg.getBoundingClientRect(),
+    calculatedPosition: position,
+    viewportSize: { width: window.innerWidth, height: window.innerHeight }
   });
   
   overlay.style.cssText = `
-    position: absolute;
-    left: ${finalLeft}px;
-    top: ${finalTop}px;
+    position: fixed;
+    left: ${position.left}px;
+    top: ${position.top}px;
     width: 200px;
     height: 30px;
     display: flex;
@@ -70,7 +64,28 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, _box: { x: numbe
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     padding: 4px;
     border: 2px solid #3b82f6;
+    transition: all 0.2s ease;
   `;
+  
+  // Add resize and scroll listeners to update position
+  const updatePosition = () => {
+    const newPosition = calculateFixedPosition();
+    overlay.style.left = `${newPosition.left}px`;
+    overlay.style.top = `${newPosition.top}px`;
+  };
+  
+  // Store listeners for cleanup
+  const resizeListener = () => updatePosition();
+  const scrollListener = () => updatePosition();
+  
+  window.addEventListener('resize', resizeListener);
+  window.addEventListener('scroll', scrollListener);
+  
+  // Store cleanup function on the overlay element
+  (overlay as any)._cleanup = () => {
+    window.removeEventListener('resize', resizeListener);
+    window.removeEventListener('scroll', scrollListener);
+  };
 
   const input = doc.createElement('input');
   input.type = 'text';
@@ -133,32 +148,30 @@ function createSearchOverlay(doc: Document, svg: SVGSVGElement, _box: { x: numbe
 }
 
 /**
- * Inject the search overlay into the SVG container
+ * Inject the search overlay as a fixed position element
  */
 export function injectSearchOverlay(svg: SVGSVGElement, opts: InjectOptions = {}) {
   if (!svg) return null;
 
-  // Check if overlay already exists
-  const existingOverlay = svg.parentElement?.querySelector('.central-search-overlay');
+  // Check if overlay already exists globally (not just in SVG parent)
+  const existingOverlay = document.querySelector('.central-search-overlay');
   if (existingOverlay) {
-    // Just update the value if overlay exists
-    const input = existingOverlay.querySelector('input');
-    if (input && opts.defaultValue !== undefined && input.value !== opts.defaultValue) {
-      input.value = opts.defaultValue;
+    // Clean up existing overlay first
+    if ((existingOverlay as any)._cleanup) {
+      (existingOverlay as any)._cleanup();
     }
-    console.log('[central-search] Updated existing HTML overlay value');
-    return existingOverlay;
+    existingOverlay.remove();
   }
 
-  // Create overlay positioned at the center of the SVG (no need to find Node A)
+  // Create overlay positioned at the center of the SVG
   const dummyBox = { x: 0, y: 0, width: 0, height: 0 }; // Not used since we calculate center from SVG dimensions
   const overlay = createSearchOverlay(svg.ownerDocument, svg, dummyBox, opts);
 
-  // Add to the SVG's parent container
+  // Add to document body for fixed positioning
   overlay.className = 'central-search-overlay';
-  svg.parentElement?.appendChild(overlay);
+  document.body.appendChild(overlay);
 
-  console.log('[central-search] HTML overlay created and positioned at SVG center');
+  console.log('[central-search] Fixed position HTML overlay created and positioned at SVG center');
   return overlay;
 }
 

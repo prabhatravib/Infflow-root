@@ -146,12 +146,10 @@ export default function SearchResults({
   // Sync the injected search bar value when searchQuery changes
   useEffect(() => {
     if (!radialEnabled) return;
-    const svg = svgRef.current;
-    if (!svg) return;
     
     console.log('[SearchResults] Syncing central search value:', searchQuery);
-    // Update the overlay input value if it exists
-    const overlay = svg.parentElement?.querySelector('.central-search-overlay');
+    // Update the overlay input value if it exists (now globally positioned)
+    const overlay = document.querySelector('.central-search-overlay');
     if (overlay) {
       const input = overlay.querySelector('input');
       if (input && input.value !== searchQuery) {
@@ -167,7 +165,7 @@ export default function SearchResults({
     if (!svg) return;
 
     const observer = new MutationObserver(() => {
-      const input = svg.querySelector('input[data-central-search-input]');
+      const input = document.querySelector('input[data-central-search-input]');
       if (!input) {
         console.log('[SearchResults] Re-injecting search bar after SVG change');
         if ((window as any).injectCentralSearch) {
@@ -183,6 +181,33 @@ export default function SearchResults({
     });
 
     return () => observer.disconnect();
+  }, [radialEnabled]);
+
+  // Cleanup overlay when component unmounts or radial is disabled
+  useEffect(() => {
+    return () => {
+      // Clean up the fixed position overlay when component unmounts
+      const overlay = document.querySelector('.central-search-overlay');
+      if (overlay) {
+        if ((overlay as any)._cleanup) {
+          (overlay as any)._cleanup();
+        }
+        overlay.remove();
+      }
+    };
+  }, []);
+
+  // Cleanup overlay when radial is disabled
+  useEffect(() => {
+    if (!radialEnabled) {
+      const overlay = document.querySelector('.central-search-overlay');
+      if (overlay) {
+        if ((overlay as any)._cleanup) {
+          (overlay as any)._cleanup();
+        }
+        overlay.remove();
+      }
+    }
   }, [radialEnabled]);
   
   return (
