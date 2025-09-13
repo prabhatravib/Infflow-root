@@ -21,11 +21,16 @@ function createSearchOverlay(
 ) {
   // Create HTML overlay
   const overlay = doc.createElement('div');
+  // Hide until we have a reliable position
+  overlay.style.opacity = '0';
 
   // Helper to compute overlay position centered over node A
   const positionOverlay = () => {
-    const nodeRect = (svg.querySelector('[data-id="A"]') || svg) as Element;
-    const nodeBBox = (nodeRect as any).getBoundingClientRect();
+    // Find the central node robustly
+    const nodeEl = findNodeA(svg);
+    if (!nodeEl) return; // keep last position until node exists
+    const nodeBBox = (nodeEl as any).getBoundingClientRect();
+    if (!nodeBBox || nodeBBox.width === 0 || nodeBBox.height === 0) return;
     const overlayWidth = 280;
     const overlayHeight = 40;
 
@@ -37,6 +42,7 @@ function createSearchOverlay(
     overlay.style.top = `${Math.round(top)}px`;
     overlay.style.width = `${overlayWidth}px`;
     overlay.style.height = `${overlayHeight}px`;
+    overlay.style.opacity = '1';
 
     // Debug
     console.log('[central-search] Overlay positioned:', {
@@ -123,7 +129,10 @@ function createSearchOverlay(
   };
 
   // Initial position
+  // Try immediately and also after a short delay to allow layout
   positionOverlay();
+  setTimeout(positionOverlay, 50);
+  setTimeout(positionOverlay, 150);
 
   // Reposition on resize/scroll (and slight delay after layout)
   const reposition = () => requestAnimationFrame(positionOverlay);
