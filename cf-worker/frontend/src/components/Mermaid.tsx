@@ -35,7 +35,6 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
       theme: 'base',
       fontFamily: 'Arial, sans-serif',
       fontSize: 16,
-      deterministicIds: true,
       flowchart: {
         useMaxWidth: true,
         htmlLabels: false,

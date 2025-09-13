@@ -4,7 +4,7 @@
  */
 
 import { callOpenAI, EnvLike } from './openai';
-import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt, getClusterPrompt } from './prompts';
+import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt } from './prompts';
 import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
 
@@ -18,7 +18,6 @@ export interface DiagramResult {
   diagram: string;
   render_type: "html";
   rendered_content: string;
-  cluster_data?: any; // Optional cluster data for FoamTree
 }
 
 export async function selectDiagramType(query: string, env: EnvLike): Promise<DiagramType> {
@@ -282,67 +281,6 @@ Original query that generated the diagram: ${originalQuery}`;
   }
 }
 
-export async function generateClusterData(
-  query: string,
-  env: EnvLike
-): Promise<any> {
-  const timer = createTimer();
-  const clusterPrompt = getClusterPrompt();
-  
-  console.log(`🟡 [${timer.getRequestId()}] Starting cluster generation...`);
-  console.log(`🟡 [${timer.getRequestId()}] Query: ${query}`);
-  console.log(`🟡 [${timer.getRequestId()}] Cluster prompt length: ${clusterPrompt.length}`);
-  
-  try {
-    const response = await timer.timeStep("cluster_generation_llm_call", () => callOpenAI(
-      env,
-      clusterPrompt,
-      query,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      2000,
-      0.7
-    ), {
-      query_length: query.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 2000
-    });
-    
-    console.log(`✅ [${timer.getRequestId()}] Cluster generation response received`);
-    console.log(`Response length: ${response?.length || 0}`);
-    
-    if (!response) {
-      throw new Error("Empty cluster response from LLM");
-    }
-    
-    // Parse JSON response
-    let jsonString = response.trim();
-    console.log(`🟡 [${timer.getRequestId()}] Raw response: ${jsonString.substring(0, 200)}...`);
-    
-    // Remove markdown code blocks if present
-    if (jsonString.startsWith('```json')) {
-      jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-      console.log(`🟡 [${timer.getRequestId()}] Removed json code blocks`);
-    } else if (jsonString.startsWith('```')) {
-      jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
-      console.log(`🟡 [${timer.getRequestId()}] Removed code blocks`);
-    }
-    
-    console.log(`🟡 [${timer.getRequestId()}] Parsing JSON: ${jsonString.substring(0, 200)}...`);
-    const clusterData = JSON.parse(jsonString);
-    console.log(`🟡 [${timer.getRequestId()}] Successfully parsed cluster data:`, clusterData);
-    
-    console.log(`✅ [${timer.getRequestId()}] Cluster generation successful`);
-    timer.logPerformanceReport();
-    
-    return clusterData;
-    
-  } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Cluster generation failed:`, error);
-    timer.logPerformanceReport();
-    throw error;
-  }
-}
-
 export async function processDiagramPipeline(
   query: string,
   env: EnvLike
@@ -383,25 +321,7 @@ export async function processDiagramPipeline(
     });
     console.log(`✅ [${timer.getRequestId()}] Generated diagram code: ${diagramCode.substring(0, 100)}...`);
     
-    // Step 4: Generate cluster data if foamtree is mentioned
-    let clusterData: any = undefined;
-    if (query.toLowerCase().includes('foamtree')) {
-      console.log(`🔍 [${timer.getRequestId()}] FOAMTREE DETECTED - Starting cluster generation...`);
-      try {
-        clusterData = await timer.timeStep("cluster_data_generation", () => 
-          generateClusterData(query, env), {
-          query_length: query.length
-        });
-        console.log(`✅ [${timer.getRequestId()}] Generated cluster data for foamtree request:`, JSON.stringify(clusterData, null, 2));
-      } catch (error) {
-        console.error(`❌ [${timer.getRequestId()}] Cluster generation failed:`, error);
-        console.error(`❌ [${timer.getRequestId()}] Error details:`, error instanceof Error ? error.stack : String(error));
-      }
-    } else {
-      console.log(`🔍 [${timer.getRequestId()}] No foamtree keyword detected in query: "${query}"`);
-    }
-    
-    // Step 5: Prepare final result
+    // Step 4: Prepare final result
     const result = await timer.timeStep("result_preparation", async () => {
       const sanitizedDiagram = diagramCode; // Will be sanitized in handlers
       
@@ -412,15 +332,13 @@ export async function processDiagramPipeline(
         universal_content: universalContent,
         diagram: sanitizedDiagram,
         render_type: "html" as const,
-        rendered_content: sanitizedDiagram,
-        cluster_data: clusterData
+        rendered_content: sanitizedDiagram
       };
       
       return result;
     }, {
       diagram_length: diagramCode.length,
-      universal_content_length: universalContent.length,
-      has_cluster_data: !!clusterData
+      universal_content_length: universalContent.length
     });
     
     console.log(`🎉 [${timer.getRequestId()}] Pipeline completed successfully!`);
