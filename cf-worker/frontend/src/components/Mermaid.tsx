@@ -98,7 +98,7 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
   }, [code, onSetupSelection, onRender]);
 
   return (
-    <div className={`${className} flex justify-center items-center w-full relative`} ref={containerRef}>
+    <div className={`${className} flex justify-center items-center w-full relative`} style={{ zIndex: 1 }} ref={containerRef}>
     </div>
   );
 });

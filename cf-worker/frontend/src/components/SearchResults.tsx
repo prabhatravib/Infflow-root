@@ -113,6 +113,32 @@ export default function SearchResults({
     (svgRef as any).current = svgElement;
     console.log('🔍 SearchResults: SVG ref updated via onRender:', svgElement);
 
+    // Position the Mermaid diagram so its central node aligns with the search bar
+    if (radialEnabled && hostRef.current) {
+      const searchBar = document.querySelector('.central-search-overlay');
+      if (searchBar) {
+        const searchBarRect = searchBar.getBoundingClientRect();
+        const searchBarCenterX = searchBarRect.left + searchBarRect.width / 2;
+        const searchBarCenterY = searchBarRect.top + searchBarRect.height / 2;
+        
+        // Find the central node in the SVG (it's always node A in radial mind maps)
+        const centralNode = svgElement.querySelector('.node[id*="A"]');
+        if (centralNode) {
+          const nodeRect = centralNode.getBoundingClientRect();
+          const nodeCenterX = nodeRect.left + nodeRect.width / 2;
+          const nodeCenterY = nodeRect.top + nodeRect.height / 2;
+          
+          // Calculate the offset needed to move the central node to the search bar position
+          const offsetX = searchBarCenterX - nodeCenterX;
+          const offsetY = searchBarCenterY - nodeCenterY;
+          
+          // Apply the offset and scale to compress the diagram
+          svgElement.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(0.8)`;
+          console.log('🔍 Positioned Mermaid central node to align with search bar and compressed');
+        }
+      }
+    }
+
     // Don't inject old-style search bar - the new styled one is already created
     // The SVG will render behind the existing fixed search bar
   }, [radialEnabled]);
@@ -443,8 +469,8 @@ export default function SearchResults({
                             />
                           )}
                 </div>
-                {/* Save PNG Button - positioned lower */}
-                <div className="absolute bottom-8 right-8">
+                {/* Save PNG Button - positioned above bottom bar */}
+                <div className="absolute bottom-24 right-8">
                   <button
                     onClick={handleSavePNG}
                     className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
