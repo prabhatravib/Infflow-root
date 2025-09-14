@@ -513,12 +513,33 @@ svg g#A > rect, svg g#A > text, svg g#A foreignObject {
   opacity: 0; 
 }
 
+/* Bar always above; only its inputs clickable */
+#radial-stage-bar { 
+  position: fixed; 
+  z-index: 2000; 
+  pointer-events: none; 
+}
+#radial-stage-bar .search-bar * { 
+  pointer-events: auto; 
+}
+
+/* Alignment wrapper for the chart: we nudge this, not Mermaid internals */
+#radial-align { 
+  position: relative; 
+  z-index: 0; 
+  will-change: transform; 
+  transition: transform 180ms ease-out; 
+}
+
+/* Optional: clip the diagram to your stage viewport */
+/* #radial-stage { overflow: hidden; } */
+
 /* Radial bar overlay - pinned to viewport */
 #radial-stage-bar {
   position: fixed;      /* pinned to viewport */
   inset: 0;
   pointer-events: none; /* clicks pass through by default */
-  z-index: 1000;        /* above the SVG */
+  z-index: 2000;        /* above the SVG */
 }
 
 #radial-stage-bar .search-bar {

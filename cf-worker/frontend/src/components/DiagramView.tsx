@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react';
 import Mermaid, { MermaidRef } from './Mermaid';
+import RadialChart from './RadialChart';
 import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
@@ -121,12 +122,20 @@ export default function DiagramView({
           className="relative w-full h-[calc(100vh-168px)] overflow-hidden"
           style={{ zIndex: radialEnabled ? 1 : "auto" }}
         >
-          <Mermaid 
-            ref={mermaidRef}
-            code={diagram} 
-            onRender={handleMermaidRender}
-            onSetupSelection={setupSelectionHandler}
-          />
+          {radialEnabled ? (
+            <RadialChart 
+              code={diagram} 
+              onRender={handleMermaidRender}
+              onSetupSelection={setupSelectionHandler}
+            />
+          ) : (
+            <Mermaid 
+              ref={mermaidRef}
+              code={diagram} 
+              onRender={handleMermaidRender}
+              onSetupSelection={setupSelectionHandler}
+            />
+          )}
         </div>
         {/* Save PNG Button - positioned above bottom bar */}
         <div className="absolute bottom-24 right-8">
