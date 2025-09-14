@@ -1,3 +1,6 @@
+import { DiagramTypeDetector, DiagramType } from './diagram-type-detector';
+import { TextExtractor } from './text-extractor';
+
 // SelectionHandler class for managing SVG element interactions
 export class SelectionHandler {
   private selectElement: (element: Element, text: string) => void;
@@ -52,7 +55,7 @@ export class SelectionHandler {
 
   private setupClickHandlers(svg: SVGElement) {
     // Setup for different diagram types
-    const diagramType = this.detectDiagramType(svg);
+    const diagramType = DiagramTypeDetector.detectDiagramType(svg);
     
     switch (diagramType) {
       case 'flowchart':
@@ -80,7 +83,7 @@ export class SelectionHandler {
       (node as HTMLElement).style.cursor = 'pointer';
       node.addEventListener('click', (e) => {
         e.stopPropagation();
-        const text = this.extractNodeText(node);
+        const text = TextExtractor.extractNodeText(node);
         console.log('🖱️ Node clicked:', text);
         if (text) {
           this.selectElement(node, text);
@@ -95,7 +98,7 @@ export class SelectionHandler {
       (label as HTMLElement).style.cursor = 'pointer';
       label.addEventListener('click', (e) => {
         e.stopPropagation();
-        const text = this.extractEdgeText(label);
+        const text = TextExtractor.extractEdgeText(label);
         if (text) {
           this.selectElement(label, text);
           this.scrollToDeepDive();
@@ -175,7 +178,7 @@ export class SelectionHandler {
       // Make the entire note clickable
       note.addEventListener('click', (e) => {
         e.stopPropagation();
-        const text = this.extractNoteText(note);
+        const text = TextExtractor.extractNoteText(note);
         if (text) {
           this.selectElement(note, text);
           this.scrollToDeepDive();
@@ -189,7 +192,7 @@ export class SelectionHandler {
           (textEl as HTMLElement).style.cursor = 'pointer';
           textEl.addEventListener('click', (e) => {
             e.stopPropagation();
-            const fullText = this.extractNoteText(note);
+            const fullText = TextExtractor.extractNoteText(note);
             if (fullText) {
               this.selectElement(note, fullText);
               this.scrollToDeepDive();
@@ -207,7 +210,7 @@ export class SelectionHandler {
         (tspan as SVGTSpanElement).style.cursor = 'pointer';
         tspan.addEventListener('click', (e) => {
           e.stopPropagation();
-          const fullBulletContent = this.extractBulletPointContent(tspan, svg);
+          const fullBulletContent = TextExtractor.extractBulletPointContent(tspan, svg);
           this.selectElement(tspan, fullBulletContent);
           this.scrollToDeepDive();
         });
@@ -222,7 +225,7 @@ export class SelectionHandler {
         (text as SVGTextElement).style.cursor = 'pointer';
         text.addEventListener('click', (e) => {
           e.stopPropagation();
-          const fullBulletContent = this.extractBulletPointContent(text, svg);
+          const fullBulletContent = TextExtractor.extractBulletPointContent(text, svg);
           this.selectElement(text, fullBulletContent);
           this.scrollToDeepDive();
         });
@@ -232,11 +235,11 @@ export class SelectionHandler {
     // Background rectangles for blocks
     const rects = svg.querySelectorAll('rect');
     rects.forEach(rect => {
-      if (this.isSelectableRect(rect)) {
+      if (TextExtractor.isSelectableRect(rect)) {
         (rect as SVGRectElement).style.cursor = 'pointer';
         rect.addEventListener('click', (e) => {
           e.stopPropagation();
-          const text = this.extractBlockText(rect, svg);
+          const text = TextExtractor.extractBlockText(rect, svg);
           if (text) {
             this.selectElement(rect, text);
             this.scrollToDeepDive();
@@ -284,16 +287,6 @@ export class SelectionHandler {
   }
 
 
-  private cleanTextContent(text: string): string {
-    return text
-      .replace(/<br\s*\/?>/gi, ' ')  // Replace <br> tags with spaces
-      .replace(/\n/g, ' ')           // Replace newlines with spaces
-      .replace(/[\r\t]/g, ' ')       // Replace carriage returns and tabs with spaces
-      .replace(/\s+/g, ' ')          // Replace multiple whitespace with single space
-      .replace(/\s*([.,;:!?])\s*/g, '$1 ')  // Fix spacing around punctuation
-      .replace(/\s+/g, ' ')          // Clean up any new multiple spaces
-      .trim();
-  }
 
   private removeSelectionStyling(element: Element) {
     if (!element) return;
@@ -341,174 +334,6 @@ export class SelectionHandler {
     }
   }
 
-  private extractNodeText(node: Element): string {
-    // Look for the text element (Mermaid uses .nodeLabel spans)
-    const textElement = node.querySelector('text, .nodeLabel, span');
-    
-    if (textElement) {
-      // Get innerHTML to preserve <br> tags, then replace them with spaces
-      const htmlContent = textElement.innerHTML || '';
-      const rawText = htmlContent.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '');
-      return this.cleanTextContent(rawText);
-    }
-    
-    return '';
-  }
-
-  private extractEdgeText(label: Element): string {
-    const text = label.querySelector('text, span');
-    const extracted = text ? (text.textContent || '') : (label.textContent || '');
-    return this.cleanTextContent(extracted);
-  }
-
-  private extractNoteText(note: Element): string {
-    const texts = note.querySelectorAll('text');
-    const text = Array.from(texts)
-      .map(t => t.textContent || '')
-      .filter(Boolean)
-      .join(' ');
-    return this.cleanTextContent(text);
-  }
-
-  private extractBlockText(rect: Element, svg: SVGElement): string {
-    const bbox = (rect as SVGRectElement).getBBox();
-    
-    // Find the main text element that contains the node text
-    const textElements = Array.from(svg.querySelectorAll('text')).filter(text => {
-      const textBox = (text as SVGTextElement).getBBox();
-      return (
-        textBox.x >= bbox.x - 5 &&
-        textBox.x + textBox.width <= bbox.x + bbox.width + 5 &&
-        textBox.y >= bbox.y - 5 &&
-        textBox.y + textBox.height <= bbox.y + bbox.height + 5
-      );
-    });
-    
-    if (textElements.length === 0) {
-      return '';
-    }
-    
-    // If there's only one text element, get its full content
-    if (textElements.length === 1) {
-      const textElement = textElements[0];
-      // Get the full text content including all child tspan elements
-      const fullText = textElement.textContent || '';
-      return this.cleanTextContent(fullText);
-    }
-    
-    // If there are multiple text elements, try to find the parent text element
-    // that contains all the text for this node
-    const parentText = textElements.find(text => {
-      // Look for a text element that contains other text elements as children
-      return text.querySelector('tspan') !== null;
-    });
-    
-    if (parentText) {
-      // Get the full text content from the parent element
-      const fullText = parentText.textContent || '';
-      return this.cleanTextContent(fullText);
-    }
-    
-    // Fallback: sort and join the text elements
-    const sortedTexts = textElements.sort((a, b) => {
-      const aBox = (a as SVGTextElement).getBBox();
-      const bBox = (b as SVGTextElement).getBBox();
-      
-      // First sort by Y position (top to bottom)
-      if (Math.abs(aBox.y - bBox.y) > 5) {
-        return aBox.y - bBox.y;
-      }
-      // Then sort by X position (left to right)
-      return aBox.x - bBox.x;
-    });
-    
-    const text = sortedTexts
-      .map(t => t.textContent || '')
-      .filter(Boolean)
-      .join(' ');
-    
-    return this.cleanTextContent(text);
-  }
-
-  private extractBulletPointContent(clickedElement: Element, _svg: SVGElement): string {
-    const clickedText = clickedElement.textContent?.trim();
-    
-    // Check if this is a numbered bullet point
-    const bulletMatch = clickedText?.match(/^(\d+[\.\)])\s*(.*)/);
-    if (!bulletMatch) {
-      return clickedText || ''; // Not a numbered bullet, return as is
-    }
-    
-    const bulletNumber = bulletMatch[1]; // e.g., "1." or "1)"
-    
-    // Find all text elements in the same note/container
-    const container = clickedElement.closest('.note, g.note, .actor, g.actor');
-    if (!container) {
-      return clickedText || '';
-    }
-    
-    const allTexts = Array.from(container.querySelectorAll('text, tspan'));
-    let bulletContent: string[] = [];
-    let foundBullet = false;
-    
-    for (let i = 0; i < allTexts.length; i++) {
-      const text = allTexts[i].textContent?.trim();
-      
-      // Check if this is the start of our bullet point
-      if (text?.startsWith(bulletNumber)) {
-        foundBullet = true;
-        bulletContent.push(text);
-        continue;
-      }
-      
-      // If we found our bullet, collect subsequent lines until next numbered bullet
-      if (foundBullet) {
-        // Check if this is the start of the next numbered bullet
-        const nextBulletMatch = text?.match(/^\d+[\.\)]\s/);
-        if (nextBulletMatch) {
-          break; // Stop at next bullet point
-        }
-        
-        // Add this line to our bullet content
-        if (text) {
-          bulletContent.push(text);
-        }
-      }
-    }
-    
-    const text = bulletContent.join(' ');
-    return this.cleanTextContent(text);
-  }
-
-  private isSelectableRect(rect: Element): boolean {
-    const fill = rect.getAttribute('fill');
-    
-    if (!fill || ['#fff', '#ffffff', 'white', 'none', 'transparent'].includes(fill.toLowerCase())) {
-      return false;
-    }
-    
-    const width = parseFloat(rect.getAttribute('width') || '0');
-    const height = parseFloat(rect.getAttribute('height') || '0');
-    
-    return width > 100 && height > 40;
-  }
-
-  private detectDiagramType(svg: SVGElement): string {
-    if (svg.querySelector('.actor, .note, sequenceDiagram')) {
-      return 'sequence';
-    }
-    if (svg.querySelector('.node, .edgePath, .flowchart')) {
-      return 'flowchart';
-    }
-    if (svg.querySelector('.gantt')) {
-      return 'gantt';
-    }
-    if (svg.querySelector('.pie')) {
-      return 'pie';
-    }
-    
-    return 'generic';
-  }
 
   cleanup() {
     if (this.currentContainer) {

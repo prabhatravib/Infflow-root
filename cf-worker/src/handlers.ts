@@ -1,5 +1,7 @@
 import { json, sanitizeMermaid } from "./utils";
-import { processDiagramPipeline, generateDeepDiveResponse, generateClusterData, generateCombinedContent } from "./diagram";
+import { processDiagramPipeline, generateDeepDiveResponse, generateCombinedContent } from "./diagram-generator";
+import { generateClusterData } from "./cluster-generator";
+import { DiagramType } from "./diagram-types";
 import { EnvLike } from "./openai";
 import { createTimer } from "./timing";
 
@@ -10,7 +12,7 @@ type DiagramResponse = {
   description: string;
   content: string;
   universal_content: string;
-  diagram_type: "flowchart" | "radial_mindmap" | "sequence_comparison";
+  diagram_type: DiagramType;
   diagram: string;
   render_type: "html";
   rendered_content: string;

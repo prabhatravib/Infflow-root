@@ -18,6 +18,27 @@ body {
   background-color: #F9FAFB; /* tailwind gray-50 */
 }
 
+/* Central search bar overlay - ensure it's always on top */
+.central-search-overlay {
+  position: fixed !important;
+  z-index: 999999 !important;
+  transform: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+.central-search-overlay * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure SVG diagrams stay behind search bar */
+svg[id^="m_"] {
+  z-index: -1 !important;
+}
+svg[id^="m_"] * {
+  z-index: -1 !important;
+}
+
 /* Dark mode body background to match app */
 .dark body {
   background-color: #0a0a0a; /* tailwind gray-950 */

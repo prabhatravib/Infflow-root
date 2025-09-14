@@ -1,68 +1,13 @@
 /**
- * Diagram generation logic adapted from pitext_desktop for Cloudflare Workers.
- * Handles diagram type selection, content generation, and diagram creation.
+ * Diagram generation logic for Cloudflare Workers.
+ * Handles content generation, diagram creation, and pipeline orchestration.
  */
 
 import { callOpenAI, EnvLike } from './openai';
 import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt } from './prompts';
-import { clusterPrompt } from './prompts/cluster_prompt';
 import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
-
-export type DiagramType = "flowchart" | "radial_mindmap" | "sequence_comparison";
-
-export interface DiagramResult {
-  diagram_type: DiagramType;
-  description: string;
-  content: string;
-  universal_content: string;
-  diagram: string;
-  render_type: "html";
-  rendered_content: string;
-}
-
-export async function selectDiagramType(query: string, env: EnvLike): Promise<DiagramType> {
-  const timer = createTimer();
-  const selectorPrompt = `You are a diagram-type selector.
-
-As a response to the below query, choose which output representation would be best suited:
-- flowchart        : sequential steps, how-to, decision logic
-- radial_mindmap   : concept overviews, definitions, characteristics
-- sequence_comparison: comparing two or more items, highlighting similarities and unique features
-
-Respond with ONLY one word: "flowchart", "radial_mindmap", or "sequence_comparison".`;
-  
-  try {
-    const response = await timer.timeStep("diagram_type_llm_call", () => callOpenAI(
-      env,
-      selectorPrompt,
-      query,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      50,
-      0.3
-    ), {
-      query_length: query.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 50
-    });
-    
-    const validTypes = ["flowchart", "radial_mindmap", "sequence_comparison"];
-    const responseClean = response.trim().toLowerCase();
-    
-    if (validTypes.includes(responseClean)) {
-      console.log(`✅ [${timer.getRequestId()}] Selected diagram type: ${responseClean}`);
-      return responseClean as DiagramType;
-    }
-    
-    // Default to radial_mindmap for general queries
-    console.log(`⚠️ [${timer.getRequestId()}] Invalid response, defaulting to radial_mindmap. Response: ${responseClean}`);
-    return "radial_mindmap";
-    
-  } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Error selecting diagram type:`, error);
-    return "radial_mindmap";
-  }
-}
+import { DiagramType, DiagramResult, selectDiagramType } from './diagram-types';
 
 export async function generateDiagramCode(
   contentDescription: string,
@@ -364,64 +309,6 @@ export async function processDiagramPipeline(
     // Log performance even for errors
     timer.logPerformanceReport();
     
-    throw error;
-  }
-}
-
-/**
- * Generates hierarchical cluster data (FoamTree topic map) for a given query.
- */
-export async function generateClusterData(
-  query: string,
-  env: EnvLike
-): Promise<any> {
-  const timer = createTimer();
-  console.log(`🟡 [${timer.getRequestId()}] Starting cluster generation...`);
-
-  try {
-    const response = await timer.timeStep(
-      'cluster_generation_llm_call',
-      () =>
-        callOpenAI(
-          env,
-          clusterPrompt,
-          query,
-          env.OPENAI_MODEL || 'gpt-4o-mini',
-          2000,
-          0.7
-        ),
-      {
-        query_length: query.length,
-        model: env.OPENAI_MODEL || 'gpt-4o-mini',
-      }
-    );
-
-    let text = (response || '').trim();
-    if (!text) throw new Error('Empty cluster JSON');
-
-    // Try to strip code fences if present
-    if (text.startsWith('```')) {
-      text = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/```\s*$/, '').trim();
-    }
-
-    // If still not parseable, try to extract the first top-level JSON object
-    let clusterData: any;
-    try {
-      clusterData = JSON.parse(text);
-    } catch (_e) {
-      const start = text.indexOf('{');
-      const end = text.lastIndexOf('}');
-      if (start !== -1 && end !== -1 && end > start) {
-        const candidate = text.slice(start, end + 1);
-        clusterData = JSON.parse(candidate);
-      } else {
-        throw _e;
-      }
-    }
-    console.log(`✅ [${timer.getRequestId()}] Cluster generation successful.`);
-    return clusterData;
-  } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Cluster generation failed:`, error);
     throw error;
   }
 }

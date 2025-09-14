@@ -126,6 +126,17 @@ export function DeepDive({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       className="deep-dive-panel bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
+      style={{
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '90%',
+        maxWidth: '800px',
+        zIndex: 10001, // Higher than search bar (10000) and SVG (1)
+        maxHeight: '50vh',
+        overflowY: 'auto'
+      }}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-4">
