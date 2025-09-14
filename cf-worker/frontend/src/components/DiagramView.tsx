@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import Mermaid, { MermaidRef } from './Mermaid';
 import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
+import { setupRadialAlignment } from '../utils/radial-align';
 
 interface DiagramViewProps {
   diagramViewTab: 'visual' | 'text';
@@ -37,124 +38,35 @@ export default function DiagramView({
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
+  const cleanupRef = useRef<null | (() => void)>(null);
 
   // Memoize the onRender callback to prevent Mermaid re-renders
-  const handleMermaidRender = useCallback((svgElement: SVGSVGElement) => {
-    // Update the SVG ref for the overlay
+  const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
     (svgRef as any).current = svgElement;
-    console.log('🔍 DiagramView: SVG ref updated via onRender:', svgElement);
+    cleanupRef.current?.();
 
-    // Position the Mermaid diagram so its central node is covered by the search bar
-    if (radialEnabled && hostRef.current) {
-      // Add a small delay to ensure the search bar is fully positioned
-      setTimeout(() => {
-      const searchBar = document.querySelector('.central-search-overlay');
-      if (searchBar) {
-          // Get the search bar's fixed position (it's position: fixed, so this won't change with scroll)
-        const searchBarRect = searchBar.getBoundingClientRect();
-        const searchBarCenterX = searchBarRect.left + searchBarRect.width / 2;
-        const searchBarCenterY = searchBarRect.top + searchBarRect.height / 2;
-        
-          console.log('🔍 Search bar rect details:', {
-            left: searchBarRect.left,
-            top: searchBarRect.top,
-            width: searchBarRect.width,
-            height: searchBarRect.height,
-            centerX: searchBarCenterX,
-            centerY: searchBarCenterY
-          });
-          console.log('🔍 Search bar center X:', searchBarCenterX, 'Y:', searchBarCenterY);
-          console.log('🔍 Search bar element:', searchBar);
-          console.log('🔍 Search bar computed style:', window.getComputedStyle(searchBar));
-          
-          // Find the central node in the SVG - debug what nodes exist first
-          const allNodes = svgElement.querySelectorAll('.node');
-          console.log('🔍 All nodes found:', allNodes.length);
-          allNodes.forEach((node, index) => {
-            console.log(`🔍 Node ${index}:`, {
-              id: node.id,
-              className: node.className,
-              textContent: node.textContent?.trim(),
-              transform: node.getAttribute('transform')
-            });
-            console.log(`🔍 Node ${index} text:`, node.textContent?.trim());
-          });
-          
-          // Find the central node - it should be the one with "Details about Paris" text
-          let centralNode = Array.from(allNodes).find(node => 
-            node.textContent?.trim() === 'Details about Paris'
-          );
-          
-          if (!centralNode) {
-            // If not found by text, try by ID pattern
-            centralNode = svgElement.querySelector('.node[id*="A"]');
-          }
-          
-          if (centralNode) {
-            // Get the node's position from its transform attribute instead of getBoundingClientRect
-            const transform = centralNode.getAttribute('transform');
-            console.log('🔍 Found central node:', centralNode);
-            console.log('🔍 Node transform:', transform);
-            
-            // Extract coordinates from transform="translate(x, y)"
-            const match = transform?.match(/translate\(([^,]+),\s*([^)]+)\)/);
-            if (match) {
-              const nodeX = parseFloat(match[1]);
-              const nodeY = parseFloat(match[2]);
-              
-              // The SVG is positioned at (0,0) since it's fixed at origin
-              // So the node's screen position is just its SVG coordinates
-              const nodeCenterX = nodeX;
-              const nodeCenterY = nodeY;
-              
-              console.log('🔍 Node SVG coordinates:', { x: nodeX, y: nodeY });
-              console.log('🔍 Calculated node center:', { x: nodeCenterX, y: nodeCenterY });
-            
-              // Position the SVG so the central node aligns with the search bar
-              // We need to move the SVG so that the node's position aligns with the search bar
-              // Since the SVG is scaled by 0.35, we need to account for that in our positioning
-              const scale = 0.25;
-              const offsetX = searchBarCenterX - (nodeCenterX * scale);
-              // Position the central node behind the search bar
-              const offsetY = searchBarCenterY - (nodeCenterY * scale);
-            
-              console.log('🔍 Positioning central node to align with search bar');
-              console.log('🔍 Search bar center X:', searchBarCenterX, 'Y:', searchBarCenterY);
-              console.log('🔍 Central node center X:', nodeCenterX, 'Y:', nodeCenterY);
-              console.log('🔍 Offset X:', offsetX, 'Y:', offsetY);
-              
-              // Apply the positioning
-              svgElement.style.position = 'fixed';
-              svgElement.style.left = '0';
-              svgElement.style.top = '0';
-              svgElement.style.width = '100vw';
-              svgElement.style.height = '100vh';
-              svgElement.style.setProperty('max-width', 'none', 'important'); // Remove max-width constraint
-              const transformValue = `translate(${offsetX}px, ${offsetY}px) scale(0.25)`;
-              svgElement.style.transform = transformValue;
-              svgElement.style.zIndex = '1'; // Behind search bar (z-index: 99999)
-              
-              console.log('🔍 Applied transform:', transformValue);
-              console.log('🔍 SVG element after positioning:', svgElement);
-            } else {
-              console.error('❌ Could not parse node transform coordinates!');
-              return;
-            }
-          } else {
-            console.error('❌ Central node not found! Cannot position diagram.');
-            return; // Fail hard - no positioning without central node
-          }
-        }
-      }, 200); // Longer delay to ensure search bar is fully positioned
+    // wait for search overlay and fonts so bbox numbers are stable
+    await (document as any).fonts?.ready;
+    if (!document.querySelector('[data-central-search-bar]')) {
+      // retry shortly if overlay not injected yet
+      setTimeout(() => handleMermaidRender(svgElement), 30);
+      return;
+    }
+
+    if (radialEnabled && hostRef.current && svgElement) {
+      cleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
+        paddingPercent: 0.12,
+        minScale: 0.5
+      });
     }
   }, [radialEnabled]);
 
-  // Reset positioning when diagram changes (new search)
+  // Cleanup alignment on unmount
   useEffect(() => {
-    if (svgRef.current) {
-      svgRef.current.removeAttribute('data-positioned');
-    }
-  }, [diagram]);
+    return () => {
+      cleanupRef.current?.();
+    };
+  }, []);
 
   if (diagramViewTab !== 'visual') {
     return null;
@@ -204,15 +116,11 @@ export default function DiagramView({
   if (diagram) {
     return (
       <div className="relative">
-        <div ref={hostRef} className="diagram-viewport mermaid-container" style={{ 
-          position: radialEnabled ? "fixed" : "relative", 
-          top: radialEnabled ? "0" : "auto",
-          left: radialEnabled ? "0" : "auto",
-          width: radialEnabled ? "100vw" : "100%",
-          height: radialEnabled ? "100vh" : "auto",
-          minHeight: '400px',
-          zIndex: radialEnabled ? "1" : "auto"
-        }}>
+        <div
+          ref={hostRef}
+          className="relative w-full h-[calc(100vh-168px)] overflow-hidden"
+          style={{ zIndex: radialEnabled ? 1 : "auto" }}
+        >
           <Mermaid 
             ref={mermaidRef}
             code={diagram} 

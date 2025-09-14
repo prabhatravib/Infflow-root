@@ -16,4 +16,4 @@ REM Deploy the worker
 echo ☁️ Deploying to Cloudflare Workers...
 call npx wrangler deploy
 
-echo ✅ Deployment complete!
+echo ✅ Deployment completed at %date% %time%

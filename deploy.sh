@@ -17,4 +17,4 @@ cd ..
 echo "☁️ Deploying to Cloudflare Workers..."
 npx wrangler deploy
 
-echo "✅ Deployment complete!"
+echo "✅ Deployment completed at $(date)"

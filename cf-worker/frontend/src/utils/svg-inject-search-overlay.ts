@@ -15,6 +15,7 @@ export interface InjectOptions {
 function createSearchOverlay(doc: Document, _element: SVGSVGElement | HTMLElement, _box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
   // Create HTML overlay
   const overlay = doc.createElement('div');
+  overlay.setAttribute('data-central-search-bar', 'true');
   
   // Calculate fixed position at screen center (not relative to any element)
   const calculateFixedPosition = () => {

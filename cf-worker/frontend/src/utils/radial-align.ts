@@ -104,81 +104,42 @@ function realign(
   minScale: number
 ) {
   const rootNode = findRootNode(svg);
-  if (!rootNode) return;
+  const bar = document.querySelector('[data-central-search-bar]') as HTMLElement;
+  if (!rootNode || !bar) return;
 
-  const searchBar = document.querySelector('[data-central-search-bar]');
-  if (!searchBar) return;
-
+  // viewport inside the host
   const hostRect = hostEl.getBoundingClientRect();
-  const searchRect = (searchBar as HTMLElement).getBoundingClientRect();
-  const targetScreen = {
-    x: searchRect.left + searchRect.width / 2,
-    y: searchRect.top + searchRect.height / 2,
-  };
+  const vpW = hostRect.width;
+  const vpH = hostRect.height;
 
-  // Current screen matrix for user→screen. Fallback to identity-like if missing
-  const screenCTM = (svg as any).getScreenCTM?.();
-  if (!screenCTM) return;
-  const inv = screenCTM.inverse();
-
-  // Compute root center in user coords via element bbox
-  const rootBBox = (rootNode as any).getBBox();
-  const rootCenterUser = {
-    x: rootBBox.x + rootBBox.width / 2,
-    y: rootBBox.y + rootBBox.height / 2,
-  };
-
-  // Compute content bbox in screen space to deduce extents and current size
-  const contentBBox = (wrapper as any).getBBox();
-  const cornersUser = [
-    { x: contentBBox.x, y: contentBBox.y },
-    { x: contentBBox.x + contentBBox.width, y: contentBBox.y },
-    { x: contentBBox.x, y: contentBBox.y + contentBBox.height },
-    { x: contentBBox.x + contentBBox.width, y: contentBBox.y + contentBBox.height },
-  ];
-  const cornersScreen = cornersUser.map((p) => new DOMPoint(p.x, p.y).matrixTransform(screenCTM));
-  const contentScreenLeft = Math.min(...cornersScreen.map((p) => p.x));
-  const contentScreenRight = Math.max(...cornersScreen.map((p) => p.x));
-  const contentScreenTop = Math.min(...cornersScreen.map((p) => p.y));
-  const contentScreenBottom = Math.max(...cornersScreen.map((p) => p.y));
-  const contentWidthScreen = contentScreenRight - contentScreenLeft;
-  const contentHeightScreen = contentScreenBottom - contentScreenTop;
-
-  // Root center in screen space
-  const rootCenterScreen = new DOMPoint(rootCenterUser.x, rootCenterUser.y).matrixTransform(screenCTM);
-
-  // Extents from root to each side in screen space
-  const EPS = 0.001;
-  const dxLeft = Math.max(EPS, rootCenterScreen.x - contentScreenLeft);
-  const dxRight = Math.max(EPS, contentScreenRight - rootCenterScreen.x);
-  const dyTop = Math.max(EPS, rootCenterScreen.y - contentScreenTop);
-  const dyBottom = Math.max(EPS, contentScreenBottom - rootCenterScreen.y);
-
-  // Available space from target to host edges with padding
-  const padX = Math.max(0, hostRect.width * paddingPercent);
-  const padY = Math.max(0, hostRect.height * paddingPercent);
-
-  const avLeft = Math.max(EPS, (targetScreen.x - (hostRect.left + padX)));
-  const avRight = Math.max(EPS, ((hostRect.right - padX) - targetScreen.x));
-  const avTop = Math.max(EPS, (targetScreen.y - (hostRect.top + padY)));
-  const avBottom = Math.max(EPS, ((hostRect.bottom - padY) - targetScreen.y));
-
-  // Fit scale w.r.t. each side from root alignment perspective; do not upscale beyond 1
-  const scaleBySides = Math.min(
-    avLeft / dxLeft,
-    avRight / dxRight,
-    avTop / dyTop,
-    avBottom / dyBottom,
-    1
+  // content bbox (wrapper space)
+  const content = (wrapper as any).getBBox();
+  const padW = content.width * paddingPercent;
+  const padH = content.height * paddingPercent;
+  const scale = Math.max(
+    minScale,
+    Math.min((vpW) / (content.width + 2 * padW), (vpH) / (content.height + 2 * padH))
   );
-  const scale = Math.max(minScale, scaleBySides);
 
-  // Compute target in user space and apply transform: translate(tx,ty) scale(s)
-  const targetUser = new DOMPoint(targetScreen.x, targetScreen.y).matrixTransform(inv);
-  const tx = targetUser.x - scale * rootCenterUser.x;
-  const ty = targetUser.y - scale * rootCenterUser.y;
+  // root center (wrapper space)
+  const r = (rootNode as any).getBBox();
+  const rootCenter = { x: r.x + r.width / 2, y: r.y + r.height / 2 };
 
-  wrapper.setAttribute('transform', `translate(${tx}, ${ty}) scale(${scale})`);
+  // target point: center of the fixed overlay (screen space) → wrapper space
+  const targetScreen = {
+    x: bar.getBoundingClientRect().left + bar.offsetWidth / 2,
+    y: bar.getBoundingClientRect().top + bar.offsetHeight / 2
+  };
+  const toWrapper = (wrapper.getScreenCTM() as DOMMatrix).inverse();
+  const target = new DOMPoint(targetScreen.x, targetScreen.y).matrixTransform(toWrapper);
+
+  // include scale in the translation
+  const tx = target.x - rootCenter.x * scale;
+  const ty = target.y - rootCenter.y * scale;
+
+  wrapper.setAttribute('transform', `matrix(${scale} 0 0 ${scale} ${tx} ${ty})`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.removeAttribute('viewBox'); // avoid Mermaid auto-fit fighting us
 }
 
 /** Attempt to find the central root node (A) */

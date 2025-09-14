@@ -507,3 +507,8 @@ svg[id^="m_"] * {
 .mermaid-search-bar .msb-button:hover {
   filter: brightness(0.95);
 }
+
+/* Hide node A under the search bar */
+svg g#A > rect, svg g#A > text, svg g#A foreignObject { 
+  opacity: 0; 
+}

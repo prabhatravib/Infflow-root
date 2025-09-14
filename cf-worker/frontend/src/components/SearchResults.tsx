@@ -5,7 +5,7 @@ import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
-import CentralSearchBar from './CentralSearchBar';
+import { FixedSearchBar } from './FixedSearchBar';
 import DiagramView from './DiagramView';
 import type { ClusterNode } from '../types/cluster';
 import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
@@ -77,7 +77,9 @@ export default function SearchResults({
   clusters,
   setClusters
 }: SearchResultsProps) {
-  const radialEnabled = diagramData?.diagramType === "radial_mindmap";
+  const mermaidSrc = diagramData?.mermaidCode || diagram || '';
+  const looksRadial = /\bgraph|flowchart\b/i.test(mermaidSrc) && /\bA\(/.test(mermaidSrc);
+  const radialEnabled = (diagramData?.diagramType === 'radial_mindmap') || looksRadial;
   const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>([]);
   const { loadClusterChildren } = useClusterLazyLoading(clusters, setClusters);
 
@@ -130,14 +132,14 @@ export default function SearchResults({
         </div>
         
         <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
-          {/* Central Search Bar Management */}
-          <CentralSearchBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSearch={onSearch}
-            radialEnabled={radialEnabled}
-            diagramViewTab={diagramViewTab}
-          />
+          {/* Fixed Search Bar - Only for Radial Flow Charts */}
+          {radialEnabled && diagramViewTab === 'visual' && (
+            <FixedSearchBar
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSearch={onSearch}
+            />
+          )}
           
           {/* Content based on selected tab */}
           {diagramViewTab === 'visual' ? (
