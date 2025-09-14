@@ -128,11 +128,11 @@ export function DeepDive({
       className="deep-dive-panel bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
       style={{
         position: 'fixed',
-        bottom: '20px',
-        left: '50%',
+        bottom: '120px', // Moved higher up from bottom
+        left: '40%', // Moved further left from center
         transform: 'translateX(-50%)',
-        width: '90%',
-        maxWidth: '800px',
+        width: '70%', // Reduced from 90% to make it thinner
+        maxWidth: '600px', // Reduced from 800px to make it thinner
         zIndex: 10001, // Higher than search bar (10000) and SVG (1)
         maxHeight: '50vh',
         overflowY: 'auto'
