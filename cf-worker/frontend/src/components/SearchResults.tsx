@@ -5,7 +5,8 @@ import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
-import { FixedSearchBar } from './FixedSearchBar';
+import { RadialBarOverlay } from './RadialBarOverlay';
+import { SearchBar } from './SearchBar';
 import DiagramView from './DiagramView';
 import type { ClusterNode } from '../types/cluster';
 import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
@@ -132,13 +133,17 @@ export default function SearchResults({
         </div>
         
         <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
-          {/* Fixed Search Bar - Only for Radial Flow Charts */}
+          {/* Radial Search Bar Overlay - Only for Radial Flow Charts */}
           {radialEnabled && diagramViewTab === 'visual' && (
-            <FixedSearchBar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onSearch={onSearch}
-            />
+            <RadialBarOverlay>
+              <SearchBar
+                size="compact"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                onSubmit={onSearch}
+                autoFocus={false}
+              />
+            </RadialBarOverlay>
           )}
           
           {/* Content based on selected tab */}

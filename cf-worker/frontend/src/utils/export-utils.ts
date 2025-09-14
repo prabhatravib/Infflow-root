@@ -10,6 +10,20 @@ export interface ExportOptions {
 }
 
 /**
+ * Hide the radial bar overlay during PNG export
+ */
+export async function withBarHidden<T>(fn: () => Promise<T> | T): Promise<T> {
+  const el = document.getElementById("radial-stage-bar");
+  const prev = el?.style.display ?? "";
+  if (el) el.style.display = "none";
+  try { 
+    return await fn(); 
+  } finally { 
+    if (el) el.style.display = prev; 
+  }
+}
+
+/**
  * Extract text content from rendered SVG nodes
  */
 function extractTextFromSVG(svg: SVGElement): string {
@@ -92,7 +106,9 @@ export async function exportDiagramAsPNG(
   } = options;
 
   try {
-    const blob = await svgToBlob(svg, scale, backgroundColor, quality);
+    const blob = await withBarHidden(async () => {
+      return await svgToBlob(svg, scale, backgroundColor, quality);
+    });
     const filename = getFilename('png');
     downloadBlob(blob, filename);
   } catch (error) {
