@@ -1,7 +1,10 @@
 /**
- * Inject a search bar into the SVG by replacing the visuals of node A
- * with an <foreignObject>. Uses a global event dispatcher for reliable communication.
+ * Search bar creation and injection functionality for SVG elements.
+ * Handles building the search bar UI and injecting it into SVG nodes.
  */
+
+import { dispatchCentralSearchChange, dispatchCentralSearchSubmit } from './svg-search-events';
+import { findNodeA, clearNodeVisuals, getNodeBox, updateCentralSearchValue, SVG_NAMESPACES } from './svg-search-dom';
 
 export type InjectOptions = {
   /** Initial value for the input */
@@ -12,111 +15,12 @@ export type InjectOptions = {
   onChange?: (query: string) => void;
 };
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-const XHTML_NS = 'http://www.w3.org/1999/xhtml';
-
-// Global event dispatcher for reliable communication between SVG and React
-const CENTRAL_SEARCH_EVENT = 'central-search-change';
-const CENTRAL_SEARCH_SUBMIT_EVENT = 'central-search-submit';
-
-// Store callbacks globally to ensure they persist
-let globalOnChange: ((value: string) => void) | null = null;
-let globalOnSubmit: ((value: string) => void) | null = null;
-
-/**
- * Set up global event listeners for central search
- */
-export function setupCentralSearchListeners(
-  onChange: (value: string) => void,
-  onSubmit: (value: string) => void
-) {
-  globalOnChange = onChange;
-  globalOnSubmit = onSubmit;
-  
-  // Remove any existing listeners
-  window.removeEventListener(CENTRAL_SEARCH_EVENT, handleCentralSearchChange as any);
-  window.removeEventListener(CENTRAL_SEARCH_SUBMIT_EVENT, handleCentralSearchSubmit as any);
-  
-  // Add new listeners
-  window.addEventListener(CENTRAL_SEARCH_EVENT, handleCentralSearchChange as any);
-  window.addEventListener(CENTRAL_SEARCH_SUBMIT_EVENT, handleCentralSearchSubmit as any);
-}
-
-function handleCentralSearchChange(event: CustomEvent) {
-  const value = event.detail.value;
-  console.log('[central-search] Global change event received:', value);
-  if (globalOnChange) {
-    globalOnChange(value);
-  }
-}
-
-function handleCentralSearchSubmit(event: CustomEvent) {
-  const value = event.detail.value;
-  console.log('new search initiated');
-  console.log('[central-search] Global submit event received:', value);
-  if (globalOnSubmit) {
-    globalOnSubmit(value);
-  }
-}
-
-/**
- * Try to locate the central node "A" in various Mermaid outputs.
- */
-function findNodeA(svg: SVGSVGElement): SVGGElement | null {
-  const selectors = [
-    'g[id^="flowchart-A"]',
-    '[data-id="A"]',
-    '[id$="-A"]',
-    '#A',
-    '.node#A',
-    '.node[id*="A"]',
-  ];
-  for (const sel of selectors) {
-    const el = svg.querySelector(sel) as SVGGElement | null;
-    if (el) return el;
-  }
-
-  // Fallback: find group whose text is exactly 'A'
-  const groups = Array.from(svg.querySelectorAll('g')) as SVGGElement[];
-  const byText = groups.find(g => (g.textContent || '').trim() === 'A');
-  return byText || null;
-}
-
-/**
- * Remove visual children of a node
- */
-function clearNodeVisuals(node: SVGGElement) {
-  const visuals = node.querySelectorAll('rect, text, .label, foreignObject, path, polygon, ellipse, circle');
-  visuals.forEach(el => el.parentElement?.removeChild(el));
-}
-
-/**
- * Read node box from its primary rect if present
- */
-function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; height: number } {
-  const rect = node.querySelector('rect') as SVGRectElement | null;
-  if (rect) {
-    const width = Number(rect.getAttribute('width') || '0');
-    const height = Number(rect.getAttribute('height') || '0');
-    const xAttr = rect.getAttribute('x');
-    const yAttr = rect.getAttribute('y');
-    const x = xAttr !== null ? Number(xAttr) : -width / 2;
-    const y = yAttr !== null ? Number(yAttr) : -height / 2;
-    return { x, y, width, height };
-  }
-
-  const bbox = node.getBBox();
-  const width = bbox.width;
-  const height = bbox.height;
-  return { x: -width / 2, y: -height / 2, width, height };
-}
-
 /**
  * Build the foreignObject with search bar
  */
 function buildSearchFO(doc: Document, box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
   // Create SVG foreignObject
-  const fo = doc.createElementNS(SVG_NS, 'foreignObject');
+  const fo = doc.createElementNS(SVG_NAMESPACES.SVG, 'foreignObject');
   // Ensure minimum dimensions for the foreignObject
   const minWidth = 200;
   const minHeight = 50;
@@ -140,15 +44,15 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
   fo.setAttribute('data-export-exclude', '');
   fo.setAttribute('style', 'overflow: visible; pointer-events: auto; z-index: 1000; position: relative; cursor: pointer;');
 
-  const container = doc.createElementNS(XHTML_NS, 'div');
-  container.setAttribute('xmlns', XHTML_NS);
+  const container = doc.createElementNS(SVG_NAMESPACES.XHTML, 'div');
+  container.setAttribute('xmlns', SVG_NAMESPACES.XHTML);
   container.setAttribute('class', 'mermaid-search-bar');
   container.setAttribute('style', 'display: flex; align-items: center; gap: 8px; padding: 4px; pointer-events: auto; z-index: 1001; position: relative;');
   
-  const formLike = doc.createElementNS(XHTML_NS, 'div');
+  const formLike = doc.createElementNS(SVG_NAMESPACES.XHTML, 'div');
   formLike.setAttribute('class', 'msb-form');
 
-  const input = doc.createElementNS(XHTML_NS, 'input');
+  const input = doc.createElementNS(SVG_NAMESPACES.XHTML, 'input');
   input.setAttribute('type', 'text');
   input.setAttribute('class', 'msb-input');
   input.setAttribute('placeholder', 'Explore visually…');
@@ -159,7 +63,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     input.setAttribute('value', opts.defaultValue);
   }
 
-  const button = doc.createElementNS(XHTML_NS, 'button');
+  const button = doc.createElementNS(SVG_NAMESPACES.XHTML, 'button');
   button.setAttribute('type', 'button');
   button.setAttribute('class', 'msb-button');
   button.setAttribute('style', 'background: #3b82f6 !important; color: white !important; border: none !important; padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; font-weight: bold !important; pointer-events: auto !important; position: relative !important; z-index: 9999 !important; display: inline-block !important; visibility: visible !important; opacity: 1 !important;');
@@ -177,7 +81,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     e.preventDefault();
     e.stopPropagation();
     console.log('new search initiated');
-    dispatchSubmit();
+    dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
   };
 
   // Also add to button as backup
@@ -185,7 +89,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     e.preventDefault();
     e.stopPropagation();
     console.log('new search initiated');
-    dispatchSubmit();
+    dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
   };
 
   // Test if button is actually in the DOM and visible
@@ -291,7 +195,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
                            e.clientY >= foRect.top && e.clientY <= foRect.bottom;
           if (isInBounds) {
             e.stopPropagation();
-            dispatchSubmit();
+            dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
           }
         }
       });
@@ -305,25 +209,6 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     }
   }, 0);
 
-  // Dispatch custom events instead of calling callbacks directly
-  const dispatchChange = () => {
-    const value = (input as HTMLInputElement).value || '';
-    console.log('[central-search] Dispatching change event with value:', value);
-    window.dispatchEvent(new CustomEvent(CENTRAL_SEARCH_EVENT, {
-      detail: { value }
-    }));
-  };
-
-  const dispatchSubmit = () => {
-    const value = (input as HTMLInputElement).value.trim();
-    if (value) {
-      console.log('[central-search] Dispatching submit event with value:', value);
-      window.dispatchEvent(new CustomEvent(CENTRAL_SEARCH_SUBMIT_EVENT, {
-        detail: { value }
-      }));
-    }
-  };
-
   // Attach event listeners
   let inputTimeout: number | null = null;
   
@@ -331,23 +216,23 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     // Debounce the input events slightly
     if (inputTimeout) clearTimeout(inputTimeout);
     inputTimeout = window.setTimeout(() => {
-      dispatchChange();
+      dispatchCentralSearchChange((input as HTMLInputElement).value || '');
     }, 50);
   });
   
   input.addEventListener('change', () => {
-    dispatchChange();
+    dispatchCentralSearchChange((input as HTMLInputElement).value || '');
   });
   
   input.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      dispatchSubmit();
+      dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
     }
   });
   
   button.addEventListener('click', () => {
-    dispatchSubmit();
+    dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
   });
 
   // Add hover effects to make button more interactive
@@ -364,7 +249,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       console.log('[central-search] Button activated via keyboard:', e.key);
-      dispatchSubmit();
+      dispatchCentralSearchSubmit((input as HTMLInputElement).value.trim());
     }
   });
 
@@ -392,16 +277,6 @@ export function injectSearchBarIntoNodeA(svg: SVGSVGElement, opts: InjectOptions
 }
 
 /**
- * Update the value of the central search input
- */
-export function updateCentralSearchValue(svg: SVGSVGElement, value: string) {
-  const input = svg.querySelector('input[data-central-search-input]') as HTMLInputElement;
-  if (input && input.value !== value) {
-    input.value = value;
-  }
-}
-
-/**
  * Ensure the search bar exists and is synced
  */
 export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions = {}) {
@@ -420,57 +295,4 @@ export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions =
     // Just update the value
     updateCentralSearchValue(svg, opts.defaultValue || '');
   }
-}
-
-/**
- * Remove the central node A completely from the SVG
- * This includes the node itself and all its connections
- */
-export function removeCentralNodeA(svg: SVGSVGElement) {
-  if (!svg) {
-    console.log('[remove-node-a] No SVG provided');
-    return;
-  }
-
-  console.log('[remove-node-a] Starting removal process...');
-  console.log('[remove-node-a] SVG element:', svg);
-
-  const nodeA = findNodeA(svg);
-  if (!nodeA) {
-    console.log('[remove-node-a] Node A not found in SVG');
-    // Let's try to find all possible nodes to debug
-    const allGroups = svg.querySelectorAll('g');
-    console.log('[remove-node-a] All groups found:', allGroups.length);
-    allGroups.forEach((group, index) => {
-      console.log(`[remove-node-a] Group ${index}:`, {
-        id: group.id,
-        textContent: group.textContent?.trim(),
-        className: group.className
-      });
-    });
-    return;
-  }
-
-  console.log('[remove-node-a] Found node A:', nodeA);
-  console.log('[remove-node-a] Node A details:', {
-    id: nodeA.id,
-    textContent: nodeA.textContent?.trim(),
-    className: nodeA.className
-  });
-
-  // Find all connections/edges that involve node A
-  const edges = svg.querySelectorAll('path[id*="flowchart-A"], path[id*="-A-"], .edge[id*="A"], path[id*="A-"], path[id*="-A"]');
-  console.log(`[remove-node-a] Found ${edges.length} edges connected to node A`);
-  
-  // Remove all edges connected to node A
-  edges.forEach((edge, index) => {
-    console.log(`[remove-node-a] Removing edge ${index}:`, edge);
-    edge.parentElement?.removeChild(edge);
-  });
-
-  // Remove the node A itself
-  console.log('[remove-node-a] Removing node A itself...');
-  nodeA.parentElement?.removeChild(nodeA);
-  
-  console.log('[remove-node-a] Successfully removed central node A and its connections');
 }

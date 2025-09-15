@@ -4,7 +4,7 @@ import RadialChart from './RadialChart';
 import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
-import { removeCentralNodeA } from '../utils/svg-inject-search';
+import { removeCentralNodeA } from '../utils/svg-search-dom';
 
 interface DiagramViewProps {
   diagramViewTab: 'visual' | 'text';
