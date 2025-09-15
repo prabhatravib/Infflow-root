@@ -4,7 +4,7 @@
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   pointer-events: auto !important;
-  font-size: 16px !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
 }
 
@@ -28,7 +28,7 @@
 .mermaid .sequenceDiagram .actor-label,
 .mermaid .participant text,
 .mermaid .sequenceDiagram .participant text {
-  font-size: 16px !important;
+  font-size: 13px !important;
   font-weight: bold !important;
   fill: #000000 !important;
   text-shadow: none !important;
@@ -264,7 +264,7 @@
 .mermaid .flowchart text,
 .mermaid .sequenceDiagram text,
 .mermaid .mindmap text {
-  font-size: 16px !important;
+  font-size: 13px !important;
   font-family: Arial, sans-serif !important;
 }
 
@@ -272,7 +272,7 @@
 .mermaid .node,
 .mermaid .actor,
 .mermaid .note {
-  font-size: 16px !important;
+  font-size: 13px !important;
 }
 
 /* Ensure SVG diagrams stay behind search bar */

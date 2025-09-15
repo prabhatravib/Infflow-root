@@ -231,7 +231,11 @@ export function FoamTreeView({
     <div 
       ref={containerRef}
       className={`${className} w-full h-full min-h-[400px]`}
-      style={{ minHeight: '400px' }}
+      style={{ 
+        minHeight: '400px',
+        transform: 'scaleX(0.8)',
+        transformOrigin: 'center'
+      }}
     />
   );
 }

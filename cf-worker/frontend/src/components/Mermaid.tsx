@@ -34,7 +34,7 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
       securityLevel: 'loose', 
       theme: 'base',
       fontFamily: 'Arial, sans-serif',
-      fontSize: 16,
+      fontSize: 13,
       flowchart: {
         useMaxWidth: true,
         htmlLabels: false,
@@ -42,19 +42,19 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
         diagramPadding: 20
       },
       sequence: {
-        diagramMarginX: 50,
-        diagramMarginY: 30,
-        actorMargin: 40,
-        width: 150,
-        height: 50,
-        boxMargin: 10,
-        boxTextMargin: 8,
-        noteMargin: 10,
-        messageMargin: 15,
+        diagramMarginX: 40,
+        diagramMarginY: 24,
+        actorMargin: 32,
+        width: 120,
+        height: 40,
+        boxMargin: 8,
+        boxTextMargin: 6,
+        noteMargin: 8,
+        messageMargin: 12,
         mirrorActors: false,
         useMaxWidth: true,
         wrap: true,
-        wrapPadding: 10,
+        wrapPadding: 8,
         noteAlign: 'center'
       },
       themeVariables: {

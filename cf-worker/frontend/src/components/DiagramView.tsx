@@ -102,7 +102,7 @@ export default function DiagramView({
   if (clusters) {
     return (
       <div className="relative">
-        <div className="h-[70vh]">
+        <div className="diagram-viewport h-[70vh]">
           <FoamTreeView
             data={clusters}
             onSelect={setSelectedClusterIds}
@@ -136,6 +136,25 @@ export default function DiagramView({
             </div>
           </div>
         )}
+        {/* Save PNG Button for FoamTree - positioned just above bottom bar */}
+        <div className="absolute bottom-2 right-8" style={{ zIndex: 3000 }}>
+          <button
+            onClick={() => {
+              console.log('Save PNG button clicked!');
+              handleSavePNG();
+            }}
+            className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
+            style={{ 
+              pointerEvents: 'auto', 
+              position: 'relative', 
+              zIndex: 3000,
+              cursor: 'pointer'
+            }}
+            title="Save as PNG image"
+          >
+            Save PNG
+          </button>
+        </div>
       </div>
     );
   }
@@ -145,7 +164,7 @@ export default function DiagramView({
       <div className="relative">
         <div
           ref={hostRef}
-          className="relative w-full h-[calc(100vh-168px)] overflow-hidden"
+          className="diagram-viewport relative w-full h-[calc(100vh-168px)] overflow-hidden"
           style={{ zIndex: radialEnabled ? 1 : "auto" }}
         >
           {radialEnabled ? (
@@ -163,11 +182,20 @@ export default function DiagramView({
             />
           )}
         </div>
-        {/* Save PNG Button - positioned above bottom bar */}
-        <div className="absolute bottom-24 right-8">
+        {/* Save PNG Button - positioned just above bottom bar */}
+        <div className="absolute bottom-2 right-8" style={{ zIndex: 3000 }}>
           <button
-            onClick={handleSavePNG}
+            onClick={() => {
+              console.log('Save PNG button clicked!');
+              handleSavePNG();
+            }}
             className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
+            style={{ 
+              pointerEvents: 'auto', 
+              position: 'relative', 
+              zIndex: 3000,
+              cursor: 'pointer'
+            }}
             title="Save as PNG image"
           >
             Save PNG
