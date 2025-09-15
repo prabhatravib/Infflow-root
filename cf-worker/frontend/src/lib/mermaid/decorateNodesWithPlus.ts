@@ -160,8 +160,17 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     defs.appendChild(filter);
 
     const r = Math.max(12, Math.min(16, Math.round(Math.min(bbox.width, bbox.height) * 0.12)));
-    const cx = bbox.x - r - 8; // Position on the left side, outside the node
+    
+    // Smart positioning: try left side first, fallback to right side if too close to edge
+    let cx = bbox.x - r - 8; // Position on the left side, outside the node
     const cy = bbox.y + bbox.height / 2; // Center vertically on the left edge
+    
+    // Check if plus sign would be too close to viewport edge (within 20px)
+    const plusLeft = cx - r;
+    if (plusLeft < 20) {
+      // Move to right side instead
+      cx = bbox.x + bbox.width + r + 8;
+    }
 
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("cx", String(cx));

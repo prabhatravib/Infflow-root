@@ -25,6 +25,8 @@ export default function App() {
   const [clusters, setClusters] = useState<import('./types/cluster').ClusterNode | null>(null);
   const debouncedTimer = useRef<number | null>(null);
   const lastInitialSearchDone = useRef(false);
+  const lastSearchQuery = useRef<string>('');
+  const currentRequestId = useRef<string>('');
   // Selection and deep dive functionality
   const {
     selection,
@@ -36,8 +38,22 @@ export default function App() {
 
   const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
     if (!query.trim()) return;
-    // Ensure UI state mirrors the first successful search every time
+    console.log('[App] handleSearch called with query:', query, 'options:', options);
+    
+    // Prevent duplicate searches for the same query
     const cleaned = query.trim();
+    if (lastSearchQuery.current === cleaned) {
+      console.log('[App] Skipping duplicate search for:', cleaned);
+      return;
+    }
+    lastSearchQuery.current = cleaned;
+    
+    // Generate unique request ID to prevent duplicate API calls
+    const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    currentRequestId.current = requestId;
+    console.log('[App] Starting search with request ID:', requestId);
+    
+    // Ensure UI state mirrors the first successful search every time
     setSearchQuery(cleaned);
     const qLower = cleaned.toLowerCase();
     const wantsFoamTree = (
@@ -96,6 +112,12 @@ export default function App() {
         // Default path: generate Mermaid diagram + content
         const res = await describe(cleaned);
         console.log('API Response:', res); // Debug logging
+        
+        // Check if this is still the current request (prevent stale responses)
+        if (currentRequestId.current !== requestId) {
+          console.log('[App] Ignoring stale API response for request:', requestId);
+          return;
+        }
 
         // Set the diagram
         if (res.render_type === 'html') {
@@ -181,9 +203,12 @@ export default function App() {
     const q = searchParams.get('q') || '';
     if (path === '/search' && q && !lastInitialSearchDone.current) {
       lastInitialSearchDone.current = true;
+      console.log('[App] Initial search triggered for:', q);
+      // Reset the last search query to allow this initial search
+      lastSearchQuery.current = '';
       handleSearch(q, { navigate: false });
     }
-  }, [location.pathname]);
+  }, [location.pathname]); // Only depend on pathname, not searchParams
 
   // Send diagram data to hexagon worker via HTTP API
   const handleDiscussionRequest = async (diagramContext: {mermaidCode: string; diagramImage: string; prompt: string}) => {

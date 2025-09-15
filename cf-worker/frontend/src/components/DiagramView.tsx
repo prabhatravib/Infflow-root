@@ -45,6 +45,7 @@ export default function DiagramView({
   const hostRef = useRef<HTMLDivElement>(null);
   const mermaidRef = useRef<MermaidRef>(null);
   const cleanupRef = useRef<null | (() => void)>(null);
+  const timeoutRef = useRef<number | null>(null);
   
   // State for popover
   const [popoverPt, setPopoverPt] = useState<{ x: number; y: number } | null>(null);
@@ -55,6 +56,13 @@ export default function DiagramView({
   const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
     (svgRef as any).current = svgElement;
     cleanupRef.current?.();
+
+    // Cancel any pending timeout from previous renders
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      console.log('[DiagramView] Cancelled previous timeout');
+    }
 
     console.log('[DiagramView] handleMermaidRender called with SVG:', svgElement);
 
@@ -90,7 +98,7 @@ export default function DiagramView({
       const exclude = new Set<string>(["A"]);
       
       // Add delay to ensure SVG is fully rendered and positioned
-      setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         console.log('[DiagramView] Executing decorateNodesWithPlus after delay');
         decorateNodesWithPlus({
           svg: svgElement,
@@ -104,6 +112,7 @@ export default function DiagramView({
             setPopoverMeta(meta);
           },
         });
+        timeoutRef.current = null; // Clear the ref after execution
       }, 200); // Increased delay to 200ms for better reliability
     } else {
       console.log('[DiagramView] No searchQuery available for plus buttons');
@@ -117,10 +126,14 @@ export default function DiagramView({
     }
   }, [radialEnabled, searchQuery]);
 
-  // Cleanup alignment on unmount
+  // Cleanup alignment and timeouts on unmount
   useEffect(() => {
     return () => {
       cleanupRef.current?.();
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, []);
 
@@ -220,7 +233,7 @@ export default function DiagramView({
         <div className="relative">
           <div
             ref={hostRef}
-            className="diagram-viewport relative w-full h-[calc(100vh-168px)] overflow-hidden"
+            className="diagram-viewport relative w-full h-[calc(100vh-168px)] overflow-visible"
             style={{ zIndex: radialEnabled ? 1 : "auto" }}
           >
             {radialEnabled ? (

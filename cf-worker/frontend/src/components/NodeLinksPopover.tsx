@@ -70,13 +70,36 @@ export function NodeLinksPopover({
 
   if (!point || !query) return null;
 
+  // Smart positioning to avoid viewport edges
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const popoverWidth = 440;
+  const popoverHeight = 200; // Estimated height
+  
+  let left = point.x + 10;
+  let top = point.y + 10;
+  
+  // Adjust horizontal position if too close to right edge
+  if (left + popoverWidth > viewportWidth - 20) {
+    left = point.x - popoverWidth - 10;
+  }
+  
+  // Adjust vertical position if too close to bottom edge
+  if (top + popoverHeight > viewportHeight - 20) {
+    top = point.y - popoverHeight - 10;
+  }
+  
+  // Ensure minimum margins from viewport edges
+  left = Math.max(20, Math.min(left, viewportWidth - popoverWidth - 20));
+  top = Math.max(20, Math.min(top, viewportHeight - popoverHeight - 20));
+
   return (
     <div
       style={{
         position: "fixed",
-        left: point.x + 10,
-        top: point.y + 10,
-        maxWidth: 440,
+        left: left,
+        top: top,
+        maxWidth: popoverWidth,
         zIndex: 9999,
         background: "white",
         border: "1px solid rgba(0,0,0,0.15)",
