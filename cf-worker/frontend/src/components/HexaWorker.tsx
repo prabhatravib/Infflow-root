@@ -20,7 +20,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Layout constants for the expanded hexagon
-  const EXPANDED_SCALE = 0.8;            // reduce size to 80%
+  const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
   const EXTRA_DOWN_OFFSET_PX = 40;       // nudge down to avoid overlap
   const BASE = {
     container: 280,        // px
@@ -30,13 +30,13 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     iframeLeft: -20        // px
   } as const;
   
-  // Derived sizes for 80% scale
+  // Keep original iframe dimensions unchanged, only scale internal content
   const SCALED = {
-    container: Math.round(BASE.container * EXPANDED_SCALE),
-    iframeWidth: Math.round(BASE.iframeWidth * EXPANDED_SCALE),
-    iframeHeight: Math.round(BASE.iframeHeight * EXPANDED_SCALE),
-    iframeTop: Math.round(BASE.iframeTop * EXPANDED_SCALE),
-    iframeLeft: Math.round(BASE.iframeLeft * EXPANDED_SCALE)
+    container: BASE.container,
+    iframeWidth: BASE.iframeWidth,
+    iframeHeight: BASE.iframeHeight,
+    iframeTop: BASE.iframeTop,
+    iframeLeft: BASE.iframeLeft
   } as const;
 
   // Subscribe to session changes
@@ -184,7 +184,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   position: 'absolute',
                   top: `${SCALED.iframeTop}px`,
                   left: `${SCALED.iframeLeft}px`,
-                  transform: 'translateY(0px)',  // Keep centered within the container
+                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(60px)`,  // Scale internal content to 80% and move down
+                  transformOrigin: 'center center',  // Scale from center
                 }}
                 title="Hexa Voice Agent"
                 allow="microphone"

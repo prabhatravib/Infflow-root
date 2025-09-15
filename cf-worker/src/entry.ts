@@ -1,7 +1,8 @@
 import { describeHandler, deepDiveHandler, clusterHandler } from './handlers';
 import { json, toMessage } from './utils';
+import { braveSearch, Env as NodeSearchEnv } from './routes/nodeSearch';
 
-export interface Env {
+export interface Env extends NodeSearchEnv {
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -19,6 +20,27 @@ export default {
     });
 
     try {
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "content-type",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+          },
+        });
+      }
+
+      if (pathname === "/api/node-search" && request.method === "POST") {
+        const { q } = (await request.json().catch(() => ({}))) as { q?: string };
+        if (!q || typeof q !== "string") {
+          return new Response(JSON.stringify({ error: "Missing q" }), {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return braveSearch(q, env);
+      }
+
       if (request.method === 'POST' && pathname === '/api/describe') {
         console.log("🔵 Handling describe request...");
         const body = await request.json();
