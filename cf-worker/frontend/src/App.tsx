@@ -3,9 +3,8 @@ import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
 import { useSelection } from './hooks/use-selection';
-import { describe, callDeepDiveApi, fetchClusterChildren } from './lib/api';
-import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { createAppHandlers } from './AppHandlers';
 
 // @component: InfflowApp
 export default function App() {
@@ -23,10 +22,12 @@ export default function App() {
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
   const [clusters, setClusters] = useState<import('./types/cluster').ClusterNode | null>(null);
+  
   const debouncedTimer = useRef<number | null>(null);
   const lastInitialSearchDone = useRef(false);
   const lastSearchQuery = useRef<string>('');
   const currentRequestId = useRef<string>('');
+
   // Selection and deep dive functionality
   const {
     selection,
@@ -36,140 +37,25 @@ export default function App() {
     askDeepDive,
   } = useSelection();
 
-  const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
-    if (!query.trim()) return;
-    console.log('[App] handleSearch called with query:', query, 'options:', options);
-    
-    // Prevent duplicate searches for the same query
-    const cleaned = query.trim();
-    if (lastSearchQuery.current === cleaned) {
-      console.log('[App] Skipping duplicate search for:', cleaned);
-      return;
-    }
-    lastSearchQuery.current = cleaned;
-    
-    // Generate unique request ID to prevent duplicate API calls
-    const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    currentRequestId.current = requestId;
-    console.log('[App] Starting search with request ID:', requestId);
-    
-    // Ensure UI state mirrors the first successful search every time
-    setSearchQuery(cleaned);
-    const qLower = cleaned.toLowerCase();
-    const wantsFoamTree = (
-      qLower.includes('foamtree') ||
-      qLower.includes('foam tree') ||
-      qLower.includes('foam-tree') ||
-      qLower.includes('topic map') ||
-      qLower.includes('topic maps') ||
-      qLower.includes('topic-map') ||
-      qLower.includes('topicmap')
-    );
-    // Ensure URL reflects the query. Also update when already on /search.
-    if (options.navigate !== false) {
-      const params = new URLSearchParams(location.search);
-      params.set('q', cleaned);
-      navigate(`/search?${params.toString()}`, { replace: false });
-    }
-    clearSelection();
-    setCodeFlowStatus('not-sent');
-    setDiagramViewTab('visual');
-    // Reset diagram and clusters immediately to avoid showing stale visuals
-    setDiagram(null);
-    setClusters(null);
- // Reset status when starting new search
-    try {
-      if (wantsFoamTree) {
-        // FoamTree-only path: generate clusters and skip Mermaid entirely
-        try {
-          const clusterRes = await fetchClusterChildren(cleaned);
-          if (clusterRes.success && clusterRes.cluster) {
-            setClusters(clusterRes.cluster as any);
-            // Populate Text tab with universal content if provided
-            if (clusterRes.universal_content) {
-              setContentData({ content: '', description: '', universal_content: clusterRes.universal_content });
-            } else {
-              setContentData({ content: '', description: '', universal_content: '' });
-            }
-
-            // Send basic details to Hexa voice worker similar to Mermaid
-            const foamTreePayload = {
-              mermaidCode: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
-              diagramImage: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
-              prompt: cleaned
-            };
-            setDiagramData(foamTreePayload);
-            await handleDiscussionRequest(foamTreePayload);
-          } else {
-            console.warn('Cluster API returned no cluster');
-            setContentData({ content: '', description: '', universal_content: '' });
-          }
-        } catch (e) {
-          console.warn('Cluster generation failed:', e);
-          setContentData({ content: '', description: '', universal_content: '' });
-        }
-      } else {
-        // Default path: generate Mermaid diagram + content
-        const res = await describe(cleaned);
-        console.log('API Response:', res); // Debug logging
-        
-        // Check if this is still the current request (prevent stale responses)
-        if (currentRequestId.current !== requestId) {
-          console.log('[App] Ignoring stale API response for request:', requestId);
-          return;
-        }
-
-        // Set the diagram
-        if (res.render_type === 'html') {
-          setDiagram(res.rendered_content);
-        } else {
-          setDiagram(res.diagram || res.rendered_content || null);
-        }
-
-        // Set content data for text tab
-        if (res.content || res.description || res.universal_content) {
-          setContentData({
-            content: res.content || '',
-            description: res.description || '',
-            universal_content: res.universal_content || ''
-          });
-        }
-
-        // Set diagram data for HexaWorker
-        if (res.diagram) {
-          const newDiagramData = {
-            mermaidCode: res.diagram,
-            diagramImage: res.diagram, // For now, using the same value
-            prompt: cleaned,
-            diagramType: res.diagram_type,
-            diagram_meta: res.diagram_meta
-          };
-          setDiagramData(newDiagramData);
-
-          // Send external data to hexa worker
-          handleDiscussionRequest(newDiagramData);
-        }
-      }
-    } catch (e) {
-      console.error('Search error:', e); // Debug logging
-      setDiagram(null);
-      setDiagramData(null);
-      setContentData(null);
-      setClusters(null);
-    }
-  };
-
-  const handleBackToHome = () => {
-    navigate('/', { replace: false });
-    setSearchQuery('');
-    setDiagram(null);
-    setDiagramData(null);
-    setContentData(null);
-    setClusters(null);
-    setCodeFlowStatus('not-sent');
-    setDiagramViewTab('visual');
-    clearSelection();
-  };
+  // Create handlers using the extracted handler functions
+  const { handleSearch, handleBackToHome, handleDeepDiveAsk, handleSaveText, handleSavePNG } = createAppHandlers({
+    searchQuery,
+    setSearchQuery,
+    setDiagram,
+    setDiagramData,
+    setContentData,
+    setClusters,
+    setCodeFlowStatus,
+    setDiagramViewTab,
+    clearSelection,
+    navigate,
+    location,
+    askDeepDive,
+    lastSearchQuery,
+    currentRequestId,
+    contentData,
+    diagram
+  });
 
   // Keep searchQuery in sync with URL `q` (initialize and on back/forward)
   useEffect(() => {
@@ -210,128 +96,9 @@ export default function App() {
     }
   }, [location.pathname]); // Only depend on pathname, not searchParams
 
-  // Send diagram data to hexagon worker via HTTP API
-  const handleDiscussionRequest = async (diagramContext: {mermaidCode: string; diagramImage: string; prompt: string}) => {
-    console.log('Hexagon discussion started for diagram:', diagramContext);
-    
-    try {
-      const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mermaidCode: diagramContext.mermaidCode,
-          diagramImage: diagramContext.diagramImage,
-          prompt: diagramContext.prompt,
-          type: 'diagram'
-        })
-      });
-
-      if (!response.ok) {
-        if (response.status === 409) {
-          console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data');
-          const errorText = await response.text();
-          throw new Error(`Hexagon worker rejected data: ${errorText}`);
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Diagram data sent to hexagon worker:', result);
-      
-      // Update status to show "Basic Details Sent"
-      setCodeFlowStatus('sent');
-      console.log('🔄 Status updated to: Basic Details Sent');
-    } catch (error) {
-      console.error('❌ Error sending data to hexagon worker:', error);
-    }
-  };
-
-  const handleDeepDiveAsk = async (question: string) => {
-    await askDeepDive(question, async (params) => {
-      // Call the real deep dive API endpoint
-      const response = await callDeepDiveApi({
-        selected_text: params.selectedText,
-        question: params.question,
-        original_query: searchQuery
-      });
-      return response;
-    });
-  };
-
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
-  };
-
-  const handleSaveText = async () => {
-    try {
-      // Check if we have universal content to save (Text tab)
-      if (contentData && contentData.universal_content) {
-        const contentLines = [];
-        contentLines.push(`Query: "${searchQuery}"`);
-        contentLines.push(`Generated: ${new Date().toLocaleString()}`);
-        contentLines.push('');
-        contentLines.push('--- Content ---');
-        contentLines.push('');
-        contentLines.push(contentData.universal_content);
-
-        const fileContent = contentLines.join('\n');
-        const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-        
-        const date = new Date();
-        const timestamp = date.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const filename = `infflow-text-${timestamp}.txt`;
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 250);
-        
-        return;
-      }
-      
-      // Fallback: try to save diagram text if available
-      if (!diagram) {
-        alert('No content to save');
-        return;
-      }
-      
-      const diagramContainer = document.querySelector('.mermaid-container');
-      const svg = diagramContainer?.querySelector('svg');
-      if (!svg) {
-        alert('No diagram image found to save');
-        return;
-      }
-      await exportDiagramAsText(svg, searchQuery);
-    } catch (error) {
-      console.error('Failed to save text:', error);
-      alert('Failed to save text content');
-    }
-  };
-
-  const handleSavePNG = async () => {
-    if (!diagram) {
-      alert('No diagram to save');
-      return;
-    }
-    try {
-      // Find the SVG element directly (overlay is excluded automatically)
-      const svg = document.querySelector('.diagram-viewport svg') as SVGSVGElement;
-      if (!svg) {
-        alert('No SVG element found to save');
-        return;
-      }
-      await exportDiagramAsPNG(svg);
-    } catch (error) {
-      console.error('Failed to save PNG:', error);
-      alert('Failed to save PNG image');
-    }
   };
 
   // Handle click outside to close deep dive

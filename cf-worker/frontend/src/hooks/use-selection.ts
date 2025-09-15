@@ -45,6 +45,13 @@ export function useSelection() {
         hasSelection: false,
       };
     });
+
+    // Also clear Deep Dive state when clearing selection
+    setDeepDive({
+      isProcessing: false,
+      response: null,
+      history: [],
+    });
   }, []);
 
   const selectElement = useCallback((element: Element, text: string) => {
@@ -63,6 +70,20 @@ export function useSelection() {
         selectedText: text,
         hasSelection: true,
       };
+    });
+
+    // Reset Deep Dive state when switching to a different selection
+    setDeepDive(prevDeepDive => {
+      // Only reset if the selected text is different
+      if (prevDeepDive.history.length > 0 && 
+          prevDeepDive.history[prevDeepDive.history.length - 1]?.selectedText !== text) {
+        return {
+          isProcessing: false,
+          response: null,
+          history: [],
+        };
+      }
+      return prevDeepDive;
     });
   }, []); // Remove dependency on selection.selectedElement to make it stable
 
@@ -112,7 +133,11 @@ export function useSelection() {
   }, [selection.hasSelection, selection.selectedText]);
 
   const clearDeepDive = useCallback(() => {
-    setDeepDive(prev => ({ ...prev, response: null }));
+    setDeepDive({
+      isProcessing: false,
+      response: null,
+      history: [],
+    });
   }, []);
 
   return {

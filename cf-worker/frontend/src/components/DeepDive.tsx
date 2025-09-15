@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Download, MessageCircle } from 'lucide-react';
 
@@ -25,14 +25,19 @@ export function DeepDive({
   onClose,
 }: DeepDiveProps) {
   const [question, setQuestion] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
+  const prevProcessingRef = useRef(isProcessing);
+
+  // Keep track of processing state for other purposes
+  useEffect(() => {
+    prevProcessingRef.current = isProcessing;
+  }, [isProcessing]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (question.trim() && !isProcessing) {
       onAsk(question.trim());
-      setQuestion('');
+      // Don't clear question immediately - let it stay visible during processing
     }
   };
 
@@ -173,7 +178,7 @@ export function DeepDive({
             {isProcessing ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Answeing...
+                Answering...
               </>
             ) : (
               'Ask'
@@ -188,11 +193,16 @@ export function DeepDive({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex items-center justify-center py-8"
+            className="py-8"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              <span className="text-gray-600 dark:text-gray-400">Diving deep...</span>
+            <div className="space-y-4">
+              {/* Loading indicator */}
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-gray-600 dark:text-gray-400">Diving deep...</span>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
