@@ -22,6 +22,7 @@ interface DiagramViewProps {
   setSelectedClusterIds: (ids: string[]) => void;
   loadClusterChildren: (clusterId: string) => void;
   findClusterById: (root: ClusterNode | null, id: string) => ClusterNode | null;
+  diagramMeta?: { nodes: Record<string, any> };
 }
 
 export default function DiagramView({
@@ -37,7 +38,8 @@ export default function DiagramView({
   selectedClusterIds,
   setSelectedClusterIds,
   loadClusterChildren,
-  findClusterById
+  findClusterById,
+  diagramMeta
 }: DiagramViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -47,6 +49,7 @@ export default function DiagramView({
   // State for popover
   const [popoverPt, setPopoverPt] = useState<{ x: number; y: number } | null>(null);
   const [popoverQuery, setPopoverQuery] = useState<string | null>(null);
+  const [popoverMeta, setPopoverMeta] = useState<any>(null);
 
   // Memoize the onRender callback to prevent Mermaid re-renders
   const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
@@ -93,10 +96,12 @@ export default function DiagramView({
           svg: svgElement,
           originalQuery: searchQuery,
           excludeIds: exclude,
-          onOpenPopover: ({ clientX, clientY, query }) => {
-            console.log('[DiagramView] Plus button clicked, opening popover at:', clientX, clientY, 'with query:', query);
+          diagramMeta: diagramMeta,
+          onOpenPopover: ({ clientX, clientY, query, nodeId, meta }) => {
+            console.log('[DiagramView] Plus button clicked, opening popover at:', clientX, clientY, 'with query:', query, 'nodeId:', nodeId, 'meta:', meta);
             setPopoverPt({ x: clientX, y: clientY });
             setPopoverQuery(query);
+            setPopoverMeta(meta);
           },
         });
       }, 200); // Increased delay to 200ms for better reliability
@@ -126,9 +131,11 @@ export default function DiagramView({
         <NodeLinksPopover
           point={popoverPt}
           query={popoverQuery}
+          meta={popoverMeta}
           onClose={() => {
             setPopoverPt(null);
             setPopoverQuery(null);
+            setPopoverMeta(null);
           }}
         />
       </>
@@ -196,9 +203,11 @@ export default function DiagramView({
         <NodeLinksPopover
           point={popoverPt}
           query={popoverQuery}
+          meta={popoverMeta}
           onClose={() => {
             setPopoverPt(null);
             setPopoverQuery(null);
+            setPopoverMeta(null);
           }}
         />
       </>
@@ -252,9 +261,11 @@ export default function DiagramView({
         <NodeLinksPopover
           point={popoverPt}
           query={popoverQuery}
+          meta={popoverMeta}
           onClose={() => {
             setPopoverPt(null);
             setPopoverQuery(null);
+            setPopoverMeta(null);
           }}
         />
       </>

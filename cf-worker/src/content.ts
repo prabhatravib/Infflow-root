@@ -6,6 +6,7 @@
 import { callOpenAI, EnvLike } from './openai';
 import { getContentPrompt } from './prompts';
 import { cleanTextContent } from './utils';
+import type { DiagramResponse, NodeMeta } from './types';
 
 export interface ContentResult {
   content: string;
@@ -13,6 +14,7 @@ export interface ContentResult {
     topic: string;
     facts: string[];
   };
+  metadata?: any;
 }
 
 export async function generateContent(
@@ -62,9 +64,14 @@ export async function generateContent(
     const parsed = parseContent(response, diagramType);
     console.log("Parsed content:", JSON.stringify(parsed, null, 2));
     
+    // Extract metadata if present
+    const metadata = extractMetadata(response, diagramType);
+    console.log("Extracted metadata:", metadata ? 'Yes' : 'No');
+    
     return {
       content: response,
-      parsed
+      parsed,
+      metadata
     };
     
   } catch (error) {
@@ -175,4 +182,55 @@ function parseComparisonContent(content: string): { topic: string; facts: string
   }
   
   return result;
+}
+
+function extractMetadata(response: string, diagramType: string): any {
+  if (diagramType !== "radial_mindmap") {
+    return null;
+  }
+  
+  try {
+    // Try to find JSON metadata in the response
+    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/) || response.match(/\{[\s\S]*"diagram_meta"[\s\S]*\}/);
+    if (jsonMatch) {
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.diagram_meta) {
+        return parsed.diagram_meta;
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to parse metadata from content response:", error);
+  }
+  
+  return null;
+}
+
+export async function buildDescribeResponse(result: any, originalQuery: string): Promise<DiagramResponse> {
+  // Ensure we pass along diagram_meta if the model returned it.
+  // If the model forgot "entity", fill it from the user query heuristically.
+  try {
+    const r = result as DiagramResponse;
+    if (r.diagram_meta?.nodes) {
+      const entityGuess =
+        (r.description || "").split(/[—:-]/)[0].trim() ||
+        ""; // harmless if empty
+      for (const k of Object.keys(r.diagram_meta.nodes)) {
+        const n = r.diagram_meta.nodes[k] as NodeMeta | undefined;
+        if (!n) continue;
+        if (!n.entity) n.entity = entityGuess;
+        if (typeof n.theme === "string") n.theme = n.theme.trim().toLowerCase();
+        if (Array.isArray(n.keywords)) {
+          n.keywords = n.keywords
+            .map((s) => (s || "").toString().trim().toLowerCase())
+            .filter(Boolean)
+            .slice(0, 8);
+        }
+        if (typeof n.search === "string") n.search = n.search.trim();
+      }
+    }
+    return r;
+  } catch {
+    return result as any;
+  }
 }

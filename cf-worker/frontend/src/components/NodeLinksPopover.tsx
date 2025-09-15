@@ -6,10 +6,12 @@ type Item = { title: string; url: string; snippet?: string; favicon?: string | n
 export function NodeLinksPopover({
   point,
   query,
+  meta,
   onClose,
 }: {
   point: { x: number; y: number } | null;
   query: string | null;
+  meta?: any;
   onClose: () => void;
 }) {
   const [items, setItems] = React.useState<Item[] | null>(null);
@@ -26,10 +28,18 @@ export function NodeLinksPopover({
       setItems(null);
       try {
         console.log('[NodeLinksPopover] Making API call to /api/node-search');
+        const body = {
+          query,
+          phrase: query,
+          entity: meta?.entity || undefined,
+          theme: meta?.theme || undefined,
+          keywords: meta?.keywords || undefined,
+          search: meta?.search || undefined,
+        };
         const resp = await fetch("/api/node-search", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ q: query }),
+          body: JSON.stringify(body),
         });
         console.log('[NodeLinksPopover] API response status:', resp.status);
         console.log('[NodeLinksPopover] API response headers:', Object.fromEntries(resp.headers.entries()));

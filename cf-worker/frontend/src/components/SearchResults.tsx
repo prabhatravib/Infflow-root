@@ -23,7 +23,7 @@ interface SearchResultsProps {
   currentTab: string;
   setCurrentTab: (tab: string) => void;
   diagram: string | null;
-  diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null;
+  diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string; diagram_meta?: any} | null;
   contentData: {content: string; description: string; universal_content: string} | null;
   codeFlowStatus: 'sent' | 'not-sent';
   selection: {
@@ -162,6 +162,7 @@ export default function SearchResults({
               setSelectedClusterIds={setSelectedClusterIds}
               loadClusterChildren={loadClusterChildren}
               findClusterById={findClusterById}
+              diagramMeta={diagramData?.diagram_meta}
             />
           ) : (
             <div className="relative p-6">

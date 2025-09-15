@@ -16,6 +16,7 @@ export interface DiagramResult {
   diagram: string;
   render_type: "html";
   rendered_content: string;
+  diagram_meta?: any;
 }
 
 export async function selectDiagramType(query: string, env: EnvLike): Promise<DiagramType> {

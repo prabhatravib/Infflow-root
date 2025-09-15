@@ -9,6 +9,7 @@ import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
 import { DiagramType, DiagramResult, selectDiagramType } from './diagram-types';
 
+
 export async function generateDiagramCode(
   contentDescription: string,
   originalQuery: string,
@@ -241,14 +242,42 @@ export async function processDiagramPipeline(
     });
     console.log(`✅ [${timer.getRequestId()}] Selected diagram type: ${diagramType}`);
     
-    // Step 2: Generate both universal content and diagram-specific content in one call
-    const { universalContent, diagramContent } = await timer.timeStep("combined_content_generation", () => 
-      generateCombinedContent(query, diagramType, env), {
-      query_length: query.length,
-      diagram_type: diagramType
-    });
+    // Step 2: Generate content (use individual generation for radial to get metadata)
+    let universalContent: string;
+    let diagramContent: string;
+    let contentMetadata: any = null;
+    
+    if (diagramType === "radial_mindmap") {
+      // Use individual content generation to get metadata
+      const contentResult = await timer.timeStep("content_generation", () => 
+        generateContent(query, diagramType, env), {
+        query_length: query.length,
+        diagram_type: diagramType
+      });
+      diagramContent = contentResult.content;
+      contentMetadata = contentResult.metadata;
+      
+      // Generate universal content separately
+      const universalResult = await timer.timeStep("universal_content_generation", () => 
+        generateContent(query, "universal", env), {
+        query_length: query.length,
+        diagram_type: "universal"
+      });
+      universalContent = universalResult.content;
+    } else {
+      // Use combined generation for other diagram types
+      const { universalContent: uni, diagramContent: dia } = await timer.timeStep("combined_content_generation", () => 
+        generateCombinedContent(query, diagramType, env), {
+        query_length: query.length,
+        diagram_type: diagramType
+      });
+      universalContent = uni;
+      diagramContent = dia;
+    }
+    
     console.log(`✅ [${timer.getRequestId()}] Generated universal content: ${universalContent.substring(0, 100)}...`);
     console.log(`✅ [${timer.getRequestId()}] Generated diagram content: ${diagramContent.substring(0, 100)}...`);
+    console.log(`✅ [${timer.getRequestId()}] Content metadata:`, contentMetadata ? 'Yes' : 'No');
     
     // Create a ContentResult object for compatibility
     const contentResult: ContentResult = {
@@ -256,7 +285,8 @@ export async function processDiagramPipeline(
       parsed: {
         topic: '',
         facts: []
-      }
+      },
+      metadata: contentMetadata
     };
     
     // Step 3: Generate diagram code
@@ -278,7 +308,8 @@ export async function processDiagramPipeline(
         universal_content: universalContent,
         diagram: sanitizedDiagram,
         render_type: "html" as const,
-        rendered_content: sanitizedDiagram
+        rendered_content: sanitizedDiagram,
+        diagram_meta: contentMetadata
       };
       
       return result;

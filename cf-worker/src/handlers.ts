@@ -16,6 +16,7 @@ type DiagramResponse = {
   diagram: string;
   render_type: "html";
   rendered_content: string;
+  diagram_meta?: any;
 };
 
 type DeepDiveRequest = { selected_text: string; question: string; original_query?: string };
@@ -88,6 +89,7 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
         diagram: sanitizedDiagram,
         render_type: "html",
         rendered_content: sanitizedDiagram,
+        diagram_meta: result.diagram_meta,
       };
       return response;
     }, {

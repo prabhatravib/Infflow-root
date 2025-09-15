@@ -1,124 +1,73 @@
 // worker/src/routes/nodeSearch.ts
+import type { NodeSearchRequest, NodeSearchResponse } from '../types';
+
 export interface Env {
   BRAVE_SEARCH_API: string;
 }
 
-export async function braveSearch(q: string, env: Env): Promise<Response> {
-  console.log('🔥 [braveSearch] FUNCTION CALLED with query:', q);
-  console.log('[braveSearch] API key available:', !!env.BRAVE_SEARCH_API);
-  console.log('[braveSearch] API key value:', env.BRAVE_SEARCH_API ? 'SET' : 'NOT SET');
-  
-  // Check if API key is available
-  if (!env.BRAVE_SEARCH_API) {
-    console.error('[braveSearch] ERROR: BRAVE_SEARCH_API environment variable is not set!');
-    return new Response(JSON.stringify({ 
-      error: "BRAVE_SEARCH_API environment variable is not configured",
-      details: "Please set the BRAVE_SEARCH_API secret in your Cloudflare Worker environment"
-    }), {
-      status: 500,
-      headers: { 
-        "content-type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "content-type",
-      },
-    });
-  }
-  
-  const params = new URLSearchParams({
-    q,
-    count: "5",
-    safesearch: "moderate",
-  });
-  
-  const url = `https://api.search.brave.com/res/v1/web/search?${params}`;
-  console.log('[braveSearch] API URL:', url);
-  console.log('[braveSearch] Using API key:', env.BRAVE_SEARCH_API.substring(0, 10) + '...');
+function clean(s: string) {
+  return (s || "")
+    .replace(/[^\p{L}\p{N}\s:''-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  const cache = caches.default as any;
-  const cacheKey = new Request(url, { method: "GET" });
-  const cached = await cache.match(cacheKey);
-  if (cached) {
-    console.log('[braveSearch] Returning cached result');
-    return cached;
-  }
+function assembleQueries(b: NodeSearchRequest) {
+  const entity = clean(b.entity || "");
+  const baseQ = clean(b.query || "");
+  const phrase = clean(b.phrase || "");
+  const theme = clean(b.theme || "");
+  const keywords = (b.keywords || []).map(clean).filter(Boolean);
+  const search = clean(b.search || "");
 
-  const resp = await fetch(url, {
+  const attempts: string[] = [];
+  if (search) attempts.push([entity, search].filter(Boolean).join(" "));
+  if (!search && (theme || keywords.length)) {
+    attempts.push([entity, theme, ...keywords].filter(Boolean).join(" "));
+  }
+  if (phrase) attempts.push([entity || baseQ, phrase].filter(Boolean).join(" "));
+  attempts.push(entity || baseQ); // final fallback
+  return attempts.filter((q, i, a) => q && a.indexOf(q) === i);
+}
+
+async function braveSearch(env: Env, q: string) {
+  const params = new URLSearchParams({ q, count: "5", country: "us", safesearch: "moderate" });
+  const resp = await fetch(`https://api.search.brave.com/res/v1/web/search?${params}`, {
     method: "GET",
     headers: {
-      Accept: "application/json",
-      "Accept-Encoding": "gzip",
+      "Accept": "application/json",
       "x-subscription-token": env.BRAVE_SEARCH_API,
     },
   });
-  
-  console.log('[braveSearch] API response status:', resp.status);
-  console.log('[braveSearch] API response headers:', Object.fromEntries(resp.headers.entries()));
-
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    console.error('[braveSearch] API ERROR:', {
-      status: resp.status,
-      statusText: resp.statusText,
-      responseText: text,
-      url: url
-    });
-    
-    return new Response(JSON.stringify({ 
-      error: "Brave Search API Error",
-      status: resp.status,
-      statusText: resp.statusText,
-      details: text,
-      url: url
-    }), {
-      status: resp.status,
-      headers: { 
-        "content-type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "content-type",
-      },
-    });
-  }
-
   const data = await resp.json();
-  
-  // Brave Search API returns actual results in web.results structure
-  const items = data?.web?.results?.slice(0, 5).map((r: any) => ({
+  return { resp, data };
+}
+
+export async function handleNodeSearch(request: Request, env: Env, _ctx: any) {
+  const body = await request.json() as NodeSearchRequest;
+  const attempts = assembleQueries(body);
+  let items: any[] = [];
+  let used = "";
+  for (const q of attempts) {
+    const { data } = await braveSearch(env, q);
+    const raw = data?.web?.results || data?.results || [];
+    if (Array.isArray(raw) && raw.length) {
+      items = raw.slice(0, 5);
+      used = q;
+      break;
+    }
+  }
+  const mapped = items.map((r: any) => ({
     title: r.title,
     url: r.url,
     snippet: r.description,
     favicon: r.profile?.image?.url ?? null,
-  })) ?? [];
-    
-  console.log('[braveSearch] Processed items:', items.length, 'results');
-  
-  // If no results, return empty array with debug info
-  if (items.length === 0) {
-    console.warn('[braveSearch] No results from API');
-    return new Response(JSON.stringify({ 
-      items: [],
-      debug: {
-        query: q,
-        apiResponse: data,
-        message: "No results returned from Brave Search API"
-      }
-    }), {
-      headers: {
-        "content-type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "content-type",
-      },
-    });
-  }
-
-  const out = new Response(JSON.stringify({ items }), {
-    headers: {
+  }));
+  return new Response(JSON.stringify({ items: mapped, debug: { attempts, used: used || null } } as NodeSearchResponse), { 
+    headers: { 
       "content-type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Headers": "content-type",
-    },
+    }
   });
-
-  out.headers.set("Cache-Control", "max-age=300");
-  await cache.put(cacheKey, out.clone());
-  return out;
 }

@@ -2,12 +2,14 @@
 type DecorateOptions = {
   svg: SVGSVGElement;
   originalQuery: string;
+  diagramMeta?: { nodes: Record<string, any> };
   onOpenPopover: (arg: {
     clientX: number;
     clientY: number;
     nodeText: string;
     nodeId: string;
     query: string;
+    meta?: any;
   }) => void;
   excludeIds?: Set<string>;
 };
@@ -18,7 +20,7 @@ function getNodeText(g: SVGGElement): string {
 }
 
 export function decorateNodesWithPlus(opts: DecorateOptions) {
-  const { svg, originalQuery, onOpenPopover, excludeIds = new Set() } = opts;
+  const { svg, originalQuery, diagramMeta, onOpenPopover, excludeIds = new Set() } = opts;
 
   console.log('[decorateNodesWithPlus] Starting decoration with query:', originalQuery);
   console.log('[decorateNodesWithPlus] SVG element:', svg);
@@ -215,13 +217,15 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
       const nodeText = getNodeText(g);
       const nodeId = id;
       const q = `${originalQuery} "${nodeText}"`;
-      console.log('[decorateNodesWithPlus] Plus button clicked!', { nodeText, nodeId, query: q });
+      const meta = diagramMeta?.nodes?.[nodeId] || {};
+      console.log('[decorateNodesWithPlus] Plus button clicked!', { nodeText, nodeId, query: q, meta });
       onOpenPopover({
         clientX: (e as MouseEvent).clientX,
         clientY: (e as MouseEvent).clientY,
         nodeText,
         nodeId,
         query: q,
+        meta,
       });
     });
 

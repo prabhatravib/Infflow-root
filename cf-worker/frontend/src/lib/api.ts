@@ -8,6 +8,7 @@ export type DiagramResponse = {
   diagram: string;
   render_type: string;
   rendered_content: string;
+  diagram_meta?: any;
 };
 
 export type DeepDiveRequest = {

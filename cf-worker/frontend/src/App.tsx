@@ -19,7 +19,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(false);
   const [diagram, setDiagram] = useState<string | null>(null);
   const [CodeFlowStatus, setCodeFlowStatus] = useState<'sent' | 'not-sent'>('not-sent');
-  const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null>(null);
+  const [diagramData, setDiagramData] = useState<{mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string; diagram_meta?: any} | null>(null);
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
   const [clusters, setClusters] = useState<import('./types/cluster').ClusterNode | null>(null);
@@ -119,7 +119,8 @@ export default function App() {
             mermaidCode: res.diagram,
             diagramImage: res.diagram, // For now, using the same value
             prompt: cleaned,
-            diagramType: res.diagram_type
+            diagramType: res.diagram_type,
+            diagram_meta: res.diagram_meta
           };
           setDiagramData(newDiagramData);
 
