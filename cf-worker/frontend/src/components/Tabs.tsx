@@ -55,7 +55,7 @@ export const Tabs = ({
   const isBottom = position === 'bottom';
   
   // @return
-  return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 ${isBottom ? 'fixed bottom-0 left-0 right-0 z-50' : ''}`}>
+  return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 ${isBottom ? 'bottom-nav-fixed' : ''}`}>
       <div className="px-4">
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
           {/* Web/Map/News tabs */}

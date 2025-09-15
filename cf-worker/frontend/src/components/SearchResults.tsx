@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { useState, useMemo } from 'react';
 import { Header } from './Header';
-import { Tabs } from './Tabs';
 import { Sidebar } from './Sidebar';
 import { DeepDive } from './DeepDive';
 import { HexaWorker } from './HexaWorker';
@@ -20,8 +19,6 @@ interface SearchResultsProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   onBackToHome: () => void;
-  currentTab: string;
-  setCurrentTab: (tab: string) => void;
   diagram: string | null;
   diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string; diagram_meta?: any} | null;
   contentData: {content: string; description: string; universal_content: string} | null;
@@ -60,8 +57,6 @@ export default function SearchResults({
   sidebarOpen,
   setSidebarOpen,
   onBackToHome,
-  currentTab,
-  setCurrentTab,
   diagram,
   diagramData,
   contentData,
@@ -205,20 +200,6 @@ export default function SearchResults({
           )}
         </main>
       </div>
-      
-      {/* Bottom Navigation */}
-      <Tabs 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
-        position="bottom"
-        diagramViewTab={diagramViewTab}
-        setDiagramViewTab={setDiagramViewTab}
-        showResults={true}
-        showSearch={true}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onSearch={onSearch}
-      />
     </motion.div>
   );
 }

@@ -112,6 +112,17 @@ svg g#A > rect, svg g#A > text, svg g#A foreignObject {
   z-index: 2000;        /* above the SVG */
 }
 
+/* Ensure bottom navigation bar stays fixed during page transitions */
+.bottom-nav-fixed {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 60 !important; /* Higher than header (50) and news iframe (50) */
+  transform: translate3d(0, 0, 0) !important; /* Create new stacking context */
+  will-change: transform !important;
+}
+
 #radial-stage-bar .search-bar {
   position: fixed;      /* center at the given viewport point */
   left: 810px;

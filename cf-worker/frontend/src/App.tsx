@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
+import { Tabs } from './components/Tabs';
 import { useSelection } from './hooks/use-selection';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createAppHandlers } from './AppHandlers';
@@ -141,8 +142,6 @@ export default function App() {
             onSearch={handleSearch}
             isDark={isDark}
             toggleTheme={toggleTheme}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
             diagramViewTab={diagramViewTab}
             setDiagramViewTab={setDiagramViewTab}
             showResults={showResults}
@@ -157,8 +156,6 @@ export default function App() {
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             onBackToHome={handleBackToHome}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
             diagram={diagram}
             diagramData={diagramData}
             contentData={contentData}
@@ -176,6 +173,20 @@ export default function App() {
             setClusters={setClusters}
           />
         )}
-          </AnimatePresence>
+      </AnimatePresence>
+      
+      {/* Bottom Navigation - Always rendered outside transition container */}
+      <Tabs 
+        currentTab={currentTab} 
+        setCurrentTab={setCurrentTab} 
+        position="bottom"
+        diagramViewTab={diagramViewTab}
+        setDiagramViewTab={setDiagramViewTab}
+        showResults={showResults}
+        showSearch={true}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        onSearch={handleSearch}
+      />
         </div>;
 }

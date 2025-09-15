@@ -19,6 +19,34 @@ function getNodeText(g: SVGGElement): string {
   return (text?.textContent || "").trim().replace(/\s+/g, " ");
 }
 
+function isSubgraph(g: SVGGElement): boolean {
+  // Check if this is a subgraph container by looking for characteristic subgraph elements
+  const id = g.getAttribute("id") || "";
+  const className = g.className.baseVal || "";
+  
+  // Subgraphs typically have these characteristics:
+  // 1. ID contains "subgraph" or "cluster"
+  // 2. Contains nested groups (child nodes)
+  // 3. Has a rect element that serves as the container background
+  // 4. Contains multiple child groups that are actual nodes
+  
+  if (id.includes("subgraph") || id.includes("cluster") || className.includes("cluster")) {
+    return true;
+  }
+  
+  // Check if this group contains other groups (indicating it's a container)
+  const childGroups = g.querySelectorAll(":scope > g");
+  if (childGroups.length > 1) {
+    // Additional check: see if it has a background rect (typical for subgraphs)
+    const backgroundRect = g.querySelector("rect[fill], rect[stroke]");
+    if (backgroundRect) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 export function decorateNodesWithPlus(opts: DecorateOptions) {
   const { svg, originalQuery, diagramMeta, onOpenPopover, excludeIds = new Set() } = opts;
 
@@ -26,13 +54,13 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
   console.log('[decorateNodesWithPlus] SVG element:', svg);
   console.log('[decorateNodesWithPlus] SVG innerHTML preview:', svg.innerHTML.substring(0, 500) + '...');
 
-  // Try multiple selectors to find Mermaid nodes
+  // Try multiple selectors to find Mermaid nodes (excluding subgraphs/clusters)
   const selectors = [
     "g.node",
     "g.nodes > g", 
-    "g.cluster",
+    // Removed "g.cluster" - this targets subgraphs, not individual nodes
     "g.flowchart-label",
-    "g[id*='flowchart']",
+    // Removed "g[id*='flowchart']" - this is too broad and includes subgraphs
     "g[id*='node']",
     "g[id*='A']",
     "g[id*='B']", 
@@ -61,7 +89,6 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     "g[id*='Y']",
     "g[id*='Z']",
     // Additional selectors for different Mermaid diagram types
-    "g[id*='flowchart-']",
     "g[id*='-node-']",
     "g[id*='-A-']",
     "g[id*='-B-']",
@@ -105,6 +132,11 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     allGroups.forEach(g => {
       const text = g.textContent?.trim();
       if (text && text.length > 0 && text.length < 100 && !text.includes('flowchart') && !text.includes('svg')) {
+        // Skip subgraphs in fallback too
+        if (isSubgraph(g)) {
+          return;
+        }
+        
         // Check if this group has a rect, polygon, or other shape element (indicating it's a node)
         const hasShape = g.querySelector('rect, polygon, path, ellipse, circle');
         if (hasShape) {
@@ -129,6 +161,12 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
   nodeGroupsArray.forEach((g) => {
     const id = g.getAttribute("id") || "";
     if (!id || excludeIds.has(id)) return;
+
+    // Skip subgraphs/clusters - they should not have plus buttons
+    if (isSubgraph(g)) {
+      console.log('[decorateNodesWithPlus] Skipping subgraph:', id);
+      return;
+    }
 
     if (g.querySelector(":scope > g.__plus")) return; // avoid double-inject
 

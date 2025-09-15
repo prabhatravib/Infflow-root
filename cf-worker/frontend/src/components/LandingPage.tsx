@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { Search, Mic, Image, Moon, Sun } from 'lucide-react';
 import Logo from './Logo';
-import { Tabs } from './Tabs';
 
 interface LandingPageProps {
   searchQuery: string;
@@ -9,8 +8,6 @@ interface LandingPageProps {
   onSearch: (query: string) => void;
   isDark: boolean;
   toggleTheme: () => void;
-  currentTab: string;
-  setCurrentTab: (tab: string) => void;
   diagramViewTab?: 'visual' | 'text';
   setDiagramViewTab?: (tab: 'visual' | 'text') => void;
   showResults?: boolean;
@@ -22,8 +19,6 @@ export default function LandingPage({
   onSearch,
   isDark,
   toggleTheme,
-  currentTab,
-  setCurrentTab,
   diagramViewTab,
   setDiagramViewTab,
   showResults = false
@@ -107,15 +102,6 @@ export default function LandingPage({
         </p>
       </div>
       
-      {/* Bottom Navigation */}
-      <Tabs 
-        currentTab={currentTab} 
-        setCurrentTab={setCurrentTab} 
-        position="bottom"
-        diagramViewTab={diagramViewTab}
-        setDiagramViewTab={setDiagramViewTab}
-        showResults={showResults}
-      />
     </motion.div>
   );
 }
