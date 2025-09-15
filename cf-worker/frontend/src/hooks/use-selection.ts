@@ -136,8 +136,9 @@ function applySelectionStyling(element: Element) {
   switch (tagName) {
     case 'text':
     case 'tspan':
-      (element as SVGTextElement).style.fontWeight = 'bold';
-      (element as SVGTextElement).style.filter = 'drop-shadow(0 0 4px #ffb300)';
+      // Keep text styling normal, only add subtle shadow
+      (element as SVGTextElement).style.fontWeight = 'normal';
+      (element as SVGTextElement).style.filter = 'drop-shadow(0 0 2px #ffb300)';
       break;
       
     case 'rect':
@@ -158,7 +159,9 @@ function applySelectionStyling(element: Element) {
       }
       const text = element.querySelector('text');
       if (text) {
-        (text as SVGTextElement).style.fontWeight = 'bold';
+        // Keep text styling normal, only add subtle shadow
+        (text as SVGTextElement).style.fontWeight = 'normal';
+        (text as SVGTextElement).style.filter = 'drop-shadow(0 0 2px #ffb300)';
       }
       break;
   }
@@ -175,7 +178,7 @@ function removeSelectionStyling(element: Element) {
   switch (tagName) {
     case 'text':
     case 'tspan':
-      (element as SVGTextElement).style.fontWeight = '';
+      (element as SVGTextElement).style.fontWeight = 'normal';
       (element as SVGTextElement).style.filter = '';
       break;
       
@@ -205,7 +208,8 @@ function removeSelectionStyling(element: Element) {
       }
       const text = element.querySelector('text');
       if (text) {
-        (text as SVGTextElement).style.fontWeight = '';
+        (text as SVGTextElement).style.fontWeight = 'normal';
+        (text as SVGTextElement).style.filter = '';
       }
       break;
   }

@@ -81,13 +81,14 @@
 .mermaid .actor.element-selected rect,
 .mermaid .sequenceDiagram .actor.element-selected rect {
   stroke: #ffb300 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px #ffb300) !important;
 }
 
 .mermaid .actor.element-selected text,
 .mermaid .sequenceDiagram .actor.element-selected text {
-  font-weight: 400 !important;
-  filter: drop-shadow(0 0 4px #ffb300) !important;
+  font-weight: normal !important;
+  filter: drop-shadow(0 0 2px #ffb300) !important;
 }
 
 .mermaid .note.element-selected,
@@ -98,13 +99,14 @@
 .mermaid .note.element-selected rect,
 .mermaid .sequenceDiagram .note.element-selected rect {
   stroke: #ffb300 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px #ffb300) !important;
 }
 
 .mermaid .note.element-selected text,
 .mermaid .sequenceDiagram .note.element-selected text {
-  font-weight: 400 !important;
-  filter: drop-shadow(0 0 4px #ffb300) !important;
+  font-weight: normal !important;
+  filter: drop-shadow(0 0 2px #ffb300) !important;
 }
 
 /* Hover classes for JavaScript-triggered effects */
@@ -216,15 +218,16 @@
 .mermaid .node.element-selected rect,
 .mermaid .flowchart .node.element-selected rect {
   stroke: #ffb300 !important;
-  stroke-width: 3px !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 0 6px #ffb300) !important;
 }
 
 .mermaid .node.element-selected text,
 .mermaid .flowchart .node.element-selected text,
 .mermaid .node.element-selected tspan,
 .mermaid .flowchart .node.element-selected tspan {
-  font-weight: 500 !important;
-  filter: drop-shadow(0 0 4px #ffb300) !important;
+  font-weight: normal !important;
+  filter: drop-shadow(0 0 2px #ffb300) !important;
 }
 
 /* Center Mermaid diagrams in their container */

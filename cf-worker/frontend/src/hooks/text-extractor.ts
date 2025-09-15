@@ -3,10 +3,12 @@ export class TextExtractor {
   static cleanTextContent(text: string): string {
     return text
       .replace(/<br\s*\/?>/gi, ' ')  // Replace <br> tags with spaces
-      .replace(/\n/g, ' ')           // Replace newlines with spaces
-      .replace(/[\r\t]/g, ' ')       // Replace carriage returns and tabs with spaces
+      .replace(/\r?\n/g, ' ')         // Replace newlines with spaces (including \r\n)
+      .replace(/[\r\t\f\v]/g, ' ')   // Replace all whitespace characters with spaces
       .replace(/\s+/g, ' ')          // Replace multiple whitespace with single space
-      .replace(/\s*([.,;:!?])\s*/g, '$1 ')  // Fix spacing around punctuation
+      .replace(/\s*([,;:!?])\s*/g, '$1 ')  // Fix spacing around punctuation (excluding periods)
+      .replace(/\s*\.\s*(?=\d)/g, '.')     // Fix spacing around decimal points (no space after)
+      .replace(/\s*\.\s*(?![0-9])/g, '. ') // Fix spacing around other periods (space after)
       .replace(/\s+/g, ' ')          // Clean up any new multiple spaces
       .trim();
   }
@@ -16,10 +18,19 @@ export class TextExtractor {
     const textElement = node.querySelector('text, .nodeLabel, span');
     
     if (textElement) {
-      // Get innerHTML to preserve <br> tags, then replace them with spaces
-      const htmlContent = textElement.innerHTML || '';
-      const rawText = htmlContent.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '');
-      return this.cleanTextContent(rawText);
+      // Handle multiple tspan elements properly
+      const tspans = textElement.querySelectorAll('tspan');
+      if (tspans.length > 0) {
+        // Join tspan elements with spaces to preserve word boundaries
+        const textParts = Array.from(tspans).map(tspan => tspan.textContent || '');
+        const rawText = textParts.join(' ');
+        return this.cleanTextContent(rawText);
+      } else {
+        // Get innerHTML to preserve <br> tags, then replace them with spaces
+        const htmlContent = textElement.innerHTML || '';
+        const rawText = htmlContent.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]*>/g, '');
+        return this.cleanTextContent(rawText);
+      }
     }
     
     return '';
@@ -93,7 +104,7 @@ export class TextExtractor {
     });
     
     const text = sortedTexts
-      .map(t => t.textContent || '')
+      .map(t => (t.textContent || '').trim())
       .filter(Boolean)
       .join(' ');
     
