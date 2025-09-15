@@ -115,7 +115,7 @@ svg g#A > rect, svg g#A > text, svg g#A foreignObject {
 #radial-stage-bar .search-bar {
   position: fixed;      /* center at the given viewport point */
   left: 810px;
-  top: 230px;
+  top: 280px;
   transform: translate(-50%, -50%);
   pointer-events: auto; /* input stays interactive */
 }

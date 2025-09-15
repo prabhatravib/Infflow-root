@@ -36,10 +36,10 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
       fontFamily: 'Arial, sans-serif',
       fontSize: 13,
       flowchart: {
-        useMaxWidth: true,
+        useMaxWidth: false,
         htmlLabels: false,
         curve: 'basis',
-        diagramPadding: 20
+        diagramPadding: 60
       },
       sequence: {
         diagramMarginX: 40,
