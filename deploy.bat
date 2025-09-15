@@ -17,3 +17,6 @@ echo ☁️ Deploying to Cloudflare Workers...
 call npx wrangler deploy
 
 echo ✅ Deployment completed at %date% %time%
+
+REM Play success sound notification
+powershell -Command "[console]::beep(1000,500)"

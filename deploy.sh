@@ -18,3 +18,6 @@ echo "☁️ Deploying to Cloudflare Workers..."
 npx wrangler deploy
 
 echo "✅ Deployment completed at $(date)"
+
+# Play success sound notification
+echo -e "\a"
