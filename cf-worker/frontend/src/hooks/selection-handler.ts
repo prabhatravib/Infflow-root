@@ -71,12 +71,15 @@ export class SelectionHandler {
   }
 
   private setupFlowchartSelection(svg: SVGElement) {
-    // Nodes - exclude the central node (first node) from selection
+    // Nodes - exclude only the actual central node from selection
     const nodes = svg.querySelectorAll('g.node, .node');
     nodes.forEach((node, index) => {
-      // Skip the central node (index 0) as it has the search bar overlay
-      if (index === 0) {
-        console.log('🚫 Skipping central node from selection to preserve search bar');
+      // Only skip the actual central node (A) - check for exact match
+      const nodeId = node.getAttribute('id');
+      const isCentralNode = nodeId === 'A';
+      
+      if (isCentralNode) {
+        console.log('🚫 Skipping central node (A) from selection to preserve search bar');
         return;
       }
       
