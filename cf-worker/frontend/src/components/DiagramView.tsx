@@ -4,6 +4,7 @@ import RadialChart from './RadialChart';
 import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
+import { removeCentralNodeA } from '../utils/svg-inject-search';
 
 interface DiagramViewProps {
   diagramViewTab: 'visual' | 'text';
@@ -45,6 +46,31 @@ export default function DiagramView({
   const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
     (svgRef as any).current = svgElement;
     cleanupRef.current?.();
+
+    console.log('[DiagramView] handleMermaidRender called with SVG:', svgElement);
+
+    // Remove central node A immediately after rendering
+    console.log('[DiagramView] Removing central node A immediately...');
+    console.log('[DiagramView] SVG element details:', {
+      id: svgElement.id,
+      children: svgElement.children.length,
+      innerHTML: svgElement.innerHTML.substring(0, 200) + '...'
+    });
+    
+    // Try to find node A manually first
+    const allGroups = svgElement.querySelectorAll('g');
+    console.log('[DiagramView] All groups in SVG:', allGroups.length);
+    allGroups.forEach((group, index) => {
+      if (group.textContent?.includes('A') || group.id?.includes('A')) {
+        console.log(`[DiagramView] Found potential node A (group ${index}):`, {
+          id: group.id,
+          textContent: group.textContent?.trim(),
+          className: group.className
+        });
+      }
+    });
+    
+    removeCentralNodeA(svgElement);
 
     // wait for search overlay and fonts so bbox numbers are stable
     await (document as any).fonts?.ready;

@@ -115,8 +115,8 @@ function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; h
  * Build the foreignObject with search bar
  */
 function buildSearchFO(doc: Document, box: { x: number; y: number; width: number; height: number }, opts: InjectOptions) {
-  // Create HTML overlay instead of SVG foreignObject
-  const overlay = doc.createElement('div');
+  // Create SVG foreignObject
+  const fo = doc.createElementNS(SVG_NS, 'foreignObject');
   // Ensure minimum dimensions for the foreignObject
   const minWidth = 200;
   const minHeight = 50;
@@ -368,7 +368,7 @@ function buildSearchFO(doc: Document, box: { x: number; y: number; width: number
     }
   });
 
-  return overlay;
+  return fo;
 }
 
 /**
@@ -420,4 +420,57 @@ export function ensureSearchBarInNodeA(svg: SVGSVGElement, opts: InjectOptions =
     // Just update the value
     updateCentralSearchValue(svg, opts.defaultValue || '');
   }
+}
+
+/**
+ * Remove the central node A completely from the SVG
+ * This includes the node itself and all its connections
+ */
+export function removeCentralNodeA(svg: SVGSVGElement) {
+  if (!svg) {
+    console.log('[remove-node-a] No SVG provided');
+    return;
+  }
+
+  console.log('[remove-node-a] Starting removal process...');
+  console.log('[remove-node-a] SVG element:', svg);
+
+  const nodeA = findNodeA(svg);
+  if (!nodeA) {
+    console.log('[remove-node-a] Node A not found in SVG');
+    // Let's try to find all possible nodes to debug
+    const allGroups = svg.querySelectorAll('g');
+    console.log('[remove-node-a] All groups found:', allGroups.length);
+    allGroups.forEach((group, index) => {
+      console.log(`[remove-node-a] Group ${index}:`, {
+        id: group.id,
+        textContent: group.textContent?.trim(),
+        className: group.className
+      });
+    });
+    return;
+  }
+
+  console.log('[remove-node-a] Found node A:', nodeA);
+  console.log('[remove-node-a] Node A details:', {
+    id: nodeA.id,
+    textContent: nodeA.textContent?.trim(),
+    className: nodeA.className
+  });
+
+  // Find all connections/edges that involve node A
+  const edges = svg.querySelectorAll('path[id*="flowchart-A"], path[id*="-A-"], .edge[id*="A"], path[id*="A-"], path[id*="-A"]');
+  console.log(`[remove-node-a] Found ${edges.length} edges connected to node A`);
+  
+  // Remove all edges connected to node A
+  edges.forEach((edge, index) => {
+    console.log(`[remove-node-a] Removing edge ${index}:`, edge);
+    edge.parentElement?.removeChild(edge);
+  });
+
+  // Remove the node A itself
+  console.log('[remove-node-a] Removing node A itself...');
+  nodeA.parentElement?.removeChild(nodeA);
+  
+  console.log('[remove-node-a] Successfully removed central node A and its connections');
 }
