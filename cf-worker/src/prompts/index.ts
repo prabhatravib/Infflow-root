@@ -18,6 +18,9 @@ export function getContentPrompt(diagramType: string): string {
   if (diagramType === "sequence_comparison") {
     return contentSequencePrompt;
   }
+  if (diagramType === "universal") {
+    return contentUniversalPrompt;
+  }
   return contentPrompt;
 }
 
@@ -51,10 +54,12 @@ export function getCombinedContentPrompt(diagramType: string): string {
 
 ${diagramPrompt}
 
-Please provide both responses in the following JSON format:
+IMPORTANT: You must provide your response in the following exact JSON format. Do not include any text before or after the JSON:
 
 {
-  "universal_content": "Your comprehensive answer here",
-  "diagram_content": "Your structured diagram content here"
-}`;
+  "universal_content": "Your comprehensive answer here (200-500 words, well-structured paragraphs, no bullet points or structured format)",
+  "diagram_content": "Your structured diagram content here (Main topic: format with bullet points)"
+}
+
+The universal_content should be comprehensive, readable text suitable for human reading. The diagram_content should be structured content suitable for diagram generation.`;
 }

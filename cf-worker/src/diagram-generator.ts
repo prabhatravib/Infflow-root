@@ -183,11 +183,56 @@ function parseCombinedResponse(response: string): { universalContent: string; di
     
   } catch (error) {
     console.warn("⚠️ Could not parse JSON response, using fallback parsing:", error);
-    // Fallback: split response roughly in half
-    const midPoint = Math.floor(response.length / 2);
+    console.warn("⚠️ Raw response:", response.substring(0, 500) + "...");
+    
+    // Better fallback: try to extract content based on structure
+    // Look for the universal content (comprehensive text) vs diagram content (structured format)
+    const lines = response.split('\n');
+    const universalLines: string[] = [];
+    const diagramLines: string[] = [];
+    let inUniversalSection = false;
+    let inDiagramSection = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Detect universal content (comprehensive paragraphs, not structured)
+      if (trimmed.length > 50 && !trimmed.startsWith('Main topic:') && !trimmed.startsWith('- ') && !trimmed.match(/^\d+\./)) {
+        if (!inDiagramSection) {
+          universalLines.push(line);
+          inUniversalSection = true;
+        }
+      }
+      // Detect diagram content (structured format)
+      else if (trimmed.startsWith('Main topic:') || trimmed.startsWith('- ') || trimmed.match(/^\d+\./)) {
+        diagramLines.push(line);
+        inDiagramSection = true;
+        inUniversalSection = false;
+      }
+      // Continue adding to current section
+      else if (inUniversalSection && trimmed.length > 0) {
+        universalLines.push(line);
+      }
+      else if (inDiagramSection && trimmed.length > 0) {
+        diagramLines.push(line);
+      }
+    }
+    
+    const universalContent = universalLines.join('\n').trim();
+    const diagramContent = diagramLines.join('\n').trim();
+    
+    // If we couldn't separate properly, use the original fallback
+    if (!universalContent || !diagramContent) {
+      const midPoint = Math.floor(response.length / 2);
+      return {
+        universalContent: response.substring(0, midPoint).trim(),
+        diagramContent: response.substring(midPoint).trim()
+      };
+    }
+    
     return {
-      universalContent: response.substring(0, midPoint).trim(),
-      diagramContent: response.substring(midPoint).trim()
+      universalContent,
+      diagramContent
     };
   }
 }
@@ -242,7 +287,7 @@ export async function processDiagramPipeline(
     });
     console.log(`✅ [${timer.getRequestId()}] Selected diagram type: ${diagramType}`);
     
-    // Step 2: Generate content (use individual generation for radial to get metadata)
+    // Step 2: Generate content with metadata for all diagram types
     let universalContent: string;
     let diagramContent: string;
     let contentMetadata: any = null;
@@ -265,14 +310,22 @@ export async function processDiagramPipeline(
       });
       universalContent = universalResult.content;
     } else {
-      // Use combined generation for other diagram types
-      const { universalContent: uni, diagramContent: dia } = await timer.timeStep("combined_content_generation", () => 
-        generateCombinedContent(query, diagramType, env), {
+      // For other diagram types, generate individual content to get metadata
+      const contentResult = await timer.timeStep("content_generation", () => 
+        generateContent(query, diagramType, env), {
         query_length: query.length,
         diagram_type: diagramType
       });
-      universalContent = uni;
-      diagramContent = dia;
+      diagramContent = contentResult.content;
+      contentMetadata = contentResult.metadata;
+      
+      // Generate universal content separately
+      const universalResult = await timer.timeStep("universal_content_generation", () => 
+        generateContent(query, "universal", env), {
+        query_length: query.length,
+        diagram_type: "universal"
+      });
+      universalContent = universalResult.content;
     }
     
     console.log(`✅ [${timer.getRequestId()}] Generated universal content: ${universalContent.substring(0, 100)}...`);

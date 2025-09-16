@@ -13,6 +13,10 @@ interface TabsProps {
   searchQuery?: string;
   setSearchQuery?: (q: string) => void;
   onSearch?: (q: string) => void;
+  // Save buttons
+  handleSavePNG?: () => void;
+  handleSaveText?: () => void;
+  showSaveButtons?: boolean;
 }
 
 const tabs = [{
@@ -50,7 +54,10 @@ export const Tabs = ({
   showSearch = false,
   searchQuery,
   setSearchQuery,
-  onSearch
+  onSearch,
+  handleSavePNG,
+  handleSaveText,
+  showSaveButtons = false
 }: TabsProps) => {
   const isBottom = position === 'bottom';
   
@@ -111,6 +118,32 @@ export const Tabs = ({
               </button>
             </div>
           </>
+        )}
+
+        {/* Save buttons - only show on bottom nav when requested */}
+        {isBottom && showSaveButtons && (
+          <div className="ml-auto flex items-center gap-2">
+            {/* Show Save Text button only when on Text tab */}
+            {diagramViewTab === 'text' && (
+              <button
+                onClick={handleSaveText}
+                className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
+                title="Save as text file"
+              >
+                Save Text
+              </button>
+            )}
+            {/* Show Save PNG button only when on Visual tab */}
+            {diagramViewTab === 'visual' && (
+              <button
+                onClick={handleSavePNG}
+                className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
+                title="Save as PNG image"
+              >
+                Save PNG
+              </button>
+            )}
+          </div>
         )}
         </div>
       </div>

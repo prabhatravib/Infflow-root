@@ -123,10 +123,33 @@ svg g#A > rect, svg g#A > text, svg g#A foreignObject {
   will-change: transform !important;
 }
 
+/* Ensure HexaWorker iframe stays fixed during page transitions */
+.hexa-worker-fixed {
+  position: fixed !important;
+  left: 16px !important; /* left-4 = 16px */
+  top: 60% !important;
+  transform: translateY(-50%) translate3d(0, 0, 0) !important; /* Stable positioning with new stacking context */
+  z-index: 50 !important; /* Same as original, but stable */
+  will-change: transform !important;
+  /* Ensure the container doesn't overflow and covers text below */
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure HexaWorker text stays visible below the iframe */
+.hexa-worker-fixed .text-center {
+  position: relative !important;
+  z-index: 60 !important; /* Higher than iframe to ensure visibility */
+  margin-top: 24px !important; /* mt-6 = 24px */
+  pointer-events: auto !important;
+  /* Ensure text is always visible and not covered by iframe */
+  background: transparent !important;
+}
+
 #radial-stage-bar .search-bar {
   position: fixed;      /* center at the given viewport point */
   left: 810px;
-  top: 280px;
+  top: 200px;
   transform: translate(-50%, -50%);
   pointer-events: auto; /* input stays interactive */
 }

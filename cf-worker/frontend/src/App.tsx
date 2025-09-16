@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
 import { Tabs } from './components/Tabs';
+import { HexaWorker } from './components/HexaWorker';
 import { useSelection } from './hooks/use-selection';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createAppHandlers } from './AppHandlers';
@@ -159,14 +160,11 @@ export default function App() {
             diagram={diagram}
             diagramData={diagramData}
             contentData={contentData}
-            codeFlowStatus={CodeFlowStatus}
             selection={selection}
             deepDive={deepDive}
             setupSelectionHandler={setupSelectionHandler}
             handleDeepDiveAsk={handleDeepDiveAsk}
             clearSelection={clearSelection}
-            handleSaveText={handleSaveText}
-            handleSavePNG={handleSavePNG}
             diagramViewTab={diagramViewTab}
             setDiagramViewTab={setDiagramViewTab}
             clusters={clusters}
@@ -175,8 +173,19 @@ export default function App() {
         )}
       </AnimatePresence>
       
+      {/* HexaWorker - Always rendered outside transition container for stable positioning */}
+      {showResults && (
+        <div className="hexa-worker-fixed">
+          <HexaWorker 
+            codeFlowStatus={CodeFlowStatus} 
+            diagramData={diagramData} 
+          />
+        </div>
+      )}
+      
       {/* Bottom Navigation - Always rendered outside transition container */}
       <Tabs 
+        key={`tabs-${diagramViewTab}`}
         currentTab={currentTab} 
         setCurrentTab={setCurrentTab} 
         position="bottom"
@@ -187,6 +196,9 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onSearch={handleSearch}
+        handleSavePNG={handleSavePNG}
+        handleSaveText={handleSaveText}
+        showSaveButtons={showResults}
       />
         </div>;
 }

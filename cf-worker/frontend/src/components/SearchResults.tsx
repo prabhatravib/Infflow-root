@@ -3,10 +3,10 @@ import { useState, useMemo } from 'react';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { DeepDive } from './DeepDive';
-import { HexaWorker } from './HexaWorker';
 import { RadialBarOverlay } from './RadialBarOverlay';
 import { SearchBar } from './SearchBar';
 import DiagramView from './DiagramView';
+import { ExternalLinksSection } from './ExternalLinksSection';
 import type { ClusterNode } from '../types/cluster';
 import { useClusterLazyLoading } from '../hooks/use-cluster-lazy-loading';
 
@@ -22,7 +22,6 @@ interface SearchResultsProps {
   diagram: string | null;
   diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string; diagram_meta?: any} | null;
   contentData: {content: string; description: string; universal_content: string} | null;
-  codeFlowStatus: 'sent' | 'not-sent';
   selection: {
     hasSelection: boolean;
     selectedText: string;
@@ -40,8 +39,6 @@ interface SearchResultsProps {
   setupSelectionHandler: (container: HTMLElement) => void;
   handleDeepDiveAsk: (question: string) => void;
   clearSelection: () => void;
-  handleSaveText: () => void;
-  handleSavePNG: () => void;
   diagramViewTab: 'visual' | 'text';
   setDiagramViewTab: (tab: 'visual' | 'text') => void;
   clusters: ClusterNode | null;
@@ -60,14 +57,11 @@ export default function SearchResults({
   diagram,
   diagramData,
   contentData,
-  codeFlowStatus,
   selection,
   deepDive,
   setupSelectionHandler,
   handleDeepDiveAsk,
   clearSelection,
-  handleSaveText,
-  handleSavePNG,
   diagramViewTab,
   setDiagramViewTab,
   clusters,
@@ -78,6 +72,10 @@ export default function SearchResults({
   const radialEnabled = (diagramData?.diagramType === 'radial_mindmap') || looksRadial;
   const [selectedClusterIds, setSelectedClusterIds] = useState<string[]>([]);
   const { loadClusterChildren } = useClusterLazyLoading(clusters, setClusters);
+  
+  // External links state
+  const [externalLinksQuery, setExternalLinksQuery] = useState<string | null>(null);
+  const [externalLinksMeta, setExternalLinksMeta] = useState<any>(null);
 
   const findClusterById = useMemo(() => {
     const fn = (root: ClusterNode | null, id: string): ClusterNode | null => {
@@ -91,6 +89,19 @@ export default function SearchResults({
     };
     return fn;
   }, []);
+
+  // Handler for external links requests from DiagramView
+  const handleExternalLinksRequest = (query: string, meta?: any) => {
+    console.log('[SearchResults] External links requested for query:', query, 'meta:', meta);
+    setExternalLinksQuery(query);
+    setExternalLinksMeta(meta);
+  };
+
+  // Handler to close external links section
+  const handleCloseExternalLinks = () => {
+    setExternalLinksQuery(null);
+    setExternalLinksMeta(null);
+  };
 
   
   return (
@@ -119,15 +130,8 @@ export default function SearchResults({
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        {/* HexaWorker Component - Static hexagon removed, only iframe functionality */}
-        <div className="fixed left-4 top-[60%] transform -translate-y-1/2 z-50">
-          <HexaWorker 
-            codeFlowStatus={codeFlowStatus} 
-            diagramData={diagramData} 
-          />
-        </div>
         
-        <main className="flex-1 transition-all duration-500 ml-36 lg:ml-40">
+        <main className="flex-1 transition-all duration-500 ml-16 lg:ml-24">
           {/* Radial Search Bar Overlay - Only for Radial Flow Charts */}
           {radialEnabled && diagramViewTab === 'visual' && (
             <RadialBarOverlay>
@@ -147,20 +151,18 @@ export default function SearchResults({
               diagramViewTab={diagramViewTab}
               clusters={clusters}
               diagram={diagram}
-              diagramData={diagramData}
               radialEnabled={radialEnabled}
               searchQuery={searchQuery}
-              onSearch={onSearch}
               setupSelectionHandler={setupSelectionHandler}
-              handleSavePNG={handleSavePNG}
               selectedClusterIds={selectedClusterIds}
               setSelectedClusterIds={setSelectedClusterIds}
               loadClusterChildren={loadClusterChildren}
               findClusterById={findClusterById}
               diagramMeta={diagramData?.diagram_meta}
+              onExternalLinksRequest={handleExternalLinksRequest}
             />
           ) : (
-            <div className="relative p-6">
+            <div className="relative p-6 pr-12">
               {contentData && contentData.universal_content ? (
                 <div className="space-y-4">
                   <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">
@@ -170,18 +172,6 @@ export default function SearchResults({
               ) : (
                 <div className="text-center text-gray-500 dark:text-gray-400">
                   <p>No text content available</p>
-                </div>
-              )}
-              {/* Save Text Button - positioned in bottom right corner */}
-              {contentData && contentData.universal_content && (
-                <div className="absolute bottom-4 right-4">
-                  <button
-                    onClick={handleSaveText}
-                    className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
-                    title="Save as text file"
-                  >
-                    Save text
-                  </button>
                 </div>
               )}
             </div>
@@ -200,6 +190,17 @@ export default function SearchResults({
           )}
         </main>
       </div>
+      
+      {/* External Links Section - positioned above bottom bar, constrained to viewport - only show in Visual tab */}
+      {externalLinksQuery && diagramViewTab === 'visual' && (
+        <div className="fixed bottom-16 left-[85%] transform -translate-x-1/2 w-[60%] z-40 max-h-[40vh] overflow-y-auto">
+          <ExternalLinksSection
+            query={externalLinksQuery}
+            meta={externalLinksMeta}
+            onClose={handleCloseExternalLinks}
+          />
+        </div>
+      )}
     </motion.div>
   );
 }

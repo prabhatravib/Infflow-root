@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import Mermaid, { MermaidRef } from './Mermaid';
 import RadialChart from './RadialChart';
 import { FoamTreeView } from './visual/FoamTreeView';
@@ -6,40 +6,35 @@ import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
 import { removeCentralNodeA } from '../utils/svg-search-dom';
 import { decorateNodesWithPlus } from '../lib/mermaid/decorateNodesWithPlus';
-import { NodeLinksPopover } from './NodeLinksPopover';
 
 interface DiagramViewProps {
   diagramViewTab: 'visual' | 'text';
   clusters: ClusterNode | null;
   diagram: string | null;
-  diagramData: {mermaidCode: string; diagramImage: string; prompt: string; diagramType?: string} | null;
   radialEnabled: boolean;
   searchQuery: string;
-  onSearch: (query: string) => void;
   setupSelectionHandler: (container: HTMLElement) => void;
-  handleSavePNG: () => void;
   selectedClusterIds: string[];
   setSelectedClusterIds: (ids: string[]) => void;
   loadClusterChildren: (clusterId: string) => void;
   findClusterById: (root: ClusterNode | null, id: string) => ClusterNode | null;
   diagramMeta?: { nodes: Record<string, any> };
+  onExternalLinksRequest?: (query: string, meta?: any) => void;
 }
 
 export default function DiagramView({
   diagramViewTab,
   clusters,
   diagram,
-  diagramData,
   radialEnabled,
   searchQuery,
-  onSearch,
   setupSelectionHandler,
-  handleSavePNG,
   selectedClusterIds,
   setSelectedClusterIds,
   loadClusterChildren,
   findClusterById,
-  diagramMeta
+  diagramMeta,
+  onExternalLinksRequest
 }: DiagramViewProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -47,10 +42,7 @@ export default function DiagramView({
   const cleanupRef = useRef<null | (() => void)>(null);
   const timeoutRef = useRef<number | null>(null);
   
-  // State for popover
-  const [popoverPt, setPopoverPt] = useState<{ x: number; y: number } | null>(null);
-  const [popoverQuery, setPopoverQuery] = useState<string | null>(null);
-  const [popoverMeta, setPopoverMeta] = useState<any>(null);
+  // External links state is now handled by parent component
 
   // Memoize the onRender callback to prevent Mermaid re-renders
   const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
@@ -105,11 +97,9 @@ export default function DiagramView({
           originalQuery: searchQuery,
           excludeIds: exclude,
           diagramMeta: diagramMeta,
-          onOpenPopover: ({ clientX, clientY, query, nodeId, meta }) => {
-            console.log('[DiagramView] Plus button clicked, opening popover at:', clientX, clientY, 'with query:', query, 'nodeId:', nodeId, 'meta:', meta);
-            setPopoverPt({ x: clientX, y: clientY });
-            setPopoverQuery(query);
-            setPopoverMeta(meta);
+          onOpenPopover: ({ query, nodeId, meta }) => {
+            console.log('[DiagramView] Plus button clicked, requesting external links for query:', query, 'nodeId:', nodeId, 'meta:', meta);
+            onExternalLinksRequest?.(query, meta);
           },
         });
         timeoutRef.current = null; // Clear the ref after execution
@@ -138,21 +128,7 @@ export default function DiagramView({
   }, []);
 
   if (diagramViewTab !== 'visual') {
-    return (
-      <>
-        {null}
-        <NodeLinksPopover
-          point={popoverPt}
-          query={popoverQuery}
-          meta={popoverMeta}
-          onClose={() => {
-            setPopoverPt(null);
-            setPopoverQuery(null);
-            setPopoverMeta(null);
-          }}
-        />
-      </>
-    );
+    return null;
   }
 
   if (clusters) {
@@ -193,36 +169,7 @@ export default function DiagramView({
               </div>
             </div>
           )}
-          {/* Save PNG Button for FoamTree - positioned just above bottom bar */}
-          <div className="absolute bottom-2 right-8" style={{ zIndex: 3000 }}>
-            <button
-              onClick={() => {
-                console.log('Save PNG button clicked!');
-                handleSavePNG();
-              }}
-              className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
-              style={{ 
-                pointerEvents: 'auto', 
-                position: 'relative', 
-                zIndex: 3000,
-                cursor: 'pointer'
-              }}
-              title="Save as PNG image"
-            >
-              Save PNG
-            </button>
-          </div>
         </div>
-        <NodeLinksPopover
-          point={popoverPt}
-          query={popoverQuery}
-          meta={popoverMeta}
-          onClose={() => {
-            setPopoverPt(null);
-            setPopoverQuery(null);
-            setPopoverMeta(null);
-          }}
-        />
       </>
     );
   }
@@ -233,7 +180,7 @@ export default function DiagramView({
         <div className="relative">
           <div
             ref={hostRef}
-            className="diagram-viewport relative w-full h-[calc(100vh-168px)] overflow-visible"
+            className="diagram-viewport relative w-full h-[calc(100vh-120px)] overflow-visible"
             style={{ zIndex: radialEnabled ? 1 : "auto" }}
           >
             {radialEnabled ? (
@@ -251,36 +198,7 @@ export default function DiagramView({
               />
             )}
           </div>
-          {/* Save PNG Button - positioned just above bottom bar */}
-          <div className="absolute bottom-2 right-8" style={{ zIndex: 3000 }}>
-            <button
-              onClick={() => {
-                console.log('Save PNG button clicked!');
-                handleSavePNG();
-              }}
-              className="px-4 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-md border border-gray-200 dark:border-gray-600"
-              style={{ 
-                pointerEvents: 'auto', 
-                position: 'relative', 
-                zIndex: 3000,
-                cursor: 'pointer'
-              }}
-              title="Save as PNG image"
-            >
-              Save PNG
-            </button>
-          </div>
         </div>
-        <NodeLinksPopover
-          point={popoverPt}
-          query={popoverQuery}
-          meta={popoverMeta}
-          onClose={() => {
-            setPopoverPt(null);
-            setPopoverQuery(null);
-            setPopoverMeta(null);
-          }}
-        />
       </>
     );
   }
@@ -303,14 +221,6 @@ export default function DiagramView({
           <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
         </div>
       </div>
-      <NodeLinksPopover
-        point={popoverPt}
-        query={popoverQuery}
-        onClose={() => {
-          setPopoverPt(null);
-          setPopoverQuery(null);
-        }}
-      />
     </>
   );
 }

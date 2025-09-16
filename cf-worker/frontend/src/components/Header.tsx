@@ -30,7 +30,7 @@ export const Header = ({
 }: HeaderProps) => {
   return (
     <header className={`sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 transition-all duration-300 ${showResults ? 'shadow-sm' : 'shadow-none'}`}>
-      <div className={`flex items-center justify-between px-6 transition-all duration-300 ${showResults ? 'py-2' : 'py-3'}`}>
+      <div className={`flex items-center justify-between px-6 transition-all duration-300 ${showResults ? 'py-0.5' : 'py-1'}`}>
         <div className="flex items-center gap-4">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors lg:hidden">
             <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />

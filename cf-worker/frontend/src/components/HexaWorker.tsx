@@ -169,6 +169,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                 position: 'relative',
                 // Pull the worker a bit further down to avoid overlap with top panels
                 transform: `translateY(${20 + EXTRA_DOWN_OFFSET_PX}px)`,
+                // Ensure container doesn't overflow and covers text
+                overflow: 'visible',
               }}
             >
               <iframe
@@ -186,6 +188,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   left: `${SCALED.iframeLeft}px`,
                   transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(60px)`,  // Scale internal content to 80% and move down
                   transformOrigin: 'center center',  // Scale from center
+                  zIndex: 1, // Lower z-index than text to ensure text stays visible
                 }}
                 title="Hexa Voice Agent"
                 allow="microphone"
@@ -201,8 +204,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
             </div>
           </div>
 
-          {/* Code Flow Status */}
-          <div className="text-center mt-6">
+          {/* Code Flow Status - Positioned to always be visible below iframe */}
+          <div className="text-center mt-6 relative z-10">
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
             </div>

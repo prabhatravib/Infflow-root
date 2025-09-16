@@ -39,12 +39,12 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
         useMaxWidth: false,
         htmlLabels: false,
         curve: 'basis',
-        diagramPadding: 60
+        diagramPadding: 20
       },
       sequence: {
-        diagramMarginX: 40,
-        diagramMarginY: 24,
-        actorMargin: 32,
+        diagramMarginX: 20,
+        diagramMarginY: 12,
+        actorMargin: 16,
         width: 120,
         height: 40,
         boxMargin: 8,
@@ -98,7 +98,7 @@ const Mermaid = forwardRef<MermaidRef, Props>(({
   }, [code, onSetupSelection, onRender]);
 
   return (
-    <div className={`${className} flex justify-center items-center w-full relative`} style={{ zIndex: 1 }} ref={containerRef}>
+    <div className={`${className} flex justify-center items-start w-full relative`} style={{ zIndex: 1 }} ref={containerRef}>
     </div>
   );
 });

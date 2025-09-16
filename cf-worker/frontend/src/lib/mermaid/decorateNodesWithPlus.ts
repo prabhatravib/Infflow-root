@@ -53,6 +53,8 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
   console.log('[decorateNodesWithPlus] Starting decoration with query:', originalQuery);
   console.log('[decorateNodesWithPlus] SVG element:', svg);
   console.log('[decorateNodesWithPlus] SVG innerHTML preview:', svg.innerHTML.substring(0, 500) + '...');
+  console.log('[decorateNodesWithPlus] diagramMeta structure:', diagramMeta);
+  console.log('[decorateNodesWithPlus] diagramMeta.facts:', Array.isArray(diagramMeta) ? diagramMeta : (diagramMeta as any)?.facts);
 
   // Try multiple selectors to find Mermaid nodes (excluding subgraphs/clusters)
   const selectors = [
@@ -177,7 +179,9 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     plus.classList.add("__plus");
     plus.setAttribute("cursor", "pointer");
     plus.setAttribute("role", "button");
-    plus.setAttribute("aria-label", "Search links for this node");
+    plus.setAttribute("aria-label", "Search for this node");
+    plus.setAttribute("opacity", "0"); // Hide by default
+    plus.style.transition = "opacity 0.2s ease-in-out"; // Smooth transition
     
     // Add shadow filter for better visibility
     const defs = svg.querySelector('defs') || svg.insertBefore(document.createElementNS("http://www.w3.org/2000/svg", "defs"), svg.firstChild);
@@ -219,43 +223,56 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     circle.setAttribute("stroke-width", "3");
     circle.setAttribute("filter", "url(#plus-shadow)");
 
-    // Create plus sign using path instead of lines for better compatibility
-    const plusPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    const halfSize = r * 0.4;
-    const pathData = [
-      `M ${cx - halfSize} ${cy}`, // Move to left of horizontal line
-      `L ${cx + halfSize} ${cy}`, // Draw horizontal line
-      `M ${cx} ${cy - halfSize}`, // Move to top of vertical line
-      `L ${cx} ${cy + halfSize}`  // Draw vertical line
-    ].join(' ');
+    // Create magnifying glass icon using lucide's Search icon path data
+    const searchPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const iconSize = r * 1.2; // Scale factor for the icon (doubled from 0.6)
     
-    plusPath.setAttribute("d", pathData);
-    plusPath.setAttribute("stroke", "#ffffff");
-    plusPath.setAttribute("stroke-width", "4");
-    plusPath.setAttribute("stroke-linecap", "round");
-    plusPath.setAttribute("fill", "none");
-    plusPath.setAttribute("opacity", "1");
+    // Lucide Search icon path data (scaled and positioned)
+    const pathData = `M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z`;
+    
+    // Create a transform to scale and position the icon
+    const scale = iconSize / 24; // Lucide icons are typically 24x24
+    const translateX = cx - (24 * scale / 2);
+    const translateY = cy - (24 * scale / 2);
+    
+    searchPath.setAttribute("d", pathData);
+    searchPath.setAttribute("transform", `translate(${translateX}, ${translateY}) scale(${scale})`);
+    searchPath.setAttribute("stroke", "#ffffff");
+    searchPath.setAttribute("stroke-width", "2");
+    searchPath.setAttribute("stroke-linecap", "round");
+    searchPath.setAttribute("stroke-linejoin", "round");
+    searchPath.setAttribute("fill", "none");
+    searchPath.setAttribute("opacity", "1");
 
     plus.appendChild(circle);
-    plus.appendChild(plusPath);
+    plus.appendChild(searchPath);
     
-    console.log('[decorateNodesWithPlus] Created plus button elements:', {
+    console.log('[decorateNodesWithPlus] Created search button elements:', {
       circle: circle.outerHTML,
-      plusPath: plusPath.outerHTML,
+      searchPath: searchPath.outerHTML,
       position: { cx, cy, r }
     });
 
-    // Add hover effects
+    // Add hover effects for the search button itself
     plus.addEventListener("mouseenter", () => {
       circle.setAttribute("fill", "#ff6666");
       circle.setAttribute("r", String(r + 2));
-      plusPath.setAttribute("stroke-width", "5");
+      searchPath.setAttribute("stroke-width", "3");
     });
     
     plus.addEventListener("mouseleave", () => {
       circle.setAttribute("fill", "#ff4444");
       circle.setAttribute("r", String(r));
-      plusPath.setAttribute("stroke-width", "4");
+      searchPath.setAttribute("stroke-width", "2");
+    });
+
+    // Add hover effects to the node to show/hide the search icon
+    g.addEventListener("mouseenter", () => {
+      plus.setAttribute("opacity", "1");
+    });
+    
+    g.addEventListener("mouseleave", () => {
+      plus.setAttribute("opacity", "0");
     });
 
     plus.addEventListener("mousedown", (e) => e.stopPropagation());
@@ -264,8 +281,49 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
       const nodeText = getNodeText(g);
       const nodeId = id;
       const q = `${originalQuery} "${nodeText}"`;
-      const meta = diagramMeta?.nodes?.[nodeId] || {};
-      console.log('[decorateNodesWithPlus] Plus button clicked!', { nodeText, nodeId, query: q, meta });
+      // Extract the actual node letter from the nodeId (e.g., "D" from "flowchart-D-3")
+      const nodeLetter = nodeId.match(/flowchart-([A-Z])-\d+/)?.[1] || nodeId.match(/^([A-Z])/)?.[1];
+      
+      // Get the fact metadata for this node
+      let factMeta = {};
+      
+      // Handle the metadata structure - it should be { facts: [...] }
+      const factsArray = (diagramMeta as any)?.facts || diagramMeta;
+      
+      if (factsArray && Array.isArray(factsArray)) {
+        // Map node letters to fact indices: B=0, C=1, D=2, E=3, F=4 (since A is removed)
+        const nodeIndex = nodeLetter ? nodeLetter.charCodeAt(0) - 66 : -1; // B=0, C=1, etc.
+        if (nodeIndex >= 0 && nodeIndex < factsArray.length) {
+          factMeta = factsArray[nodeIndex] || {};
+        }
+      }
+      
+      // Debug: log what we're getting from metadata
+      console.log('[decorateNodesWithPlus] Fact metadata for node', nodeLetter, ':', factMeta);
+      console.log('[decorateNodesWithPlus] All facts array:', Array.isArray(diagramMeta) ? diagramMeta : (diagramMeta as any)?.facts);
+      
+      // Create meta object with theme information
+      const meta = {
+        ...factMeta,
+        nodeId: nodeId,
+        nodeText: nodeText
+      };
+      
+      console.log('[decorateNodesWithPlus] Search button clicked!', { 
+        nodeText, 
+        nodeId, 
+        nodeLetter, 
+        nodeIndex: nodeLetter ? nodeLetter.charCodeAt(0) - 65 : -1,
+        query: q, 
+        factMeta,
+        meta, 
+        allFacts: Array.isArray(diagramMeta) ? diagramMeta : (diagramMeta as any)?.facts,
+        diagramMetaStructure: Array.isArray(diagramMeta) ? 'array' : 'object'
+      });
+      
+      // Log the specific fact metadata for debugging
+      console.log('[decorateNodesWithPlus] Fact metadata for node', nodeLetter, ':', factMeta);
+      console.log('[decorateNodesWithPlus] All facts array:', Array.isArray(diagramMeta) ? diagramMeta : (diagramMeta as any)?.facts);
       onOpenPopover({
         clientX: (e as MouseEvent).clientX,
         clientY: (e as MouseEvent).clientY,
@@ -277,6 +335,6 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     });
 
     g.appendChild(plus);
-    console.log('[decorateNodesWithPlus] Added plus button to node:', id, 'at position:', cx, cy);
+    console.log('[decorateNodesWithPlus] Added search button to node:', id, 'at position:', cx, cy);
   });
 }

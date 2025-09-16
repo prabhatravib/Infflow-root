@@ -68,8 +68,11 @@ export async function generateContent(
     const metadata = extractMetadata(response, diagramType);
     console.log("Extracted metadata:", metadata ? 'Yes' : 'No');
     
+    // Clean the content by removing JSON metadata
+    const cleanedContent = cleanContentFromMetadata(response);
+    
     return {
-      content: response,
+      content: cleanedContent,
       parsed,
       metadata
     };
@@ -83,6 +86,9 @@ export async function generateContent(
 function validateContent(content: string, diagramType: string): boolean {
   if (diagramType === "sequence_comparison") {
     return validateComparisonContent(content);
+  }
+  if (diagramType === "universal") {
+    return validateUniversalContent(content);
   }
   return validateStandardContent(content);
 }
@@ -122,9 +128,31 @@ function validateComparisonContent(content: string): boolean {
          contentLower.includes('unique');
 }
 
+function validateUniversalContent(content: string): boolean {
+  // Universal content should be natural, readable text
+  // Just check that it's not empty and has reasonable length
+  const trimmed = content.trim();
+  if (!trimmed || trimmed.length < 50) {
+    return false;
+  }
+  
+  // Check that it contains some substantive content (not just headers or formatting)
+  const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l);
+  const substantiveLines = lines.filter(line => 
+    line.length > 20 && // Substantial content
+    !line.match(/^[#*\-=]+$/) && // Not just formatting characters
+    !line.match(/^\d+\.?\s*$/) // Not just numbers
+  );
+  
+  return substantiveLines.length >= 2; // At least 2 substantive lines
+}
+
 function parseContent(content: string, diagramType: string): { topic: string; facts: string[] } {
   if (diagramType === "sequence_comparison") {
     return parseComparisonContent(content);
+  }
+  if (diagramType === "universal") {
+    return parseUniversalContent(content);
   }
   return parseStandardContent(content);
 }
@@ -184,8 +212,55 @@ function parseComparisonContent(content: string): { topic: string; facts: string
   return result;
 }
 
+function parseUniversalContent(content: string): { topic: string; facts: string[] } {
+  // For universal content, extract the main topic from the first line or heading
+  const lines = content.split('\n').map(l => l.trim()).filter(l => l);
+  const result = { topic: '', facts: [] as string[] };
+  
+  if (lines.length === 0) {
+    return result;
+  }
+  
+  // Try to extract topic from first line
+  const firstLine = lines[0];
+  if (firstLine.length > 0) {
+    // If it's a heading (starts with a word), use that as topic
+    if (/^[A-Z]/.test(firstLine)) {
+      result.topic = firstLine.split(' ').slice(0, 3).join(' '); // First few words
+    } else {
+      result.topic = firstLine.substring(0, 50); // First 50 chars
+    }
+  }
+  
+  // Add all lines as "facts" for universal content
+  result.facts = lines.map(line => fixSpacing(line));
+  
+  return result;
+}
+
+function cleanContentFromMetadata(response: string): string {
+  // Remove JSON metadata blocks from the response
+  let cleaned = response;
+  
+  // Remove JSON code blocks
+  cleaned = cleaned.replace(/```json\s*[\s\S]*?\s*```/g, '');
+  
+  // Remove standalone JSON objects that contain diagram_meta
+  cleaned = cleaned.replace(/\{[\s\S]*?"diagram_meta"[\s\S]*?\}/g, '');
+  
+  // Remove any remaining JSON-like structures at the end
+  cleaned = cleaned.replace(/\n\s*\{[\s\S]*?\}\s*$/g, '');
+  
+  // Clean up extra whitespace and empty lines
+  cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n');
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+}
+
 function extractMetadata(response: string, diagramType: string): any {
-  if (diagramType !== "radial_mindmap") {
+  // Extract metadata for all diagram types that support it
+  if (diagramType !== "radial_mindmap" && diagramType !== "flowchart" && diagramType !== "sequence_comparison") {
     return null;
   }
   
