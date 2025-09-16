@@ -67,6 +67,11 @@ export function ExternalLinksSection({
       setLoading(true);
       setError(null);
       setItems(null);
+      
+      // Ensure minimum loading time for better UX
+      const startTime = Date.now();
+      const minLoadingTime = 800; // 800ms minimum loading time
+      
       try {
         console.log('[ExternalLinksSection] Making API call to /api/node-search');
         const body = {
@@ -102,6 +107,14 @@ export function ExternalLinksSection({
         console.error('[ExternalLinksSection] Fetch error:', e);
         if (!cancel) setError(`Network Error: ${e?.message || "Failed to fetch"}`);
       } finally {
+        // Ensure minimum loading time has passed
+        const elapsedTime = Date.now() - startTime;
+        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        
+        if (remainingTime > 0) {
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
+        }
+        
         if (!cancel) setLoading(false);
       }
     }

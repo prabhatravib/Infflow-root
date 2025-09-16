@@ -21,13 +21,13 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   
   // Layout constants for the expanded hexagon
   const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
-  const EXTRA_DOWN_OFFSET_PX = 40;       // nudge down to avoid overlap
+  const EXTRA_DOWN_OFFSET_PX = 30;       // move down to position hexagon lower
   const BASE = {
-    container: 280,        // px
-    iframeWidth: 300,      // px
-    iframeHeight: 320,     // px
-    iframeTop: -40,        // px
-    iframeLeft: -20        // px
+    container: 260,        // px (reduced to accommodate smaller iframe)
+    iframeWidth: 270,      // px (10% reduction from 300px)
+    iframeHeight: 288,     // px (10% reduction from 320px)
+    iframeTop: 20,         // px (move iframe window down more to show full hexagon)
+    iframeLeft: -15        // px (adjusted for better centering)
   } as const;
   
   // Keep original iframe dimensions unchanged, only scale internal content
@@ -168,7 +168,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                 height: `${SCALED.container}px`,
                 position: 'relative',
                 // Pull the worker a bit further down to avoid overlap with top panels
-                transform: `translateY(${20 + EXTRA_DOWN_OFFSET_PX}px)`,
+                transform: `translateY(${-10 + EXTRA_DOWN_OFFSET_PX}px)`,
                 // Ensure container doesn't overflow and covers text
                 overflow: 'visible',
               }}
@@ -186,7 +186,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   position: 'absolute',
                   top: `${SCALED.iframeTop}px`,
                   left: `${SCALED.iframeLeft}px`,
-                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(60px)`,  // Scale internal content to 80% and move down
+                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(80px)`,  // Scale and move internal content down
                   transformOrigin: 'center center',  // Scale from center
                   zIndex: 1, // Lower z-index than text to ensure text stays visible
                 }}

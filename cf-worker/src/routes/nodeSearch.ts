@@ -12,6 +12,18 @@ function clean(s: string) {
     .trim();
 }
 
+function stripHtmlTags(text: string) {
+  return (text || "")
+    .replace(/<[^>]*>/g, "") // Remove all HTML tags
+    .replace(/&nbsp;/g, " ") // Replace &nbsp; with regular space
+    .replace(/&amp;/g, "&") // Replace &amp; with &
+    .replace(/&lt;/g, "<") // Replace &lt; with <
+    .replace(/&gt;/g, ">") // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/&#39;/g, "'") // Replace &#39; with '
+    .trim();
+}
+
 function assembleQueries(b: NodeSearchRequest) {
   const entity = clean(b.entity || "");
   const baseQ = clean(b.query || "");
@@ -60,7 +72,7 @@ export async function handleNodeSearch(request: Request, env: Env, _ctx: any) {
   const mapped = items.map((r: any) => ({
     title: r.title,
     url: r.url,
-    snippet: r.description,
+    snippet: stripHtmlTags(r.description),
     favicon: r.profile?.image?.url ?? null,
   }));
   return new Response(JSON.stringify({ items: mapped, debug: { attempts, used: used || null } } as NodeSearchResponse), { 

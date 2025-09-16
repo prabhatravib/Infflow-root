@@ -123,7 +123,7 @@ export const createAppHandlers = ({
           if (clusterRes.success && clusterRes.cluster) {
             setClusters(clusterRes.cluster as any);
             if (clusterRes.universal_content) {
-              setContentData({ content: '', description: '', universal_content: clusterRes.universal_content });
+              setContentData(processContentData({ content: '', description: '', universal_content: clusterRes.universal_content }));
             } else {
               setContentData({ content: '', description: '', universal_content: '' });
             }

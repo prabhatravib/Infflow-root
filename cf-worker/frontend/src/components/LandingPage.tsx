@@ -32,7 +32,7 @@ export default function LandingPage({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5, ease: "easeInOut" }}
-      className="flex flex-col items-center justify-start px-8 relative -mt-24 pb-8 min-h-screen"
+      className="flex flex-col items-center justify-start px-8 relative -mt-16 pb-8 min-h-screen"
     >
       {/* Floating theme toggle for landing page */}
       <button 

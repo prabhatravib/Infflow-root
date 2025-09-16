@@ -127,7 +127,7 @@ svg g#A > rect, svg g#A > text, svg g#A foreignObject {
 .hexa-worker-fixed {
   position: fixed !important;
   left: 16px !important; /* left-4 = 16px */
-  top: 60% !important;
+  top: 35% !important;
   transform: translateY(-50%) translate3d(0, 0, 0) !important; /* Stable positioning with new stacking context */
   z-index: 50 !important; /* Same as original, but stable */
   will-change: transform !important;

@@ -50,6 +50,17 @@ function isSubgraph(g: SVGGElement): boolean {
 export function decorateNodesWithPlus(opts: DecorateOptions) {
   const { svg, originalQuery, diagramMeta, onOpenPopover, excludeIds = new Set() } = opts;
 
+  // Expand the SVG viewBox to accommodate icons that extend beyond the content
+  const currentViewBox = svg.getAttribute('viewBox');
+  if (currentViewBox) {
+    const viewBoxValues = currentViewBox.split(' ').map(Number);
+    if (viewBoxValues.length === 4) {
+      const [x, y, width, height] = viewBoxValues;
+      const margin = 50; // Add 50px margin on all sides
+      svg.setAttribute('viewBox', `${x - margin} ${y - margin} ${width + margin * 2} ${height + margin * 2}`);
+    }
+  }
+
   console.log('[decorateNodesWithPlus] Starting decoration with query:', originalQuery);
   console.log('[decorateNodesWithPlus] SVG element:', svg);
   console.log('[decorateNodesWithPlus] SVG innerHTML preview:', svg.innerHTML.substring(0, 500) + '...');
@@ -212,6 +223,20 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     if (plusLeft < 20) {
       // Move to right side instead
       cx = bbox.x + bbox.width + r + 8;
+      
+      // Check if right side is also too close to viewport edge
+      const plusRight = cx + r;
+      const viewportWidth = window.innerWidth;
+      if (plusRight > viewportWidth - 20) {
+        // If both sides are problematic, position on the side with more space
+        const leftSpace = bbox.x - r - 8;
+        const rightSpace = viewportWidth - (bbox.x + bbox.width + r + 8);
+        if (leftSpace > rightSpace) {
+          cx = bbox.x - r - 8;
+        } else {
+          cx = bbox.x + bbox.width + r + 8;
+        }
+      }
     }
 
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");

@@ -63,7 +63,7 @@ export const Tabs = ({
   
   // @return
   return <nav className={`${isBottom ? 'border-t' : 'border-b'} border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 ${isBottom ? 'bottom-nav-fixed' : ''}`}>
-      <div className="px-4">
+      <div className={`px-2 ${isBottom && showSaveButtons ? 'flex justify-between items-center' : ''}`}>
         <div className="flex space-x-1 overflow-x-auto scrollbar-hide">
           {/* Web/Map/News tabs */}
           {tabs.map(tab => {
@@ -120,32 +120,33 @@ export const Tabs = ({
           </>
         )}
 
-        {/* Save buttons - only show on bottom nav when requested */}
-        {isBottom && showSaveButtons && (
-          <div className="ml-auto flex items-center gap-2">
-            {/* Show Save Text button only when on Text tab */}
-            {diagramViewTab === 'text' && (
-              <button
-                onClick={handleSaveText}
-                className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
-                title="Save as text file"
-              >
-                Save Text
-              </button>
-            )}
-            {/* Show Save PNG button only when on Visual tab */}
-            {diagramViewTab === 'visual' && (
-              <button
-                onClick={handleSavePNG}
-                className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
-                title="Save as PNG image"
-              >
-                Save PNG
-              </button>
-            )}
-          </div>
-        )}
-        </div>
-      </div>
-    </nav>;
+         </div>
+
+         {/* Save buttons - only show on bottom nav when requested */}
+         {isBottom && showSaveButtons && (
+           <div className="flex items-center gap-2">
+             {/* Show Save Text button only when on Text tab */}
+             {diagramViewTab === 'text' && (
+               <button
+                 onClick={handleSaveText}
+                 className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
+                 title="Save as text file"
+               >
+                 Save Text
+               </button>
+             )}
+             {/* Show Save PNG button only when on Visual tab */}
+             {diagramViewTab === 'visual' && (
+               <button
+                 onClick={handleSavePNG}
+                 className="px-3 py-2 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700 text-black dark:text-white text-sm font-medium rounded-lg transition-colors shadow-sm border border-gray-200 dark:border-gray-600"
+                 title="Save as PNG image"
+               >
+                 Save PNG
+               </button>
+             )}
+           </div>
+         )}
+       </div>
+     </nav>;
 };

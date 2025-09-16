@@ -135,7 +135,7 @@ export default function DiagramView({
     return (
       <>
         <div className="relative">
-          <div className="diagram-viewport h-[70vh]">
+          <div className="diagram-viewport h-[calc(100vh-80px)]">
             <FoamTreeView
               data={clusters}
               onSelect={setSelectedClusterIds}
@@ -180,7 +180,7 @@ export default function DiagramView({
         <div className="relative">
           <div
             ref={hostRef}
-            className="diagram-viewport relative w-full h-[calc(100vh-120px)] overflow-visible"
+            className="diagram-viewport relative w-full h-[calc(100vh-80px)] overflow-visible"
             style={{ zIndex: radialEnabled ? 1 : "auto" }}
           >
             {radialEnabled ? (
