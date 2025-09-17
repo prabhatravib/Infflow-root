@@ -23,11 +23,11 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
   const EXTRA_DOWN_OFFSET_PX = 30;       // move down to position hexagon lower
   const BASE = {
-    container: 260,        // px (reduced to accommodate smaller iframe)
-    iframeWidth: 270,      // px (10% reduction from 300px)
-    iframeHeight: 288,     // px (10% reduction from 320px)
-    iframeTop: 20,         // px (move iframe window down more to show full hexagon)
-    iframeLeft: -15        // px (adjusted for better centering)
+    container: 350,        // px (further increased for more hexagon visibility)
+    iframeWidth: 300,      // px (increased iframe width for better coverage)
+    iframeHeight: 320,     // px (increased iframe height for better coverage)
+    iframeTop: -50,        // px (moved further up to show more of hexagon top)
+    iframeLeft: -25        // px (adjusted for better centering with larger iframe)
   } as const;
   
   // Keep original iframe dimensions unchanged, only scale internal content
@@ -171,6 +171,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                 transform: `translateY(${-10 + EXTRA_DOWN_OFFSET_PX}px)`,
                 // Ensure container doesn't overflow and covers text
                 overflow: 'visible',
+                // CSS variable for clean hexagon positioning
+                ['--hexa-nudge-y' as any]: '30px',
               }}
             >
               <iframe
@@ -186,7 +188,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   position: 'absolute',
                   top: `${SCALED.iframeTop}px`,
                   left: `${SCALED.iframeLeft}px`,
-                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(80px)`,  // Scale and move internal content down
+                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(40px)`,  // Further reduced to show more hexagon
                   transformOrigin: 'center center',  // Scale from center
                   zIndex: 1, // Lower z-index than text to ensure text stays visible
                 }}
