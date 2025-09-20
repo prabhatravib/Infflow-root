@@ -76,24 +76,22 @@ export const createAppHandlers = ({
   };
 
   const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
-    const startTime = performance.now();
-    const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    
     if (!query.trim()) return;
-    console.log(`🔍 [${requestId}] Frontend search started - Query: "${query}", Options:`, options);
+    console.log('[App] handleSearch called with query:', query, 'options:', options);
     
     // Prevent duplicate searches for the same query
     const cleaned = query.trim();
     if (lastSearchQuery.current === cleaned) {
-      console.log(`⏭️ [${requestId}] Skipping duplicate search for: "${cleaned}"`);
+      console.log('[App] Skipping duplicate search for:', cleaned);
       return;
     }
     lastSearchQuery.current = cleaned;
     
+    // Generate unique request ID to prevent duplicate API calls
+    const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     currentRequestId.current = requestId;
-    console.log(`🚀 [${requestId}] Starting search with request ID: ${requestId}`);
+    console.log('[App] Starting search with request ID:', requestId);
     
-    const uiSetupStart = performance.now();
     setSearchQuery(cleaned);
     const qLower = cleaned.toLowerCase();
     const wantsFoamTree = (
@@ -118,21 +116,11 @@ export const createAppHandlers = ({
     setDiagram(null);
     setClusters(null);
     
-    const uiSetupTime = performance.now() - uiSetupStart;
-    console.log(`⚡ [${requestId}] UI setup completed in ${uiSetupTime.toFixed(2)}ms - FoamTree: ${wantsFoamTree}`);
-    
     try {
       if (wantsFoamTree) {
-        const foamTreeStart = performance.now();
-        console.log(`🌳 [${requestId}] Starting FoamTree cluster generation`);
-        
         try {
           const clusterRes = await fetchClusterChildren(cleaned);
-          const clusterApiTime = performance.now() - foamTreeStart;
-          console.log(`⏱️ [${requestId}] Cluster API call completed in ${clusterApiTime.toFixed(2)}ms`);
-          
           if (clusterRes.success && clusterRes.cluster) {
-            const dataProcessingStart = performance.now();
             setClusters(clusterRes.cluster as any);
             if (clusterRes.universal_content) {
               setContentData(processContentData({ content: '', description: '', universal_content: clusterRes.universal_content }));
@@ -146,41 +134,25 @@ export const createAppHandlers = ({
               prompt: cleaned
             };
             setDiagramData(foamTreePayload);
-            
-            const hexagonStart = performance.now();
             await handleDiscussionRequest(foamTreePayload);
-            const hexagonTime = performance.now() - hexagonStart;
-            console.log(`⏱️ [${requestId}] Hexagon worker call completed in ${hexagonTime.toFixed(2)}ms`);
-            
-            const dataProcessingTime = performance.now() - dataProcessingStart;
-            console.log(`⚡ [${requestId}] Data processing completed in ${dataProcessingTime.toFixed(2)}ms`);
           } else {
-            console.warn(`⚠️ [${requestId}] Cluster API returned no cluster`);
+            console.warn('Cluster API returned no cluster');
             setContentData({ content: '', description: '', universal_content: '' });
           }
         } catch (e) {
-          console.warn(`❌ [${requestId}] Cluster generation failed:`, e);
+          console.warn('Cluster generation failed:', e);
           setContentData({ content: '', description: '', universal_content: '' });
         }
-        
-        const totalFoamTreeTime = performance.now() - foamTreeStart;
-        console.log(`🌳 [${requestId}] Total FoamTree processing time: ${totalFoamTreeTime.toFixed(2)}ms`);
       } else {
-        const describeStart = performance.now();
-        console.log(`📊 [${requestId}] Starting diagram generation`);
-        
         const res = await describe(cleaned);
-        const describeApiTime = performance.now() - describeStart;
-        console.log(`⏱️ [${requestId}] Describe API call completed in ${describeApiTime.toFixed(2)}ms`);
-        console.log(`📋 [${requestId}] API Response:`, res);
+        console.log('API Response:', res);
         
         // Check if this is still the current request (prevent stale responses)
         if (currentRequestId.current !== requestId) {
-          console.log(`⏭️ [${requestId}] Ignoring stale API response for request: ${requestId}`);
+          console.log('[App] Ignoring stale API response for request:', requestId);
           return;
         }
         
-        const dataProcessingStart = performance.now();
         if (res.render_type === 'html') {
           setDiagram(res.rendered_content);
         } else {
@@ -204,26 +176,11 @@ export const createAppHandlers = ({
             diagram_meta: res.diagram_meta
           };
           setDiagramData(newDiagramData);
-          
-          const hexagonStart = performance.now();
           handleDiscussionRequest(newDiagramData);
-          const hexagonTime = performance.now() - hexagonStart;
-          console.log(`⏱️ [${requestId}] Hexagon worker call completed in ${hexagonTime.toFixed(2)}ms`);
         }
-        
-        const dataProcessingTime = performance.now() - dataProcessingStart;
-        console.log(`⚡ [${requestId}] Data processing completed in ${dataProcessingTime.toFixed(2)}ms`);
-        
-        const totalDescribeTime = performance.now() - describeStart;
-        console.log(`📊 [${requestId}] Total diagram processing time: ${totalDescribeTime.toFixed(2)}ms`);
       }
-      
-      const totalTime = performance.now() - startTime;
-      console.log(`✅ [${requestId}] Search completed successfully in ${totalTime.toFixed(2)}ms`);
-      
     } catch (e) {
-      const totalTime = performance.now() - startTime;
-      console.error(`❌ [${requestId}] Search error after ${totalTime.toFixed(2)}ms:`, e);
+      console.error('Search error:', e);
       setDiagram(null);
       setDiagramData(null);
       setContentData(null);

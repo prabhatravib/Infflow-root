@@ -7,9 +7,7 @@ interface RadialBarOverlayProps {
 export function RadialBarOverlay({ children }: RadialBarOverlayProps) {
   return createPortal(
     <div id="radial-stage-bar">
-      <div className="search-bar" data-central-search-bar="">
-        {children}
-      </div>
+      <div className="search-bar">{children}</div>
     </div>,
     document.body
   );

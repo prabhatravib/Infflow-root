@@ -1,225 +1,240 @@
-﻿/**
+/**
  * Diagram generation logic for Cloudflare Workers.
  * Handles content generation, diagram creation, and pipeline orchestration.
  */
 
 import { callOpenAI, EnvLike } from './openai';
-import { getCombinedContentPrompt, getDeepDivePrompt } from './prompts';
+import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt } from './prompts';
+import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
 import { DiagramType, DiagramResult, selectDiagramType } from './diagram-types';
 
-export interface CombinedContentResult {
-  universalContent: string;
-  diagramContent: string;
-  diagramMermaid: string;
-  diagramMeta?: any;
-}
 
-const COMBINED_CONTENT_CACHE_TTL_MS = 2 * 60 * 1000;
-const combinedContentCache = new Map<string, { expires: number; value: CombinedContentResult }>();
+export async function generateDiagramCode(
+  contentDescription: string,
+  originalQuery: string,
+  diagramType: DiagramType,
+  env: EnvLike
+): Promise<string> {
+  const timer = createTimer();
+  const diagramPrompt = getDiagramPrompt(diagramType);
+  
+  console.log(`🟡 [${timer.getRequestId()}] Starting diagram generation...`);
+  console.log(`Diagram type: ${diagramType}`);
+  console.log(`Content description: ${contentDescription.substring(0, 200)}...`);
+  console.log(`Original query: ${originalQuery}`);
+  
+  // Build user message based on diagram type
+  let userMessage: string;
+  
+  if (diagramType === "flowchart") {
+    userMessage = `Create a Mermaid flowchart that answers this query:
 
-function buildCacheKey(diagramType: string, query: string): string {
-  return `${diagramType.toLowerCase()}::${query.trim().toLowerCase()}`;
+${originalQuery}
+
+Content details:
+${contentDescription}`;
+  } else if (diagramType === "sequence_comparison") {
+    userMessage = `Create a Mermaid sequence diagram for this comparison query:
+
+${originalQuery}
+
+Content details:
+${contentDescription}`;
+  } else { // radial_mindmap
+    userMessage = `Create a radial Mermaid mind-map from this content:
+${contentDescription}
+
+IMPORTANT: The central node A must contain exactly this text: "${originalQuery}"
+Use the format: A("${originalQuery}")
+
+Make sure the central node A is visible and contains the exact query text.`;
+  }
+  
+  console.log(`🟡 [${timer.getRequestId()}] User message for diagram generation: ${userMessage.substring(0, 300)}...`);
+  
+  try {
+    console.log(`🟡 [${timer.getRequestId()}] Calling OpenAI for diagram generation...`);
+    const response = await timer.timeStep("diagram_generation_llm_call", () => callOpenAI(
+      env,
+      diagramPrompt,
+      userMessage,
+      env.OPENAI_MODEL || "gpt-4o-mini",
+      2000,
+      0.7
+    ), {
+      diagram_type: diagramType,
+      content_length: contentDescription.length,
+      query_length: originalQuery.length,
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 2000
+    });
+    
+    console.log(`✅ [${timer.getRequestId()}] OpenAI diagram response received:`);
+    console.log(`Response length: ${response?.length || 0}`);
+    console.log(`Response preview: ${response?.substring(0, 300)}...`);
+    
+    if (!response) {
+      throw new Error("Empty diagram response from LLM");
+    }
+    
+    console.log(`✅ [${timer.getRequestId()}] Diagram generation successful`);
+    
+    // Log performance for this function
+    timer.logPerformanceReport();
+    
+    return response;
+    
+  } catch (error) {
+    console.error(`❌ [${timer.getRequestId()}] Diagram generation failed:`, error);
+    timer.logPerformanceReport();
+    throw error;
+  }
 }
 
 export async function generateCombinedContent(
   query: string,
   diagramType: string,
   env: EnvLike
-): Promise<CombinedContentResult> {
+): Promise<{ universalContent: string; diagramContent: string }> {
   const timer = createTimer();
-  timer.markStart('cache_lookup', { diagram_type: diagramType });
-
-  const key = buildCacheKey(diagramType, query);
-  const cached = combinedContentCache.get(key);
-  if (cached && cached.expires > Date.now()) {
-    timer.markEnd('cache_lookup', { hit: true });
-    console.log(`[combined-content] Cache hit for ${diagramType}`);
-    timer.logPerformanceReport();
-    return cached.value;
-  }
-  timer.markEnd('cache_lookup', { hit: false });
-
   const combinedPrompt = getCombinedContentPrompt(diagramType);
-  const model = (env as Record<string, string | undefined>)?.OPENAI_COMBINED_MODEL || env.OPENAI_MODEL || 'gpt-4o-mini';
-
-  console.log(`dY"� [${timer.getRequestId()}] Starting combined content generation...`);
+  
+  console.log(`🔵 [${timer.getRequestId()}] Starting combined content generation...`);
   console.log(`Query: ${query}`);
   console.log(`Diagram type: ${diagramType}`);
-  console.log(`Using model: ${model}`);
-
+  console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4.1"}`);
+  
   try {
-    const response = await timer.timeStep('combined_content_llm_call', () => callOpenAI(
+    console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI for combined content generation...`);
+    const response = await timer.timeStep("combined_content_llm_call", () => callOpenAI(
       env,
       combinedPrompt,
       query,
-      model,
-      1600,
-      0.4
+      env.OPENAI_MODEL || "gpt-4.1",
+      3000,
+      0.7
     ), {
       query_length: query.length,
       diagram_type: diagramType,
-      model,
-      max_tokens: 1600
+      model: env.OPENAI_MODEL || "gpt-4.1",
+      max_tokens: 3000
     });
-
-    console.log(`�o. [${timer.getRequestId()}] OpenAI combined content response received:`);
+    
+    console.log(`✅ [${timer.getRequestId()}] OpenAI combined content response received:`);
     console.log(`Response length: ${response?.length || 0}`);
     console.log(`Response preview: ${response?.substring(0, 200)}...`);
-
+    
     if (!response) {
-      throw new Error('Empty combined content response from LLM');
+      throw new Error("Empty combined content response from LLM");
     }
-
-    const parsed = await timer.timeStep('response_parsing', async () => {
-      return parseCombinedResponse(response, query);
+    
+    // Parse the combined response
+    const { universalContent, diagramContent } = await timer.timeStep("response_parsing", async () => {
+      return parseCombinedResponse(response);
     }, {
       response_length: response.length
     });
-
-    combinedContentCache.set(key, {
-      expires: Date.now() + COMBINED_CONTENT_CACHE_TTL_MS,
-      value: parsed
-    });
-
-    console.log(`�o. [${timer.getRequestId()}] Combined content generation successful`);
-    console.log(`Universal content length: ${parsed.universalContent.length}`);
-    console.log(`Diagram content length: ${parsed.diagramContent.length}`);
-
+    
+    console.log(`✅ [${timer.getRequestId()}] Combined content generation successful`);
+    console.log(`Universal content length: ${universalContent.length}`);
+    console.log(`Diagram content length: ${diagramContent.length}`);
+    
+    // Log performance for this function
     timer.logPerformanceReport();
-    return parsed;
+    
+    return { universalContent, diagramContent };
+    
   } catch (error) {
-    console.error(`�?O [${timer.getRequestId()}] Combined content generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Combined content generation failed:`, error);
     timer.logPerformanceReport();
     throw error;
   }
 }
 
-function parseCombinedResponse(response: string, query: string): CombinedContentResult {
-  let universalContent = '';
-  let diagramContent = '';
-  let diagramMermaid = '';
-  let diagramMeta: any = undefined;
-
-  let candidate = response.trim();
-  if (candidate.startsWith('```')) {
-    candidate = candidate.replace(/^```[a-zA-Z]*\s*/, '').replace(/\s*```$/, '');
-  }
-
-  const jsonMatch = candidate.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    candidate = jsonMatch[0];
-  }
-
+function parseCombinedResponse(response: string): { universalContent: string; diagramContent: string } {
   try {
-    const parsed = JSON.parse(candidate);
-    universalContent = String(parsed.universal_content ?? parsed.universalContent ?? '').trim();
-    diagramContent = String(parsed.diagram_content ?? parsed.diagramContent ?? '').trim();
-    diagramMermaid = String(parsed.diagram_mermaid ?? parsed.diagramMermaid ?? '').trim();
-    diagramMeta = parsed.diagram_meta ?? parsed.diagramMeta ?? undefined;
-  } catch (error) {
-    console.warn('�s��,? Failed to parse JSON combined response, applying heuristics:', error);
-  }
-
-  if (!universalContent || !diagramContent) {
-    const split = fallbackContentSplit(response);
-    universalContent = universalContent || split.universalContent;
-    diagramContent = diagramContent || split.diagramContent;
-  }
-
-  if (typeof diagramMeta === 'string') {
-    try {
-      diagramMeta = JSON.parse(diagramMeta);
-    } catch {
-      diagramMeta = undefined;
+    // Try to find JSON in the response (it might be wrapped in markdown code blocks)
+    let jsonString = response.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonString.startsWith('```json')) {
+      jsonString = jsonString.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+    } else if (jsonString.startsWith('```')) {
+      jsonString = jsonString.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-  }
-
-  diagramMermaid = sanitizeMermaidCandidate(diagramMermaid || extractMermaid(response));
-
-  if (!diagramMermaid) {
-    throw new Error('Unable to locate Mermaid diagram in combined response');
-  }
-
-  return {
-    universalContent: universalContent || `Summary unavailable for ${query}`,
-    diagramContent: diagramContent || 'Main topic: ' + query,
-    diagramMermaid,
-    diagramMeta
-  };
-}
-
-function sanitizeMermaidCandidate(value: string): string {
-  const trimmed = (value || '').trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  let sanitized = trimmed;
-  sanitized = sanitized.replace(/^```(?:mermaid)?\s*/i, '').replace(/\s*```$/, '');
-  sanitized = sanitized.replace(/\\n/g, '\n');
-  sanitized = sanitized.replace(/\r\n?/g, '\n');
-  return sanitized.trim();
-}
-
-function extractMermaid(source: string): string {
-  if (!source) return '';
-
-  const codeBlock = source.match(/```(?:mermaid)?\s*([\s\S]*?)```/i);
-  if (codeBlock) {
-    return codeBlock[1].trim();
-  }
-
-  const initIndex = source.indexOf('%%{init');
-  if (initIndex !== -1) {
-    return source.slice(initIndex).trim();
-  }
-
-  const flowchartIndex = source.indexOf('flowchart');
-  if (flowchartIndex !== -1) {
-    return source.slice(flowchartIndex).trim();
-  }
-
-  const sequenceIndex = source.indexOf('sequenceDiagram');
-  if (sequenceIndex !== -1) {
-    return source.slice(sequenceIndex).trim();
-  }
-
-  return '';
-}
-
-function fallbackContentSplit(raw: string): { universalContent: string; diagramContent: string } {
-  const lines = raw.split('\n');
-  const universalLines: string[] = [];
-  const diagramLines: string[] = [];
-  let inUniversal = true;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    if (trimmed.startsWith('Main topic:') || trimmed.startsWith('- ') || /^\d+\./.test(trimmed)) {
-      inUniversal = false;
-      diagramLines.push(line);
-    } else if (inUniversal) {
-      universalLines.push(line);
-    } else {
-      diagramLines.push(line);
+    
+    // Try to find JSON object in the response
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
     }
-  }
-
-  const universalContent = universalLines.join('\n').trim();
-  const diagramContent = diagramLines.join('\n').trim();
-
-  if (!universalContent || !diagramContent) {
-    const midpoint = Math.floor(raw.length / 2);
+    
+    const parsed = JSON.parse(jsonString);
+    
+    if (!parsed.universal_content || !parsed.diagram_content) {
+      throw new Error("Missing required fields in JSON response");
+    }
+    
     return {
-      universalContent: (universalContent || raw.substring(0, midpoint)).trim(),
-      diagramContent: (diagramContent || raw.substring(midpoint)).trim()
+      universalContent: parsed.universal_content.trim(),
+      diagramContent: parsed.diagram_content.trim()
+    };
+    
+  } catch (error) {
+    console.warn("⚠️ Could not parse JSON response, using fallback parsing:", error);
+    console.warn("⚠️ Raw response:", response.substring(0, 500) + "...");
+    
+    // Better fallback: try to extract content based on structure
+    // Look for the universal content (comprehensive text) vs diagram content (structured format)
+    const lines = response.split('\n');
+    const universalLines: string[] = [];
+    const diagramLines: string[] = [];
+    let inUniversalSection = false;
+    let inDiagramSection = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Detect universal content (comprehensive paragraphs, not structured)
+      if (trimmed.length > 50 && !trimmed.startsWith('Main topic:') && !trimmed.startsWith('- ') && !trimmed.match(/^\d+\./)) {
+        if (!inDiagramSection) {
+          universalLines.push(line);
+          inUniversalSection = true;
+        }
+      }
+      // Detect diagram content (structured format)
+      else if (trimmed.startsWith('Main topic:') || trimmed.startsWith('- ') || trimmed.match(/^\d+\./)) {
+        diagramLines.push(line);
+        inDiagramSection = true;
+        inUniversalSection = false;
+      }
+      // Continue adding to current section
+      else if (inUniversalSection && trimmed.length > 0) {
+        universalLines.push(line);
+      }
+      else if (inDiagramSection && trimmed.length > 0) {
+        diagramLines.push(line);
+      }
+    }
+    
+    const universalContent = universalLines.join('\n').trim();
+    const diagramContent = diagramLines.join('\n').trim();
+    
+    // If we couldn't separate properly, use the original fallback
+    if (!universalContent || !diagramContent) {
+      const midPoint = Math.floor(response.length / 2);
+      return {
+        universalContent: response.substring(0, midPoint).trim(),
+        diagramContent: response.substring(midPoint).trim()
+      };
+    }
+    
+    return {
+      universalContent,
+      diagramContent
     };
   }
-
-  return { universalContent, diagramContent };
 }
 
 export async function generateDeepDiveResponse(
@@ -229,30 +244,31 @@ export async function generateDeepDiveResponse(
   env: EnvLike
 ): Promise<string> {
   const deepDivePrompt = getDeepDivePrompt();
-
+  
   const userMessage = `Selected text from diagram: "${selectedText}"
 
 User's question: ${question}
 
 Original query that generated the diagram: ${originalQuery}`;
-
+  
   try {
     const response = await callOpenAI(
       env,
       deepDivePrompt,
       userMessage,
-      env.OPENAI_MODEL || 'gpt-4o-mini',
+      env.OPENAI_MODEL || "gpt-4o-mini",
       500,
       0.7
     );
-
+    
     if (!response) {
-      throw new Error('Empty deep dive response from LLM');
+      throw new Error("Empty deep dive response from LLM");
     }
-
+    
     return response.trim();
+    
   } catch (error) {
-    console.error('Deep dive generation failed:', error);
+    console.error("Deep dive generation failed:", error);
     throw error;
   }
 }
@@ -262,54 +278,121 @@ export async function processDiagramPipeline(
   env: EnvLike
 ): Promise<DiagramResult> {
   const timer = createTimer();
-  console.log(`dYs? [${timer.getRequestId()}] Starting diagram pipeline for query:`, query);
-
+  console.log(`🚀 [${timer.getRequestId()}] Starting diagram pipeline for query:`, query);
+  
   try {
-    const diagramType = await timer.timeStep('diagram_type_selection', () => selectDiagramType(query, env), {
+    // Step 1: Select diagram type
+    const diagramType = await timer.timeStep("diagram_type_selection", () => selectDiagramType(query, env), {
       query_length: query.length
     });
-    console.log(`�o. [${timer.getRequestId()}] Selected diagram type: ${diagramType}`);
-
-    const combined = await timer.timeStep('combined_generation', () => generateCombinedContent(query, diagramType, env), {
-      query_length: query.length,
+    console.log(`✅ [${timer.getRequestId()}] Selected diagram type: ${diagramType}`);
+    
+    // Step 2: Generate content with metadata for all diagram types
+    let universalContent: string;
+    let diagramContent: string;
+    let contentMetadata: any = null;
+    
+    if (diagramType === "radial_mindmap") {
+      // Use individual content generation to get metadata
+      const contentResult = await timer.timeStep("content_generation", () => 
+        generateContent(query, diagramType, env), {
+        query_length: query.length,
+        diagram_type: diagramType
+      });
+      diagramContent = contentResult.content;
+      contentMetadata = contentResult.metadata;
+      
+      // Generate universal content separately
+      const universalResult = await timer.timeStep("universal_content_generation", () => 
+        generateContent(query, "universal", env), {
+        query_length: query.length,
+        diagram_type: "universal"
+      });
+      universalContent = universalResult.content;
+    } else {
+      // For other diagram types, generate individual content to get metadata
+      const contentResult = await timer.timeStep("content_generation", () => 
+        generateContent(query, diagramType, env), {
+        query_length: query.length,
+        diagram_type: diagramType
+      });
+      diagramContent = contentResult.content;
+      contentMetadata = contentResult.metadata;
+      
+      // Generate universal content separately
+      const universalResult = await timer.timeStep("universal_content_generation", () => 
+        generateContent(query, "universal", env), {
+        query_length: query.length,
+        diagram_type: "universal"
+      });
+      universalContent = universalResult.content;
+    }
+    
+    console.log(`✅ [${timer.getRequestId()}] Generated universal content: ${universalContent.substring(0, 100)}...`);
+    console.log(`✅ [${timer.getRequestId()}] Generated diagram content: ${diagramContent.substring(0, 100)}...`);
+    console.log(`✅ [${timer.getRequestId()}] Content metadata:`, contentMetadata ? 'Yes' : 'No');
+    
+    // Create a ContentResult object for compatibility
+    const contentResult: ContentResult = {
+      content: diagramContent,
+      parsed: {
+        topic: '',
+        facts: []
+      },
+      metadata: contentMetadata
+    };
+    
+    // Step 3: Generate diagram code
+    const diagramCode = await timer.timeStep("diagram_code_generation", () => 
+      generateDiagramCode(contentResult.content, query, diagramType, env), {
+      content_length: contentResult.content.length,
       diagram_type: diagramType
     });
-
-    console.log(`�o. [${timer.getRequestId()}] Combined generation complete`);
-
-    const result = await timer.timeStep('result_preparation', async () => {
-      const diagramResult: DiagramResult = {
-        diagram_type: diagramType as DiagramType,
-        description: combined.diagramContent,
-        content: combined.diagramContent,
-        universal_content: combined.universalContent,
-        diagram: combined.diagramMermaid,
-        render_type: 'html',
-        rendered_content: combined.diagramMermaid,
-        diagram_meta: combined.diagramMeta
+    console.log(`✅ [${timer.getRequestId()}] Generated diagram code: ${diagramCode.substring(0, 100)}...`);
+    
+    // Step 4: Prepare final result
+    const result = await timer.timeStep("result_preparation", async () => {
+      const sanitizedDiagram = diagramCode; // Will be sanitized in handlers
+      
+      const result: DiagramResult = {
+        diagram_type: diagramType,
+        description: diagramContent,
+        content: diagramContent,
+        universal_content: universalContent,
+        diagram: sanitizedDiagram,
+        render_type: "html" as const,
+        rendered_content: sanitizedDiagram,
+        diagram_meta: contentMetadata
       };
-      return diagramResult;
+      
+      return result;
     }, {
-      universal_content_length: combined.universalContent.length,
-      diagram_length: combined.diagramMermaid.length
+      diagram_length: diagramCode.length,
+      universal_content_length: universalContent.length
     });
-
-    console.log(`dYZ% [${timer.getRequestId()}] Pipeline completed successfully!`);
-    console.log(`dY"S [${timer.getRequestId()}] Final result:`, JSON.stringify({
+    
+    console.log(`🎉 [${timer.getRequestId()}] Pipeline completed successfully!`);
+    console.log(`📊 [${timer.getRequestId()}] Final result:`, JSON.stringify({
       diagram_type: result.diagram_type,
       description_length: result.description.length,
       universal_content_length: result.universal_content.length,
       diagram_length: result.diagram.length,
       render_type: result.render_type
     }, null, 2));
-
+    
+    // Log pipeline performance
     timer.logPerformanceReport();
+    
     return result;
+    
   } catch (error) {
-    console.error(`�?O [${timer.getRequestId()}] Diagram pipeline failed:`, error);
-    console.error('Pipeline error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    console.error('Pipeline error details:', JSON.stringify(error, null, 2));
+    console.error(`❌ [${timer.getRequestId()}] Diagram pipeline failed:`, error);
+    console.error("Pipeline error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    console.error("Pipeline error details:", JSON.stringify(error, null, 2));
+    
+    // Log performance even for errors
     timer.logPerformanceReport();
+    
     throw error;
   }
 }

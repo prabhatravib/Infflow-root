@@ -124,71 +124,34 @@ export async function describeHandler(body: DescribeRequest, env: EnvLike): Prom
 }
 
 export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Promise<Response> {
-  const timer = createTimer();
-  timer.markStart("request_validation");
+  const selected = (body?.selected_text || "").trim();
+  const question = (body?.question || "").trim();
+  const original = (body?.original_query || "").trim();
   
+  if (!selected || !question) {
+    return json({ 
+      success: false, 
+      detail: "selected_text and question are required", 
+      error_type: "validation_error" 
+    }, 400);
+  }
+
   try {
-    const selected = (body?.selected_text || "").trim();
-    const question = (body?.question || "").trim();
-    const original = (body?.original_query || "").trim();
+    console.log(`Deep-dive request - Text: ${selected.substring(0, 30)}..., Question: ${question.substring(0, 50)}...`);
     
-    if (!selected || !question) {
-      timer.markEnd("request_validation", { success: false, error: "Missing required fields" });
-      timer.logPerformanceReport();
-      return json({ 
-        success: false, 
-        detail: "selected_text and question are required", 
-        error_type: "validation_error" 
-      }, 400);
-    }
-
-    timer.markEnd("request_validation", { 
-      success: true,
-      selected_length: selected.length,
-      question_length: question.length,
-      has_original: !!original
-    });
-
-    console.log(`🔍 [${timer.getRequestId()}] Deep-dive request - Text: ${selected.substring(0, 30)}..., Question: ${question.substring(0, 50)}...`);
-    
-    const response = await timer.timeStep("deep_dive_generation", async () => {
-      return await generateDeepDiveResponse(selected, question, original, env);
-    }, {
-      selected_length: selected.length,
-      question_length: question.length,
-      has_original_query: !!original
-    });
-    
-    timer.logPerformanceReport();
-    console.log(`✅ [${timer.getRequestId()}] Deep dive completed successfully`);
+    const response = await generateDeepDiveResponse(selected, question, original, env);
     
     return json({ 
       success: true, 
-      response: response,
-      timing: {
-        request_id: timer.getRequestId(),
-        total_time: timer.getTotalTime(),
-        steps: timer.getTimings().filter(t => t.duration > 0)
-      }
+      response: response 
     }, 200);
     
   } catch (error) {
-    timer.markEnd("request_validation", { 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error) 
-    });
-    timer.logPerformanceReport();
-    
-    console.error(`❌ [${timer.getRequestId()}] Deep dive handler error:`, error);
+    console.error("Deep dive handler error:", error);
     return json({ 
       success: false, 
       detail: `Error generating deep dive response: ${error instanceof Error ? error.message : 'Unknown error'}`, 
-      error_type: "internal_error",
-      timing: {
-        request_id: timer.getRequestId(),
-        total_time: timer.getTotalTime(),
-        steps: timer.getTimings().filter(t => t.duration > 0)
-      }
+      error_type: "internal_error" 
     }, 500);
   }
 }
@@ -196,80 +159,42 @@ export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Prom
 type ClusterRequest = { clusterId: string };
 
 export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promise<Response> {
-  const timer = createTimer();
-  timer.markStart("request_validation");
-  
+  const clusterId = (body?.clusterId || '').trim();
+
+  if (!clusterId) {
+    return json({
+      success: false,
+      detail: 'clusterId is required',
+      error_type: 'validation_error',
+    }, 400);
+  }
+
   try {
-    const clusterId = (body?.clusterId || '').trim();
+    console.log(`Cluster request - ID: ${clusterId}`);
 
-    if (!clusterId) {
-      timer.markEnd("request_validation", { success: false, error: "Missing clusterId" });
-      timer.logPerformanceReport();
-      return json({
-        success: false,
-        detail: 'clusterId is required',
-        error_type: 'validation_error',
-      }, 400);
-    }
-
-    timer.markEnd("request_validation", { 
-      success: true,
-      cluster_id: clusterId,
-      cluster_id_length: clusterId.length
-    });
-
-    console.log(`🔍 [${timer.getRequestId()}] Cluster request - ID: ${clusterId}`);
-
-    const cluster = await timer.timeStep("cluster_data_generation", async () => {
-      return await generateClusterData(clusterId, env);
-    }, {
-      cluster_id: clusterId
-    });
+    const cluster = await generateClusterData(clusterId, env);
 
     // Also generate universal text content to populate the Text tab
-    const universal_content = await timer.timeStep("universal_content_generation", async () => {
-      try {
-        const { universalContent } = await generateCombinedContent(clusterId, 'radial_mindmap', env);
-        return universalContent || '';
-      } catch (e) {
-        console.warn(`⚠️ [${timer.getRequestId()}] Universal content generation failed for cluster:`, e);
-        return '';
-      }
-    }, {
-      cluster_id: clusterId,
-      content_type: 'radial_mindmap'
-    });
-
-    timer.logPerformanceReport();
-    console.log(`✅ [${timer.getRequestId()}] Cluster generation completed successfully`);
+    let universal_content = '';
+    try {
+      const { universalContent } = await generateCombinedContent(clusterId, 'radial_mindmap', env);
+      universal_content = universalContent || '';
+    } catch (e) {
+      console.warn('Universal content generation failed for cluster:', e);
+      universal_content = '';
+    }
 
     return json({
       success: true,
       cluster,
       universal_content,
-      timing: {
-        request_id: timer.getRequestId(),
-        total_time: timer.getTotalTime(),
-        steps: timer.getTimings().filter(t => t.duration > 0)
-      }
     }, 200);
   } catch (error) {
-    timer.markEnd("request_validation", { 
-      success: false, 
-      error: error instanceof Error ? error.message : String(error) 
-    });
-    timer.logPerformanceReport();
-    
-    console.error(`❌ [${timer.getRequestId()}] Cluster handler error:`, error);
+    console.error('Cluster handler error:', error);
     return json({
       success: false,
       detail: `Error generating cluster data: ${error instanceof Error ? error.message : 'Unknown error'}`,
       error_type: 'server_error',
-      timing: {
-        request_id: timer.getRequestId(),
-        total_time: timer.getTotalTime(),
-        steps: timer.getTimings().filter(t => t.duration > 0)
-      }
     }, 500);
   }
 }
