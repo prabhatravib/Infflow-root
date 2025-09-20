@@ -5,6 +5,7 @@ import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
 import { removeCentralNodeA } from '../utils/svg-search-dom';
+import { enforceRadialFanout } from '../utils/mermaid-radial-layout';
 import { decorateNodesWithPlus } from '../lib/mermaid/decorateNodesWithPlus';
 
 interface DiagramViewProps {
@@ -58,27 +59,17 @@ export default function DiagramView({
 
     console.log('[DiagramView] handleMermaidRender called with SVG:', svgElement);
 
-    // Remove central node A immediately after rendering
-    console.log('[DiagramView] Removing central node A immediately...');
-    console.log('[DiagramView] SVG element details:', {
-      id: svgElement.id,
-      children: svgElement.children.length,
-      innerHTML: svgElement.innerHTML.substring(0, 200) + '...'
-    });
-    
-    // Try to find node A manually first
-    const allGroups = svgElement.querySelectorAll('g');
-    console.log('[DiagramView] All groups in SVG:', allGroups.length);
-    allGroups.forEach((group, index) => {
-      if (group.textContent?.includes('A') || group.id?.includes('A')) {
-        console.log(`[DiagramView] Found potential node A (group ${index}):`, {
-          id: group.id,
-          textContent: group.textContent?.trim(),
-          className: group.className
-        });
+    // Try to push nodes into a radial ring before any DOM surgery
+    if (radialEnabled) {
+      try {
+        enforceRadialFanout(svgElement);
+        console.log('[DiagramView] Applied radial fan-out layout');
+      } catch (err) {
+        console.warn('[DiagramView] Radial fan-out failed:', err);
       }
-    });
-    
+    }
+
+    // Remove central node A immediately after rendering
     removeCentralNodeA(svgElement);
 
     // wait for fonts so bbox numbers are stable

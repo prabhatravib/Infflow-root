@@ -104,21 +104,25 @@ export function removeCentralNodeA(svg: SVGSVGElement) {
     className: nodeA.className
   });
 
-  // Find all connections/edges that involve node A
-  const edges = svg.querySelectorAll('path[id*="flowchart-A"], path[id*="-A-"], .edge[id*="A"], path[id*="A-"], path[id*="-A"]');
-  console.log(`[remove-node-a] Found ${edges.length} edges connected to node A`);
-  
-  // Remove all edges connected to node A
-  edges.forEach((edge, index) => {
-    console.log(`[remove-node-a] Removing edge ${index}:`, edge);
-    edge.parentElement?.removeChild(edge);
-  });
+  const { x, y, width, height } = getNodeBox(nodeA);
+  clearNodeVisuals(nodeA);
 
-  // Remove the node A itself
-  console.log('[remove-node-a] Removing node A itself...');
-  nodeA.parentElement?.removeChild(nodeA);
-  
-  console.log('[remove-node-a] Successfully removed central node A and its connections');
+  const doc = svg.ownerDocument || document;
+  const placeholder = doc.createElementNS(SVG_NS, 'rect');
+  placeholder.setAttribute('data-radial-placeholder', 'true');
+  placeholder.setAttribute('x', String(x));
+  placeholder.setAttribute('y', String(y));
+  placeholder.setAttribute('width', String(width));
+  placeholder.setAttribute('height', String(height));
+  placeholder.setAttribute('fill', 'transparent');
+  placeholder.setAttribute('stroke', 'transparent');
+  placeholder.setAttribute('pointer-events', 'none');
+
+  nodeA.appendChild(placeholder);
+  nodeA.setAttribute('aria-hidden', 'true');
+  nodeA.setAttribute('pointer-events', 'none');
+
+  console.log('[remove-node-a] Replaced central node visuals with placeholder while preserving layout');
 }
 
 /**
