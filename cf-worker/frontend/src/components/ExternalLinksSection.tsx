@@ -63,17 +63,22 @@ export function ExternalLinksSection({
     let cancel = false;
     async function run() {
       if (!query) return;
-      console.log('[ExternalLinksSection] Starting search for query:', query);
+      
+      const requestId = `external_links_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      const startTime = performance.now();
+      console.log(`🔗 [${requestId}] External links search started for query: "${query}"`);
+      
       setLoading(true);
       setError(null);
       setItems(null);
       
       // Ensure minimum loading time for better UX
-      const startTime = Date.now();
       const minLoadingTime = 800; // 800ms minimum loading time
       
       try {
-        console.log('[ExternalLinksSection] Making API call to /api/node-search');
+        const apiCallStart = performance.now();
+        console.log(`🌐 [${requestId}] Making API call to /api/node-search`);
+        
         const body = {
           query,
           phrase: query,
@@ -82,29 +87,45 @@ export function ExternalLinksSection({
           keywords: meta?.keywords || undefined,
           search: meta?.search || undefined,
         };
+        
         const resp = await fetch("/api/node-search", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        console.log('[ExternalLinksSection] API response status:', resp.status);
-        console.log('[ExternalLinksSection] API response headers:', Object.fromEntries(resp.headers.entries()));
         
+        const apiCallTime = performance.now() - apiCallStart;
+        console.log(`⏱️ [${requestId}] API call completed in ${apiCallTime.toFixed(2)}ms`);
+        console.log(`📊 [${requestId}] API response status: ${resp.status}`);
+        console.log(`📋 [${requestId}] API response headers:`, Object.fromEntries(resp.headers.entries()));
+        
+        const parseStart = performance.now();
         const data = await resp.json();
-        console.log('[ExternalLinksSection] API response data:', data);
-        console.log('[ExternalLinksSection] Request body sent:', body);
-        console.log('[ExternalLinksSection] Meta object received:', meta);
+        const parseTime = performance.now() - parseStart;
+        console.log(`⏱️ [${requestId}] JSON parsing completed in ${parseTime.toFixed(2)}ms`);
+        
+        console.log(`📋 [${requestId}] API response data:`, data);
+        console.log(`📤 [${requestId}] Request body sent:`, body);
+        console.log(`🏷️ [${requestId}] Meta object received:`, meta);
         
         if (!cancel) {
           if (data.error) {
-            console.error('[ExternalLinksSection] API error:', data.error);
+            console.error(`❌ [${requestId}] API error:`, data.error);
             setError(`API Error: ${data.error}${data.details ? ' - ' + data.details : ''}`);
           } else {
+            const itemsCount = data.items?.length || 0;
+            console.log(`✅ [${requestId}] Successfully received ${itemsCount} external links`);
             setItems(data.items || []);
+            
+            // Log timing information from the API response if available
+            if (data.debug?.timing) {
+              console.log(`⏱️ [${requestId}] Backend timing info:`, data.debug.timing);
+            }
           }
         }
       } catch (e: any) {
-        console.error('[ExternalLinksSection] Fetch error:', e);
+        const errorTime = performance.now() - startTime;
+        console.error(`❌ [${requestId}] Fetch error after ${errorTime.toFixed(2)}ms:`, e);
         if (!cancel) setError(`Network Error: ${e?.message || "Failed to fetch"}`);
       } finally {
         // Ensure minimum loading time has passed
@@ -112,8 +133,12 @@ export function ExternalLinksSection({
         const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
         
         if (remainingTime > 0) {
+          console.log(`⏳ [${requestId}] Waiting additional ${remainingTime}ms for minimum loading time`);
           await new Promise(resolve => setTimeout(resolve, remainingTime));
         }
+        
+        const totalTime = performance.now() - startTime;
+        console.log(`🏁 [${requestId}] External links search completed in ${totalTime.toFixed(2)}ms`);
         
         if (!cancel) setLoading(false);
       }
