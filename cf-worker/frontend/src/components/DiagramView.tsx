@@ -101,8 +101,8 @@ export default function DiagramView({
 
     if (radialEnabled && hostRef.current && svgElement) {
       cleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
-        paddingPercent: 0.12,
-        minScale: 0.5
+        paddingPercent: 0.08,
+        minScale: 0.7
       });
     }
   }, [radialEnabled, searchQuery]);

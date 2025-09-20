@@ -36,9 +36,14 @@ function findRootNode(nodes: NodeInfo[]): NodeInfo | null {
 function computeRadius(root: NodeInfo, leaves: NodeInfo[]): number {
   const leafMax = leaves.reduce((acc, n) => Math.max(acc, Math.max(n.width, n.height)), 0);
   const rootSize = Math.max(root.width, root.height);
-  const base = Math.max(rootSize, leafMax);
-  const minRadius = base * 1.8 + 80;
-  return Math.max(minRadius, 260 + leafMax * 0.9);
+  const viewportHeight = Math.max(window.innerHeight - 200, 400);
+  const viewportWidth = Math.max(window.innerWidth, 600);
+  const minDimension = Math.min(viewportHeight, viewportWidth);
+
+  const targetRadius = minDimension * 0.3;
+  const minRadius = Math.max(rootSize * 2, leafMax * 2, 280);
+
+  return Math.max(targetRadius, minRadius);
 }
 
 function makeEdgePath(start: { x: number; y: number }, end: { x: number; y: number }, controlScale: number): string {
