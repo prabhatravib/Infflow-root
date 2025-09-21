@@ -9,9 +9,10 @@ import { diagramRadialPrompt } from './diagram_radial_prompt';
 import { diagramFlowchartPrompt } from './diagram_flowchart_prompt';
 import { diagramSequencePrompt } from './diagram_sequence_prompt';
 import { deepDivePrompt } from './deep_dive_prompt';
+import { megaPrompt } from './mega_prompt';
 
 // Re-export for external use
-export { contentPrompt, contentSequencePrompt, contentUniversalPrompt, diagramRadialPrompt, diagramFlowchartPrompt, diagramSequencePrompt, deepDivePrompt };
+export { contentPrompt, contentSequencePrompt, contentUniversalPrompt, diagramRadialPrompt, diagramFlowchartPrompt, diagramSequencePrompt, deepDivePrompt, megaPrompt };
 
 // Convenience functions for getting prompts by type
 export function getContentPrompt(diagramType: string): string {
@@ -62,4 +63,8 @@ IMPORTANT: You must provide your response in the following exact JSON format. Do
 }
 
 The universal_content should be comprehensive, readable text suitable for human reading. The diagram_content should be structured content suitable for diagram generation.`;
+}
+
+export function getMegaPrompt(): string {
+  return megaPrompt;
 }

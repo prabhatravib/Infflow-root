@@ -46,6 +46,11 @@ export default function DiagramView({
 
   // Memoize the onRender callback to prevent Mermaid re-renders
   const handleMermaidRender = useCallback(async (svgElement: SVGSVGElement) => {
+    const startTime = performance.now();
+    const renderId = `diagram_view_${Date.now()}`;
+    
+    console.log(`🎯 [${renderId}] Starting DiagramView render processing...`);
+    
     (svgRef as any).current = svgElement;
     cleanupRef.current?.();
 
@@ -53,14 +58,15 @@ export default function DiagramView({
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
-      console.log('[DiagramView] Cancelled previous timeout');
+      console.log(`[${renderId}] Cancelled previous timeout`);
     }
 
-    console.log('[DiagramView] handleMermaidRender called with SVG:', svgElement);
+    console.log(`[${renderId}] handleMermaidRender called with SVG:`, svgElement);
 
     // Remove central node A immediately after rendering
-    console.log('[DiagramView] Removing central node A immediately...');
-    console.log('[DiagramView] SVG element details:', {
+    const nodeRemovalStartTime = performance.now();
+    console.log(`[${renderId}] Removing central node A immediately...`);
+    console.log(`[${renderId}] SVG element details:`, {
       id: svgElement.id,
       children: svgElement.children.length,
       innerHTML: svgElement.innerHTML.substring(0, 200) + '...'
@@ -68,10 +74,10 @@ export default function DiagramView({
     
     // Try to find node A manually first
     const allGroups = svgElement.querySelectorAll('g');
-    console.log('[DiagramView] All groups in SVG:', allGroups.length);
+    console.log(`[${renderId}] All groups in SVG:`, allGroups.length);
     allGroups.forEach((group, index) => {
       if (group.textContent?.includes('A') || group.id?.includes('A')) {
-        console.log(`[DiagramView] Found potential node A (group ${index}):`, {
+        console.log(`[${renderId}] Found potential node A (group ${index}):`, {
           id: group.id,
           textContent: group.textContent?.trim(),
           className: group.className
@@ -80,40 +86,64 @@ export default function DiagramView({
     });
     
     removeCentralNodeA(svgElement);
+    const nodeRemovalTime = performance.now() - nodeRemovalStartTime;
+    console.log(`⏱️ [${renderId}] Node removal time: ${nodeRemovalTime.toFixed(2)}ms`);
 
     // wait for fonts so bbox numbers are stable
+    const fontWaitStartTime = performance.now();
     await (document as any).fonts?.ready;
+    const fontWaitTime = performance.now() - fontWaitStartTime;
+    console.log(`⏱️ [${renderId}] Font ready wait time: ${fontWaitTime.toFixed(2)}ms`);
 
     // Add plus buttons to nodes with a delay to ensure SVG is fully rendered
     if (searchQuery) {
-      console.log('[DiagramView] Adding plus buttons with searchQuery:', searchQuery);
+      const plusButtonStartTime = performance.now();
+      console.log(`[${renderId}] Adding plus buttons with searchQuery:`, searchQuery);
       const exclude = new Set<string>(["A"]);
       
       // Add delay to ensure SVG is fully rendered and positioned
       timeoutRef.current = setTimeout(() => {
-        console.log('[DiagramView] Executing decorateNodesWithPlus after delay');
+        const decorationStartTime = performance.now();
+        console.log(`[${renderId}] Executing decorateNodesWithPlus after delay`);
         decorateNodesWithPlus({
           svg: svgElement,
           originalQuery: searchQuery,
           excludeIds: exclude,
           diagramMeta: diagramMeta,
           onOpenPopover: ({ query, nodeId, meta }) => {
-            console.log('[DiagramView] Plus button clicked, requesting external links for query:', query, 'nodeId:', nodeId, 'meta:', meta);
+            console.log(`[${renderId}] Plus button clicked, requesting external links for query:`, query, 'nodeId:', nodeId, 'meta:', meta);
             onExternalLinksRequest?.(query, meta);
           },
         });
+        const decorationTime = performance.now() - decorationStartTime;
+        console.log(`⏱️ [${renderId}] Node decoration time: ${decorationTime.toFixed(2)}ms`);
         timeoutRef.current = null; // Clear the ref after execution
       }, 200); // Increased delay to 200ms for better reliability
+      const plusButtonSetupTime = performance.now() - plusButtonStartTime;
+      console.log(`⏱️ [${renderId}] Plus button setup time: ${plusButtonSetupTime.toFixed(2)}ms`);
     } else {
-      console.log('[DiagramView] No searchQuery available for plus buttons');
+      console.log(`[${renderId}] No searchQuery available for plus buttons`);
     }
 
     if (radialEnabled && hostRef.current && svgElement) {
+      const radialSetupStartTime = performance.now();
       cleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
         paddingPercent: 0.12,
         minScale: 0.5
       });
+      const radialSetupTime = performance.now() - radialSetupStartTime;
+      console.log(`⏱️ [${renderId}] Radial alignment setup time: ${radialSetupTime.toFixed(2)}ms`);
     }
+    
+    const totalTime = performance.now() - startTime;
+    console.log(`🚀 [${renderId}] PERFORMANCE REPORT:`);
+    console.log(`📊 Total DiagramView render time: ${totalTime.toFixed(2)}ms`);
+    console.log(`📈 Breakdown:`);
+    console.log(`   • Node removal: ${nodeRemovalTime.toFixed(2)}ms (${((nodeRemovalTime / totalTime) * 100).toFixed(1)}%)`);
+    console.log(`   • Font wait: ${fontWaitTime.toFixed(2)}ms (${((fontWaitTime / totalTime) * 100).toFixed(1)}%)`);
+    console.log(`   • Plus button setup: ${searchQuery ? 'Scheduled' : 'Skipped'}`);
+    console.log(`   • Radial setup: ${radialEnabled ? 'Completed' : 'Skipped'}`);
+    
   }, [radialEnabled, searchQuery]);
 
   // Cleanup alignment and timeouts on unmount

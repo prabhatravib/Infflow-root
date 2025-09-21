@@ -136,10 +136,30 @@ export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Prom
     }, 400);
   }
 
+  // Create performance timer for this request
+  const timer = createTimer();
+  timer.markStart("deep_dive_validation", { 
+    selected_length: selected.length, 
+    question_length: question.length,
+    original_length: original.length 
+  });
+
   try {
-    console.log(`Deep-dive request - Text: ${selected.substring(0, 30)}..., Question: ${question.substring(0, 50)}...`);
+    console.log(`🔍 [${timer.getRequestId()}] Deep-dive request - Text: ${selected.substring(0, 30)}..., Question: ${question.substring(0, 50)}...`);
     
-    const response = await generateDeepDiveResponse(selected, question, original, env);
+    const response = await timer.timeStep("deep_dive_generation", () => 
+      generateDeepDiveResponse(selected, question, original, env), {
+      selected_length: selected.length,
+      question_length: question.length,
+      original_length: original.length
+    });
+    
+    timer.markEnd("deep_dive_validation");
+    
+    // Log performance report
+    timer.logPerformanceReport();
+    
+    console.log(`✅ [${timer.getRequestId()}] Deep dive completed successfully`);
     
     return json({ 
       success: true, 
@@ -147,7 +167,12 @@ export async function deepDiveHandler(body: DeepDiveRequest, env: EnvLike): Prom
     }, 200);
     
   } catch (error) {
-    console.error("Deep dive handler error:", error);
+    timer.markEnd("deep_dive_validation", { success: false, error: error instanceof Error ? error.message : String(error) });
+    
+    // Log performance report even for errors
+    timer.logPerformanceReport();
+    
+    console.error(`❌ [${timer.getRequestId()}] Deep dive handler error:`, error);
     return json({ 
       success: false, 
       detail: `Error generating deep dive response: ${error instanceof Error ? error.message : 'Unknown error'}`, 
@@ -169,20 +194,38 @@ export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promis
     }, 400);
   }
 
-  try {
-    console.log(`Cluster request - ID: ${clusterId}`);
+  // Create performance timer for this request
+  const timer = createTimer();
+  timer.markStart("cluster_validation", { cluster_id: clusterId });
 
-    const cluster = await generateClusterData(clusterId, env);
+  try {
+    console.log(`📊 [${timer.getRequestId()}] Cluster request - ID: ${clusterId}`);
+
+    const cluster = await timer.timeStep("cluster_generation", () => 
+      generateClusterData(clusterId, env), {
+      cluster_id: clusterId
+    });
 
     // Also generate universal text content to populate the Text tab
     let universal_content = '';
     try {
-      const { universalContent } = await generateCombinedContent(clusterId, 'radial_mindmap', env);
+      const { universalContent } = await timer.timeStep("universal_content_generation", () => 
+        generateCombinedContent(clusterId, 'radial_mindmap', env), {
+        cluster_id: clusterId,
+        diagram_type: 'radial_mindmap'
+      });
       universal_content = universalContent || '';
     } catch (e) {
-      console.warn('Universal content generation failed for cluster:', e);
+      console.warn(`⚠️ [${timer.getRequestId()}] Universal content generation failed for cluster:`, e);
       universal_content = '';
     }
+
+    timer.markEnd("cluster_validation");
+    
+    // Log performance report
+    timer.logPerformanceReport();
+    
+    console.log(`✅ [${timer.getRequestId()}] Cluster generation completed successfully`);
 
     return json({
       success: true,
@@ -190,7 +233,12 @@ export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promis
       universal_content,
     }, 200);
   } catch (error) {
-    console.error('Cluster handler error:', error);
+    timer.markEnd("cluster_validation", { success: false, error: error instanceof Error ? error.message : String(error) });
+    
+    // Log performance report even for errors
+    timer.logPerformanceReport();
+    
+    console.error(`❌ [${timer.getRequestId()}] Cluster handler error:`, error);
     return json({
       success: false,
       detail: `Error generating cluster data: ${error instanceof Error ? error.message : 'Unknown error'}`,

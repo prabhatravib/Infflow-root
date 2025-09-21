@@ -41,9 +41,13 @@ export const createAppHandlers = ({
 }: AppHandlersProps) => {
   // Send diagram data to hexagon worker via HTTP API
   const handleDiscussionRequest = async (diagramContext: {mermaidCode: string; diagramImage: string; prompt: string}) => {
-    console.log('Hexagon discussion started for diagram:', diagramContext);
+    const startTime = performance.now();
+    const hexagonId = `hexagon_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    
+    console.log(`📤 [${hexagonId}] Sending diagram data to voice worker via API:`, diagramContext);
     
     try {
+      const networkStartTime = performance.now();
       const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
         method: 'POST',
         headers: {
@@ -56,33 +60,48 @@ export const createAppHandlers = ({
           type: 'diagram'
         })
       });
+      const networkTime = performance.now() - networkStartTime;
+      console.log(`⏱️ [${hexagonId}] Network request time: ${networkTime.toFixed(2)}ms`);
 
       if (!response.ok) {
         if (response.status === 409) {
-          console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data');
+          console.error(`❌ [${hexagonId}] 409 Conflict: Hexagon worker rejected the diagram data`);
           const errorText = await response.text();
           throw new Error(`Hexagon worker rejected data: ${errorText}`);
         }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const parseStartTime = performance.now();
       const result = await response.json();
-      console.log('✅ Diagram data sent to hexagon worker:', result);
+      const parseTime = performance.now() - parseStartTime;
+      console.log(`⏱️ [${hexagonId}] Response parsing time: ${parseTime.toFixed(2)}ms`);
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`✅ [${hexagonId}] Diagram data sent to hexagon worker:`, result);
+      console.log(`⏱️ [${hexagonId}] Total hexagon request time: ${totalTime.toFixed(2)}ms`);
+      console.log(`📈 [${hexagonId}] Breakdown:`);
+      console.log(`   • Network: ${networkTime.toFixed(2)}ms (${((networkTime / totalTime) * 100).toFixed(1)}%)`);
+      console.log(`   • Parsing: ${parseTime.toFixed(2)}ms (${((parseTime / totalTime) * 100).toFixed(1)}%)`);
+      
       setCodeFlowStatus('sent');
-      console.log('🔄 Status updated to: Basic Details Sent');
+      console.log(`🔄 [${hexagonId}] Status updated to: Basic Details Sent`);
     } catch (error) {
-      console.error('❌ Error sending data to hexagon worker:', error);
+      const errorTime = performance.now() - startTime;
+      console.error(`❌ [${hexagonId}] Error sending data to hexagon worker after ${errorTime.toFixed(2)}ms:`, error);
     }
   };
 
   const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
     if (!query.trim()) return;
-    console.log('[App] handleSearch called with query:', query, 'options:', options);
+    
+    const startTime = performance.now();
+    console.log(`[App] handleSearch called with query: ${query} options:`, options);
     
     // Prevent duplicate searches for the same query
     const cleaned = query.trim();
     if (lastSearchQuery.current === cleaned) {
-      console.log('[App] Skipping duplicate search for:', cleaned);
+      console.log(`[App] Skipping duplicate search for: ${cleaned}`);
       return;
     }
     lastSearchQuery.current = cleaned;
@@ -90,7 +109,7 @@ export const createAppHandlers = ({
     // Generate unique request ID to prevent duplicate API calls
     const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
     currentRequestId.current = requestId;
-    console.log('[App] Starting search with request ID:', requestId);
+    console.log(`[App] Starting search with request ID: ${requestId}`);
     
     setSearchQuery(cleaned);
     const qLower = cleaned.toLowerCase();
@@ -118,8 +137,13 @@ export const createAppHandlers = ({
     
     try {
       if (wantsFoamTree) {
+        const foamTreeStartTime = performance.now();
+        console.log(`[${requestId}] Starting FoamTree cluster generation...`);
         try {
           const clusterRes = await fetchClusterChildren(cleaned);
+          const foamTreeApiTime = performance.now() - foamTreeStartTime;
+          console.log(`⏱️ [${requestId}] FoamTree API call time: ${foamTreeApiTime.toFixed(2)}ms`);
+          
           if (clusterRes.success && clusterRes.cluster) {
             setClusters(clusterRes.cluster as any);
             if (clusterRes.universal_content) {
@@ -134,25 +158,34 @@ export const createAppHandlers = ({
               prompt: cleaned
             };
             setDiagramData(foamTreePayload);
+            
+            const discussionStartTime = performance.now();
             await handleDiscussionRequest(foamTreePayload);
+            const discussionTime = performance.now() - discussionStartTime;
+            console.log(`⏱️ [${requestId}] Hexagon discussion request time: ${discussionTime.toFixed(2)}ms`);
           } else {
-            console.warn('Cluster API returned no cluster');
+            console.warn(`[${requestId}] Cluster API returned no cluster`);
             setContentData({ content: '', description: '', universal_content: '' });
           }
         } catch (e) {
-          console.warn('Cluster generation failed:', e);
+          console.warn(`[${requestId}] Cluster generation failed:`, e);
           setContentData({ content: '', description: '', universal_content: '' });
         }
       } else {
+        const diagramStartTime = performance.now();
+        console.log(`[${requestId}] Starting diagram generation...`);
         const res = await describe(cleaned);
-        console.log('API Response:', res);
+        const diagramApiTime = performance.now() - diagramStartTime;
+        console.log(`⏱️ [${requestId}] Diagram API call time: ${diagramApiTime.toFixed(2)}ms`);
+        console.log(`[${requestId}] API Response:`, res);
         
         // Check if this is still the current request (prevent stale responses)
         if (currentRequestId.current !== requestId) {
-          console.log('[App] Ignoring stale API response for request:', requestId);
+          console.log(`[${requestId}] Ignoring stale API response for request: ${requestId}`);
           return;
         }
         
+        const stateUpdateStartTime = performance.now();
         if (res.render_type === 'html') {
           setDiagram(res.rendered_content);
         } else {
@@ -176,11 +209,26 @@ export const createAppHandlers = ({
             diagram_meta: res.diagram_meta
           };
           setDiagramData(newDiagramData);
+          
+          const discussionStartTime = performance.now();
           handleDiscussionRequest(newDiagramData);
+          const discussionTime = performance.now() - discussionStartTime;
+          console.log(`⏱️ [${requestId}] Hexagon discussion request time: ${discussionTime.toFixed(2)}ms`);
         }
+        
+        const stateUpdateTime = performance.now() - stateUpdateStartTime;
+        console.log(`⏱️ [${requestId}] State update time: ${stateUpdateTime.toFixed(2)}ms`);
       }
+      
+      const totalTime = performance.now() - startTime;
+      console.log(`🚀 [${requestId}] SEARCH PERFORMANCE REPORT:`);
+      console.log(`📊 Total search time: ${totalTime.toFixed(2)}ms`);
+      console.log(`📈 Query: "${cleaned}"`);
+      console.log(`📈 Type: ${wantsFoamTree ? 'FoamTree' : 'Diagram'}`);
+      
     } catch (e) {
-      console.error('Search error:', e);
+      const errorTime = performance.now() - startTime;
+      console.error(`❌ [${requestId}] Search error after ${errorTime.toFixed(2)}ms:`, e);
       setDiagram(null);
       setDiagramData(null);
       setContentData(null);

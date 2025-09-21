@@ -6,6 +6,7 @@
 import { callOpenAI, EnvLike } from './openai';
 import { getContentPrompt } from './prompts';
 import { cleanTextContent } from './utils';
+import { createTimer } from './timing';
 import type { DiagramResponse, NodeMeta } from './types';
 
 export interface ContentResult {
@@ -22,54 +23,85 @@ export async function generateContent(
   diagramType: string,
   env: EnvLike
 ): Promise<ContentResult> {
+  const timer = createTimer();
   const prompt = getContentPrompt(diagramType);
   
-  console.log("🔵 Starting content generation...");
-  console.log("Query:", query);
-  console.log("Diagram type:", diagramType);
-  console.log("Using model:", env.OPENAI_MODEL || "gpt-4o-mini");
+  console.log(`🔵 [${timer.getRequestId()}] Starting content generation...`);
+  console.log(`Query: ${query}`);
+  console.log(`Diagram type: ${diagramType}`);
+  console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4o-mini"}`);
   
   try {
-    console.log("🔵 Calling OpenAI for content generation...");
-    const response = await callOpenAI(
+    console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI for content generation...`);
+    const response = await timer.timeStep("content_llm_call", () => callOpenAI(
       env,
       prompt,
       query,
       env.OPENAI_MODEL || "gpt-4o-mini",
       1000,
       0.7
-    );
+    ), {
+      query_length: query.length,
+      diagram_type: diagramType,
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 1000
+    });
     
-    console.log("✅ OpenAI content response received:");
-    console.log("Response length:", response?.length || 0);
-    console.log("Response preview:", response?.substring(0, 200) + "...");
+    console.log(`✅ [${timer.getRequestId()}] OpenAI content response received:`);
+    console.log(`Response length: ${response?.length || 0}`);
+    console.log(`Response preview: ${response?.substring(0, 200)}...`);
     
     if (!response) {
       throw new Error("Empty content response from LLM");
     }
     
     // Validate content structure
-    console.log("🔵 Validating content structure...");
-    const isValid = validateContent(response, diagramType);
-    console.log("Content validation result:", isValid);
+    console.log(`🔵 [${timer.getRequestId()}] Validating content structure...`);
+    const isValid = await timer.timeStep("content_validation", async () => {
+      return validateContent(response, diagramType);
+    }, {
+      response_length: response.length,
+      diagram_type: diagramType
+    });
+    console.log(`Content validation result: ${isValid}`);
     
     if (!isValid) {
-      console.error("❌ Content validation failed");
-      console.error("Full content:", response);
+      console.error(`❌ [${timer.getRequestId()}] Content validation failed`);
+      console.error(`Full content: ${response}`);
       throw new Error("Invalid content structure");
     }
     
     // Parse content
-    console.log("🔵 Parsing content...");
-    const parsed = parseContent(response, diagramType);
-    console.log("Parsed content:", JSON.stringify(parsed, null, 2));
+    console.log(`🔵 [${timer.getRequestId()}] Parsing content...`);
+    const parsed = await timer.timeStep("content_parsing", async () => {
+      return parseContent(response, diagramType);
+    }, {
+      response_length: response.length,
+      diagram_type: diagramType
+    });
+    console.log(`Parsed content: ${JSON.stringify(parsed, null, 2)}`);
     
     // Extract metadata if present
-    const metadata = extractMetadata(response, diagramType);
-    console.log("Extracted metadata:", metadata ? 'Yes' : 'No');
+    const metadata = await timer.timeStep("metadata_extraction", async () => {
+      return extractMetadata(response, diagramType);
+    }, {
+      response_length: response.length,
+      diagram_type: diagramType
+    });
+    console.log(`Extracted metadata: ${metadata ? 'Yes' : 'No'}`);
     
     // Clean the content by removing JSON metadata
-    const cleanedContent = cleanContentFromMetadata(response);
+    const cleanedContent = await timer.timeStep("content_cleaning", async () => {
+      return cleanContentFromMetadata(response);
+    }, {
+      original_length: response.length
+    });
+    
+    // Log performance for this function
+    timer.logPerformanceReport();
+    
+    console.log(`✅ [${timer.getRequestId()}] Content generation successful`);
+    console.log(`Final content length: ${cleanedContent.length}`);
     
     return {
       content: cleanedContent,
@@ -78,7 +110,8 @@ export async function generateContent(
     };
     
   } catch (error) {
-    console.error("❌ Content generation failed:", error);
+    console.error(`❌ [${timer.getRequestId()}] Content generation failed:`, error);
+    timer.logPerformanceReport();
     throw error;
   }
 }

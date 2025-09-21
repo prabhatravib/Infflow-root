@@ -4,9 +4,10 @@
  */
 
 import { callOpenAI, EnvLike } from './openai';
-import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt } from './prompts';
+import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt, getMegaPrompt } from './prompts';
 import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
+import { sanitizeMermaid } from './utils';
 import { DiagramType, DiagramResult, selectDiagramType } from './diagram-types';
 
 
@@ -243,7 +244,13 @@ export async function generateDeepDiveResponse(
   originalQuery: string,
   env: EnvLike
 ): Promise<string> {
+  const timer = createTimer();
   const deepDivePrompt = getDeepDivePrompt();
+  
+  console.log(`🔍 [${timer.getRequestId()}] Starting deep dive response generation...`);
+  console.log(`Selected text length: ${selectedText.length}`);
+  console.log(`Question length: ${question.length}`);
+  console.log(`Original query length: ${originalQuery.length}`);
   
   const userMessage = `Selected text from diagram: "${selectedText}"
 
@@ -252,28 +259,154 @@ User's question: ${question}
 Original query that generated the diagram: ${originalQuery}`;
   
   try {
-    const response = await callOpenAI(
+    console.log(`🔍 [${timer.getRequestId()}] Calling OpenAI for deep dive generation...`);
+    const response = await timer.timeStep("deep_dive_llm_call", () => callOpenAI(
       env,
       deepDivePrompt,
       userMessage,
       env.OPENAI_MODEL || "gpt-4o-mini",
       500,
       0.7
-    );
+    ), {
+      selected_text_length: selectedText.length,
+      question_length: question.length,
+      original_query_length: originalQuery.length,
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 500
+    });
     
     if (!response) {
       throw new Error("Empty deep dive response from LLM");
     }
     
+    console.log(`✅ [${timer.getRequestId()}] Deep dive response generated successfully`);
+    console.log(`Response length: ${response.length}`);
+    
+    // Log performance for this function
+    timer.logPerformanceReport();
+    
     return response.trim();
     
   } catch (error) {
-    console.error("Deep dive generation failed:", error);
+    console.error(`❌ [${timer.getRequestId()}] Deep dive generation failed:`, error);
+    timer.logPerformanceReport();
     throw error;
   }
 }
 
-export async function processDiagramPipeline(
+export interface UnifiedDiagramResult {
+  diagram_type: DiagramType;
+  universal_content: string;
+  diagram_content: string;
+  mermaid_code: string;
+  diagram_meta?: any;
+}
+
+export async function generateUnifiedDiagram(
+  query: string,
+  env: EnvLike
+): Promise<UnifiedDiagramResult> {
+  const timer = createTimer();
+  const megaPrompt = getMegaPrompt();
+  
+  console.log(`🚀 [${timer.getRequestId()}] Starting UNIFIED diagram generation...`);
+  console.log(`Query: ${query}`);
+  
+  try {
+    // Single API call for everything
+    const response = await timer.timeStep("unified_llm_call", () =>
+      callOpenAI(
+        env,
+        megaPrompt,
+        query,
+        env.OPENAI_MODEL || "gpt-4o-mini",
+        5000,
+        0.7
+      ), {
+      query_length: query.length,
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 5000
+    });
+    
+    console.log(`✅ [${timer.getRequestId()}] Unified response received, length: ${response?.length || 0}`);
+    
+    if (!response) {
+      throw new Error("Empty unified response from LLM");
+    }
+    
+    // Parse the JSON response
+    const result = await timer.timeStep("parse_unified_response", async () => {
+      return parseUnifiedResponse(response);
+    }, {
+      response_length: response.length
+    });
+    
+    console.log(`✅ [${timer.getRequestId()}] Unified generation successful`);
+    console.log(`📊 [${timer.getRequestId()}] Results:`, {
+      diagram_type: result.diagram_type,
+      universal_content_length: result.universal_content.length,
+      diagram_content_length: result.diagram_content.length,
+      mermaid_code_length: result.mermaid_code.length,
+      has_meta: !!result.diagram_meta
+    });
+    
+    timer.logPerformanceReport();
+    return result;
+    
+  } catch (error) {
+    console.error(`❌ [${timer.getRequestId()}] Unified generation failed:`, error);
+    timer.logPerformanceReport();
+    throw error;
+  }
+}
+
+function parseUnifiedResponse(response: string): UnifiedDiagramResult {
+  try {
+    // Clean up response if wrapped in markdown
+    let jsonString = response.trim();
+    if (jsonString.startsWith("```json")) {
+      jsonString = jsonString.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+    } else if (jsonString.startsWith("```")) {
+      jsonString = jsonString.replace(/^```\s*/, "").replace(/\s*```$/, "");
+    }
+    
+    // Try to extract JSON object
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonString = jsonMatch[0];
+    }
+    
+    const parsed = JSON.parse(jsonString);
+    
+    // Validate required fields
+    if (!parsed.diagram_type || !parsed.universal_content || 
+        !parsed.diagram_content || !parsed.mermaid_code) {
+      throw new Error("Missing required fields in unified response");
+    }
+    
+    // Validate diagram type
+    const validTypes = ["flowchart", "radial_mindmap", "sequence_comparison"];
+    if (!validTypes.includes(parsed.diagram_type)) {
+      console.warn(`Invalid diagram type: ${parsed.diagram_type}, defaulting to radial_mindmap`);
+      parsed.diagram_type = "radial_mindmap";
+    }
+    
+    return {
+      diagram_type: parsed.diagram_type as DiagramType,
+      universal_content: parsed.universal_content.trim(),
+      diagram_content: parsed.diagram_content.trim(),
+      mermaid_code: parsed.mermaid_code.trim(),
+      diagram_meta: parsed.diagram_meta || null
+    };
+    
+  } catch (error) {
+    console.error("Failed to parse unified response:", error);
+    console.error("Raw response:", response.substring(0, 500));
+    throw new Error(`Failed to parse unified LLM response: ${error}`);
+  }
+}
+
+export async function processDiagramPipelineSequential(
   query: string,
   env: EnvLike
 ): Promise<DiagramResult> {
@@ -394,5 +527,72 @@ export async function processDiagramPipeline(
     timer.logPerformanceReport();
     
     throw error;
+  }
+}
+
+export async function processDiagramPipeline(
+  query: string,
+  env: EnvLike
+): Promise<DiagramResult> {
+  const timer = createTimer();
+  console.log(`🚀 [${timer.getRequestId()}] Starting OPTIMIZED diagram pipeline for query:`, query);
+  
+  try {
+    // Use the new unified generation approach
+    const unifiedResult = await timer.timeStep("unified_generation", () =>
+      generateUnifiedDiagram(query, env), {
+      query_length: query.length
+    });
+    
+    console.log(`✅ [${timer.getRequestId()}] Unified generation completed`);
+    
+    // Sanitize the diagram code
+    const sanitizedDiagram = await timer.timeStep("diagram_sanitization", async () => {
+      return sanitizeMermaid(unifiedResult.mermaid_code);
+    }, {
+      diagram_length: unifiedResult.mermaid_code.length,
+      diagram_type: unifiedResult.diagram_type
+    });
+    
+    // Prepare final result
+    const result = await timer.timeStep("result_preparation", async () => {
+      const result: DiagramResult = {
+        diagram_type: unifiedResult.diagram_type,
+        description: unifiedResult.diagram_content,
+        content: unifiedResult.diagram_content,
+        universal_content: unifiedResult.universal_content,
+        diagram: sanitizedDiagram,
+        render_type: "html" as const,
+        rendered_content: sanitizedDiagram,
+        diagram_meta: unifiedResult.diagram_meta
+      };
+      
+      return result;
+    }, {
+      diagram_length: sanitizedDiagram.length,
+      universal_content_length: unifiedResult.universal_content.length
+    });
+    
+    console.log(`🎉 [${timer.getRequestId()}] OPTIMIZED Pipeline completed successfully!`);
+    console.log(`📊 [${timer.getRequestId()}] Final result:`, JSON.stringify({
+      diagram_type: result.diagram_type,
+      description_length: result.description.length,
+      universal_content_length: result.universal_content.length,
+      diagram_length: result.diagram.length,
+      render_type: result.render_type,
+      has_meta: !!result.diagram_meta
+    }, null, 2));
+    
+    timer.logPerformanceReport();
+    
+    return result;
+    
+  } catch (error) {
+    console.error(`❌ [${timer.getRequestId()}] Optimized pipeline failed:`, error);
+    console.error("Pipeline error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Fallback to original sequential approach if unified fails
+    console.log(`⚠️ [${timer.getRequestId()}] Falling back to sequential pipeline...`);
+    return processDiagramPipelineSequential(query, env);
   }
 }
