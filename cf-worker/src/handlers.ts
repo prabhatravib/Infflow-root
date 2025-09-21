@@ -209,14 +209,26 @@ export async function clusterHandler(body: ClusterRequest, env: EnvLike): Promis
     // Also generate universal text content to populate the Text tab
     let universal_content = '';
     try {
-      const { universalContent } = await timer.timeStep("universal_content_generation", () => 
+      console.log(`🟡 [${timer.getRequestId()}] Generating universal content for query: "${clusterId}"`);
+      console.log(`🟡 [${timer.getRequestId()}] Calling generateCombinedContent with query: "${clusterId}", diagramType: "radial_mindmap"`);
+      
+      const combinedResult = await timer.timeStep("universal_content_generation", () => 
         generateCombinedContent(clusterId, 'radial_mindmap', env), {
         cluster_id: clusterId,
         diagram_type: 'radial_mindmap'
       });
-      universal_content = universalContent || '';
+      
+      console.log(`🟡 [${timer.getRequestId()}] generateCombinedContent result:`, {
+        universalContent: combinedResult.universalContent ? `${combinedResult.universalContent.substring(0, 50)}...` : 'null',
+        diagramContent: combinedResult.diagramContent ? `${combinedResult.diagramContent.substring(0, 50)}...` : 'null'
+      });
+      
+      universal_content = combinedResult.universalContent || '';
+      console.log(`✅ [${timer.getRequestId()}] Universal content generated: ${universal_content.substring(0, 100)}...`);
     } catch (e) {
-      console.warn(`⚠️ [${timer.getRequestId()}] Universal content generation failed for cluster:`, e);
+      console.error(`❌ [${timer.getRequestId()}] Universal content generation failed for cluster:`, e);
+      console.error(`❌ [${timer.getRequestId()}] Error details:`, e instanceof Error ? e.message : String(e));
+      console.error(`❌ [${timer.getRequestId()}] Error stack:`, e instanceof Error ? e.stack : 'No stack trace');
       universal_content = '';
     }
 

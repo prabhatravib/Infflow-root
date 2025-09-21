@@ -146,15 +146,20 @@ export const createAppHandlers = ({
           
           if (clusterRes.success && clusterRes.cluster) {
             setClusters(clusterRes.cluster as any);
+            console.log(`[${requestId}] Cluster response universal_content:`, clusterRes.universal_content ? 'Present' : 'Missing');
+            console.log(`[${requestId}] Universal content length:`, clusterRes.universal_content?.length || 0);
+            
             if (clusterRes.universal_content) {
-              setContentData(processContentData({ content: '', description: '', universal_content: clusterRes.universal_content }));
+              setContentData({ content: '', description: '', universal_content: clusterRes.universal_content });
             } else {
+              console.warn(`[${requestId}] No universal content received from cluster API`);
               setContentData({ content: '', description: '', universal_content: '' });
             }
 
+            // For foam tree, we need to send a special format that the hexagon worker can understand
             const foamTreePayload = {
-              mermaidCode: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
-              diagramImage: `FOAMTREE_JSON:${JSON.stringify(clusterRes.cluster)}`,
+              mermaidCode: `FOAMTREE_DATA:${JSON.stringify(clusterRes.cluster)}`,
+              diagramImage: `FOAMTREE_DATA:${JSON.stringify(clusterRes.cluster)}`,
               prompt: cleaned
             };
             setDiagramData(foamTreePayload);
