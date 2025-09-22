@@ -135,46 +135,50 @@ export default function App() {
         </div>
       )}
 
-      <AnimatePresence mode="wait">
-        {!showResults ? (
-          <LandingPage
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSearch={handleSearch}
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            diagramViewTab={diagramViewTab}
-            setDiagramViewTab={setDiagramViewTab}
-            showResults={showResults}
-          />
-        ) : (
-          <SearchResults
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            onSearch={handleSearch}
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            onBackToHome={handleBackToHome}
-            diagram={diagram}
-            diagramData={diagramData}
-            contentData={contentData}
-            selection={selection}
-            deepDive={deepDive}
-            setupSelectionHandler={setupSelectionHandler}
-            handleDeepDiveAsk={handleDeepDiveAsk}
-            clearSelection={clearSelection}
-            diagramViewTab={diagramViewTab}
-            setDiagramViewTab={setDiagramViewTab}
-            clusters={clusters}
-            setClusters={setClusters}
-          />
-        )}
-      </AnimatePresence>
+      {currentTab !== 'News' && (
+        <AnimatePresence mode="wait">
+          {!showResults ? (
+            <LandingPage
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSearch={handleSearch}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+              diagramViewTab={diagramViewTab}
+              setDiagramViewTab={setDiagramViewTab}
+              showResults={showResults}
+              currentTab={currentTab}
+            />
+          ) : (
+            <SearchResults
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onSearch={handleSearch}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              onBackToHome={handleBackToHome}
+              diagram={diagram}
+              diagramData={diagramData}
+              contentData={contentData}
+              selection={selection}
+              deepDive={deepDive}
+              setupSelectionHandler={setupSelectionHandler}
+              handleDeepDiveAsk={handleDeepDiveAsk}
+              clearSelection={clearSelection}
+              diagramViewTab={diagramViewTab}
+              setDiagramViewTab={setDiagramViewTab}
+              clusters={clusters}
+              setClusters={setClusters}
+              currentTab={currentTab}
+            />
+          )}
+        </AnimatePresence>
+      )}
       
       {/* HexaWorker - Always rendered outside transition container for stable positioning */}
-      {showResults && (
+      {currentTab !== 'News' && showResults && (
         <div className="hexa-worker-fixed">
           <HexaWorker 
             codeFlowStatus={CodeFlowStatus} 

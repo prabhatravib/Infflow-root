@@ -13,6 +13,7 @@ interface HeaderProps {
   onBackToHome: () => void;
   diagramViewTab?: 'visual' | 'text';
   setDiagramViewTab?: (tab: 'visual' | 'text') => void;
+  currentTab?: string;
 }
 
 export const Header = ({
@@ -27,6 +28,7 @@ export const Header = ({
   onBackToHome,
   diagramViewTab,
   setDiagramViewTab,
+  currentTab,
 }: HeaderProps) => {
   return (
     <header className={`sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 transition-all duration-300 ${showResults ? 'shadow-sm' : 'shadow-none'}`}>
@@ -64,7 +66,7 @@ export const Header = ({
               })}
             </div>
           </div>
-        ) : (
+        ) : currentTab !== 'News' ? (
           <div className="flex-1 max-w-2xl mx-8 hidden md:block" data-central-search-bar>
             <div className="relative">
               <div className="flex items-center bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/20 transition-all duration-300 shadow-none">
@@ -88,7 +90,7 @@ export const Header = ({
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         <div className="flex items-center gap-3">
           <button onClick={toggleTheme} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">

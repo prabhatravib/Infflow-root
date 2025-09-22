@@ -43,6 +43,7 @@ interface SearchResultsProps {
   setDiagramViewTab: (tab: 'visual' | 'text') => void;
   clusters: ClusterNode | null;
   setClusters: (c: ClusterNode | null) => void;
+  currentTab: string;
 }
 
 export default function SearchResults({
@@ -65,7 +66,8 @@ export default function SearchResults({
   diagramViewTab,
   setDiagramViewTab,
   clusters,
-  setClusters
+  setClusters,
+  currentTab
 }: SearchResultsProps) {
   const mermaidSrc = diagramData?.mermaidCode || diagram || '';
   const looksRadial = /\bgraph|flowchart\b/i.test(mermaidSrc) && /\bA\(/.test(mermaidSrc);
@@ -125,6 +127,7 @@ export default function SearchResults({
         onBackToHome={onBackToHome}
         diagramViewTab={diagramViewTab}
         setDiagramViewTab={setDiagramViewTab}
+        currentTab={currentTab}
       />
       
       <div className="flex">

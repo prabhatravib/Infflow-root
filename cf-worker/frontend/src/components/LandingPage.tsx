@@ -11,6 +11,7 @@ interface LandingPageProps {
   diagramViewTab?: 'visual' | 'text';
   setDiagramViewTab?: (tab: 'visual' | 'text') => void;
   showResults?: boolean;
+  currentTab: string;
 }
 
 export default function LandingPage({
@@ -21,7 +22,8 @@ export default function LandingPage({
   toggleTheme,
   diagramViewTab,
   setDiagramViewTab,
-  showResults = false
+  showResults = false,
+  currentTab
 }: LandingPageProps) {
   const suggestionChips = ['Details about Paris', 'Pepsi vs Coke', 'Steps to bake a cake','Rome Foamtree'];
 
