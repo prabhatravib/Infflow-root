@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import LandingPage from './components/LandingPage';
 import SearchResults from './components/SearchResults';
 import { Tabs } from './components/Tabs';
 import { HexaWorker } from './components/HexaWorker';
+import { AutoDemoController } from './components/AutoDemo/AutoDemoController';
 import { useSelection } from './hooks/use-selection';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { createAppHandlers } from './AppHandlers';
@@ -24,6 +25,8 @@ export default function App() {
   const [contentData, setContentData] = useState<{content: string; description: string; universal_content: string} | null>(null);
   const [diagramViewTab, setDiagramViewTab] = useState<'visual' | 'text'>('visual');
   const [clusters, setClusters] = useState<import('./types/cluster').ClusterNode | null>(null);
+  const [autoDemoMode, setAutoDemoMode] = useState(false);
+  const [demoNarration, setDemoNarration] = useState<string | null>(null);
   
   const debouncedTimer = useRef<number | null>(null);
   const lastInitialSearchDone = useRef(false);
@@ -85,6 +88,19 @@ export default function App() {
     };
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === 'auto') {
+      if (location.pathname !== '/') {
+        navigate('/');
+      }
+      setAutoDemoMode(true);
+    }
+  }, []);
+
   // On direct navigation to /search with q, perform initial search once
   useEffect(() => {
     const path = location.pathname || '';
@@ -101,6 +117,25 @@ export default function App() {
   const toggleTheme = () => {
     setIsDark(!isDark);
     document.documentElement.classList.toggle('dark');
+  };
+
+  const handleStartAutoDemo = () => {
+    if (autoDemoMode) {
+      return;
+    }
+    if (location.pathname !== '/') {
+      navigate('/');
+    }
+    setAutoDemoMode(true);
+  };
+
+  const handleAutoDemoExit = () => {
+    setAutoDemoMode(false);
+    setDemoNarration(null);
+  };
+
+  const handleDemoNarration = (text: string | null) => {
+    setDemoNarration(text);
   };
 
   // Handle click outside to close deep dive
@@ -121,6 +156,13 @@ export default function App() {
     className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300"
     onClick={handlePageClick}
   >
+      <AutoDemoController
+        isActive={autoDemoMode}
+        onExit={handleAutoDemoExit}
+        onComplete={handleAutoDemoExit}
+        onNarration={handleDemoNarration}
+      />
+
       {/* Centralized Tab Content - Works regardless of current page */}
       {currentTab === 'News' && (
         <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50">
@@ -148,6 +190,8 @@ export default function App() {
               setDiagramViewTab={setDiagramViewTab}
               showResults={showResults}
               currentTab={currentTab}
+              onStartAutoDemo={handleStartAutoDemo}
+              autoDemoActive={autoDemoMode}
             />
           ) : (
             <SearchResults
@@ -172,6 +216,8 @@ export default function App() {
               clusters={clusters}
               setClusters={setClusters}
               currentTab={currentTab}
+              onStartAutoDemo={handleStartAutoDemo}
+              autoDemoActive={autoDemoMode}
             />
           )}
         </AnimatePresence>
@@ -180,9 +226,11 @@ export default function App() {
       {/* HexaWorker - Always rendered outside transition container for stable positioning */}
       {currentTab !== 'News' && showResults && (
         <div className="hexa-worker-fixed">
-          <HexaWorker 
-            codeFlowStatus={CodeFlowStatus} 
-            diagramData={diagramData} 
+          <HexaWorker
+            codeFlowStatus={CodeFlowStatus}
+            diagramData={diagramData}
+            autoDemoMode={autoDemoMode}
+            demoNarration={demoNarration}
           />
         </div>
       )}
@@ -206,3 +254,19 @@ export default function App() {
       />
         </div>;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

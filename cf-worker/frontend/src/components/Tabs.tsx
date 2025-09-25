@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+﻿import { motion } from 'framer-motion';
 import { Globe, MapPin, Newspaper, Eye, FileText } from 'lucide-react';
 
 interface TabsProps {
@@ -88,7 +88,7 @@ export const Tabs = ({
             <div className="flex space-x-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1 w-[400px]">
               {diagramTabs.map(tab => {
                 const isActive = diagramViewTab === tab.id;
-                return <button key={tab.id} onClick={() => setDiagramViewTab(tab.id as 'visual' | 'text')} className={`flex-1 py-2 px-12 text-sm font-medium rounded-md transition-colors ${
+                return <button key={tab.id} onClick={() => setDiagramViewTab(tab.id as 'visual' | 'text')} data-demo-visual-tab={tab.id === 'visual' ? true : undefined} data-demo-text-tab={tab.id === 'text' ? true : undefined} className={`flex-1 py-2 px-12 text-sm font-medium rounded-md transition-colors ${
                   isActive
                     ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -150,3 +150,6 @@ export const Tabs = ({
        </div>
      </nav>;
 };
+
+
+

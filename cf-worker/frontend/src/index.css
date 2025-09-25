@@ -1,4 +1,7 @@
-/* Import refactored CSS modules */
+﻿/* Import refactored CSS modules */
 @import './styles/base.css';
 @import './styles/mermaid.css';
 @import './styles/components.css';
+@import './styles/autodemo.css';
+
+

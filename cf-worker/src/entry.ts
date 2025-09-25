@@ -1,8 +1,9 @@
-import { describeHandler, deepDiveHandler, clusterHandler } from './handlers';
+﻿import { describeHandler, deepDiveHandler, clusterHandler } from './handlers';
 import { json, toMessage } from './utils';
 import { handleNodeSearch, Env as NodeSearchEnv } from './routes/nodeSearch';
+import { handleDemoAnalytics, Env as DemoAnalyticsEnv } from './routes/demoAnalytics';
 
-export interface Env extends NodeSearchEnv {
+export interface Env extends NodeSearchEnv, DemoAnalyticsEnv {
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   ASSETS: { fetch: (req: Request) => Promise<Response> };
@@ -13,7 +14,7 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
-    console.log("🚀 Worker request received:", {
+    console.log("ðŸš€ Worker request received:", {
       method: request.method,
       pathname: pathname,
       url: url.toString()
@@ -34,16 +35,20 @@ export default {
         return handleNodeSearch(request, env, {} as any);
       }
 
+      if (pathname === '/api/demo-analytics' && request.method === 'POST') {
+        return handleDemoAnalytics(request, env);
+      }
+
       if (request.method === 'POST' && pathname === '/api/describe') {
-        console.log("🔵 Handling describe request...");
+        console.log("ðŸ”µ Handling describe request...");
         const body = await request.json();
-        console.log("🔵 Request body:", JSON.stringify(body, null, 2));
+        console.log("ðŸ”µ Request body:", JSON.stringify(body, null, 2));
         
         return describeHandler(body as any, env as any);
       }
 
       if (request.method === 'POST' && pathname === '/api/deep-dive') {
-        console.log("🔵 Handling deep-dive request...");
+        console.log("ðŸ”µ Handling deep-dive request...");
         const body = await request.json();
         return deepDiveHandler(body as any, env as any);
       }
@@ -62,8 +67,8 @@ export default {
       const indexUrl = new URL('/index.html', url.origin);
       return env.ASSETS.fetch(new Request(indexUrl.toString(), request));
     } catch (err) {
-      console.error("❌ Worker error:", err);
-      console.error("❌ Error stack:", err instanceof Error ? err.stack : 'No stack trace');
+      console.error("âŒ Worker error:", err);
+      console.error("âŒ Error stack:", err instanceof Error ? err.stack : 'No stack trace');
       return json({ 
         success: false, 
         detail: toMessage(err), 
@@ -73,3 +78,8 @@ export default {
     }
   },
 };
+
+
+
+
+

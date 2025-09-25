@@ -1,4 +1,4 @@
-import { Search, Mic, Image, Settings, User, Moon, Sun, Menu } from 'lucide-react';
+﻿import { Search, Mic, Image, Settings, User, Moon, Sun, Menu, PlayCircle } from 'lucide-react';
 import Logo from './Logo';
 
 interface HeaderProps {
@@ -14,6 +14,8 @@ interface HeaderProps {
   diagramViewTab?: 'visual' | 'text';
   setDiagramViewTab?: (tab: 'visual' | 'text') => void;
   currentTab?: string;
+  onStartAutoDemo?: () => void;
+  autoDemoActive?: boolean;
 }
 
 export const Header = ({
@@ -29,7 +31,12 @@ export const Header = ({
   diagramViewTab,
   setDiagramViewTab,
   currentTab,
+  onStartAutoDemo,
+  autoDemoActive,
 }: HeaderProps) => {
+  const watchDemoDisabled = Boolean(autoDemoActive);
+  const watchDemoLabel = watchDemoDisabled ? 'Demo Playing' : 'Watch Demo';
+
   return (
     <header className={`sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-800/50 transition-all duration-300 ${showResults ? 'shadow-sm' : 'shadow-none'}`}>
       <div className={`flex items-center justify-between px-3 transition-all duration-300 ${showResults ? 'py-0.5' : 'py-1'}`}>
@@ -39,7 +46,11 @@ export const Header = ({
           </button>
 
           <div className="flex items-center gap-2">
-            <button onClick={onBackToHome} className="hover:opacity-80 transition-opacity">
+            <button
+              onClick={onBackToHome}
+              className="hover:opacity-80 transition-opacity"
+              data-demo-home-button
+            >
               <Logo size={showResults ? 'sm' : 'md'} variant="full" isDark={isDark} />
             </button>
           </div>
@@ -54,6 +65,8 @@ export const Header = ({
                   <button
                     key={tab}
                     onClick={() => setDiagramViewTab(tab)}
+                    data-demo-visual-tab={tab === 'visual' ? true : undefined}
+                    data-demo-text-tab={tab === 'text' ? true : undefined}
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       isActive
                         ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
@@ -77,6 +90,7 @@ export const Header = ({
                   onKeyPress={(e) => e.key === 'Enter' && onSearch(searchQuery)}
                   placeholder="Explore visually"
                   className="flex-1 px-5 py-3 bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm"
+                  data-demo-search-input
                 />
                 <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
                   <Mic className="w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -84,7 +98,11 @@ export const Header = ({
                 <button className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
                   <Image className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
-                <button onClick={() => onSearch(searchQuery)} className="p-2.5 mr-1 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-xl transition-colors">
+                <button
+                  onClick={() => onSearch(searchQuery)}
+                  className="p-2.5 mr-1 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 rounded-xl transition-colors"
+                  data-demo-search-submit
+                >
                   <Search className="w-4 h-4 text-white dark:text-gray-900" />
                 </button>
               </div>
@@ -93,6 +111,19 @@ export const Header = ({
         ) : null}
 
         <div className="flex items-center gap-3">
+          {!showResults && onStartAutoDemo && (
+            <button
+              onClick={onStartAutoDemo}
+              disabled={watchDemoDisabled}
+              className={`px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium flex items-center gap-2 shadow-lg transition-all duration-200 ${
+                watchDemoDisabled ? 'opacity-70 cursor-not-allowed' : 'hover:from-purple-700 hover:to-blue-700 animate-pulse'
+              }`}
+            >
+              <PlayCircle className="w-5 h-5" />
+              <span>{watchDemoLabel}</span>
+            </button>
+          )}
+
           <button onClick={toggleTheme} className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
             {isDark ? <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" /> : <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
           </button>

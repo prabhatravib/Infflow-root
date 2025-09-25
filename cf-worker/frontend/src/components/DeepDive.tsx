@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Copy, Download, MessageCircle } from 'lucide-react';
 
@@ -126,7 +126,7 @@ export function DeepDive({
   const relevantHistory = history.filter(item => item.selectedText === selectedText).slice(0, 5);
 
   return (
-    <motion.div
+    <motion.div data-demo-deep-dive
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
