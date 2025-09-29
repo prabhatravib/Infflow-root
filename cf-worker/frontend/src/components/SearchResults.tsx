@@ -189,28 +189,6 @@ export default function SearchResults({
               onClose={clearSelection}
             />
           )}
-
-          <div className="max-w-4xl mx-auto px-6 lg:px-8 mt-12">
-            <div
-              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600/90 via-purple-500/90 to-blue-500/90 text-white p-8 shadow-2xl"
-              data-demo-cta
-            >
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.6),_transparent_70%)]" />
-              <div className="relative z-10 flex flex-col gap-4">
-                <p className="text-sm text-white/90 max-w-2xl">
-                  Get a layout of the answer directions, before you can search for specific links.
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <button className="px-4 py-2 rounded-xl bg-white text-purple-600 font-semibold shadow-sm hover:bg-white/90">
-                    Schedule follow-up
-                  </button>
-                  <button className="px-4 py-2 rounded-xl border border-white/60 text-white/90 hover:bg-white/10">
-                    Keep exploring
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </main>
       </div>
 

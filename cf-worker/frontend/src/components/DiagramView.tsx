@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import Mermaid, { MermaidRef } from './Mermaid';
 import RadialChart from './RadialChart';
 import { FoamTreeView } from './visual/FoamTreeView';

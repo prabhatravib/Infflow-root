@@ -58,6 +58,7 @@ export default function App() {
     askDeepDive,
     lastSearchQuery,
     currentRequestId,
+    clusters,
     contentData,
     diagram
   });
@@ -177,7 +178,20 @@ export default function App() {
         </div>
       )}
 
-      {currentTab !== 'News' && (
+      {currentTab === 'Map' && (
+        <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50">
+          <div className="w-full h-full">
+            <iframe
+              src="https://infflow-map.prabhatravib.workers.dev/"
+              className="w-full h-full border-0"
+              title="Map"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+
+      {currentTab !== 'News' && currentTab !== 'Map' && (
         <AnimatePresence mode="wait">
           {!showResults ? (
             <LandingPage
@@ -224,7 +238,7 @@ export default function App() {
       )}
       
       {/* HexaWorker - Always rendered outside transition container for stable positioning */}
-      {currentTab !== 'News' && showResults && (
+      {currentTab !== 'News' && currentTab !== 'Map' && showResults && (
         <div className="hexa-worker-fixed">
           <HexaWorker
             codeFlowStatus={CodeFlowStatus}
@@ -254,19 +268,3 @@ export default function App() {
       />
         </div>;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -17,6 +17,7 @@ export interface AppHandlersProps {
   askDeepDive: (question: string, apiCall: any) => Promise<void>;
   lastSearchQuery: React.MutableRefObject<string>;
   currentRequestId: React.MutableRefObject<string>;
+  clusters: import('./types/cluster').ClusterNode | null;
   contentData: {content: string; description: string; universal_content: string} | null;
   diagram: string | null;
 }
@@ -36,6 +37,7 @@ export const createAppHandlers = ({
   askDeepDive,
   lastSearchQuery,
   currentRequestId,
+  clusters,
   contentData,
   diagram
 }: AppHandlersProps) => {
@@ -312,6 +314,80 @@ export const createAppHandlers = ({
   };
 
   const handleSavePNG = async () => {
+    // Check if we have a FoamTree diagram (clusters data)
+    if (clusters) {
+      try {
+        // Debug: Log all elements in diagram-viewport
+        const diagramViewport = document.querySelector('.diagram-viewport');
+        console.log('Diagram viewport found:', diagramViewport);
+        if (diagramViewport) {
+          console.log('Diagram viewport children:', diagramViewport.children);
+          console.log('Diagram viewport innerHTML:', diagramViewport.innerHTML);
+        }
+        
+        // Try multiple selectors to find FoamTree container
+        let foamTreeContainer = document.querySelector('.diagram-viewport .foamtree');
+        if (!foamTreeContainer) {
+          // Try alternative selectors
+          foamTreeContainer = document.querySelector('.foamtree');
+          console.log('Trying .foamtree selector:', foamTreeContainer);
+        }
+        if (!foamTreeContainer) {
+          // Look for any canvas element in the diagram viewport
+          foamTreeContainer = document.querySelector('.diagram-viewport canvas')?.parentElement;
+          console.log('Trying canvas parent selector:', foamTreeContainer);
+        }
+        if (!foamTreeContainer) {
+          // Look for any div with foamtree class anywhere
+          foamTreeContainer = document.querySelector('div[class*="foamtree"]');
+          console.log('Trying div with foamtree class:', foamTreeContainer);
+        }
+        
+        if (!foamTreeContainer) {
+          console.error('No FoamTree container found. Available elements:', {
+            diagramViewport: document.querySelector('.diagram-viewport'),
+            foamtreeClass: document.querySelector('.foamtree'),
+            canvas: document.querySelector('canvas'),
+            allDivs: document.querySelectorAll('div')
+          });
+          alert('No FoamTree visualization found to save');
+          return;
+        }
+        
+        // Look for canvas element in the FoamTree container
+        let canvas = foamTreeContainer.querySelector('canvas');
+        if (!canvas) {
+          // Try to find canvas anywhere in the viewport
+          canvas = document.querySelector('.diagram-viewport canvas');
+          console.log('Canvas found in viewport:', canvas);
+        }
+        
+        if (!canvas) {
+          console.error('No canvas element found. Container:', foamTreeContainer);
+          alert('No canvas element found in FoamTree visualization');
+          return;
+        }
+        
+        // Create a download link for the canvas
+        const link = document.createElement('a');
+        const filename = `foamtree-${searchQuery.replace(/[^a-zA-Z0-9]/g, '-')}.png`;
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log(`FoamTree image saved as: ${filename}`);
+      } catch (error) {
+        console.error('Failed to save FoamTree PNG:', error);
+        alert('Failed to save FoamTree PNG image');
+      }
+      return;
+    }
+    
+    // Handle regular SVG diagrams (Mermaid, etc.)
     if (!diagram) {
       alert('No diagram to save');
       return;

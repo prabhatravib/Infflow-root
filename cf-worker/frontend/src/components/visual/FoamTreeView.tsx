@@ -65,6 +65,7 @@ export function FoamTreeView({
     }, 100);
   }, [onSetupSelection]);
 
+
   // Initialize FoamTree
   useEffect(() => {
     if (!containerRef.current) return;

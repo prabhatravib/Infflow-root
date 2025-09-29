@@ -33,10 +33,10 @@ export function AutoDemoOverlay({
     <AnimatePresence>
       {isActive && (
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-[60]"
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-28 z-[70]"
         >
           <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4 min-w-[360px]">
             <div className="flex items-center gap-2">
