@@ -23,12 +23,12 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   
   // Layout constants for the expanded hexagon
   const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
-  const EXTRA_DOWN_OFFSET_PX = 30;       // move down to position hexagon lower
+  const EXTRA_DOWN_OFFSET_PX = 60;       // move down to position hexagon lower (increased from 30)
   const BASE = {
     container: 350,        // px (further increased for more hexagon visibility)
     iframeWidth: 300,      // px (increased iframe width for better coverage)
     iframeHeight: 320,     // px (increased iframe height for better coverage)
-    iframeTop: -50,        // px (moved further up to show more of hexagon top)
+    iframeTop: -100,       // px (moved iframe frame up to center green hexagon within bounds)
     iframeLeft: -25        // px (adjusted for better centering with larger iframe)
   } as const;
   
@@ -196,7 +196,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
             {/* Minimize Button */}
             <button
               onClick={toggleExpanded}
-              className="absolute -top-2 -right-2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
+              className="absolute top-4 -left-2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
               title="Minimize"
             >
               <Minus className="w-4 h-4" />
@@ -208,8 +208,8 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                 width: `${SCALED.container}px`,
                 height: `${SCALED.container}px`,
                 position: 'relative',
-                // Pull the worker a bit further down to avoid overlap with top panels
-                transform: `translateY(${-10 + EXTRA_DOWN_OFFSET_PX}px)`,
+                // Step 1 complete, now move whole setup down (Step 2)
+                transform: `translateY(${-10 + 60}px)`,
                 // Ensure container doesn't overflow and covers text
                 overflow: 'visible',
                 // CSS variable for clean hexagon positioning
@@ -229,7 +229,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                   position: 'absolute',
                   top: `${SCALED.iframeTop}px`,
                   left: `${SCALED.iframeLeft}px`,
-                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(40px)`,  // Further reduced to show more hexagon
+                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(170px)`,  // Compensate for iframe frame moving up to center hexagon
                   transformOrigin: 'center center',  // Scale from center
                   zIndex: 1, // Lower z-index than text to ensure text stays visible
                 }}
@@ -258,9 +258,3 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     </div>
   );
 };
-
-
-
-
-
-
