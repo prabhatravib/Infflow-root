@@ -3,7 +3,7 @@
  * Handles diagram type definitions and selection based on user queries.
  */
 
-import { callOpenAI, EnvLike, selectOptimalModel } from './openai';
+import { callOpenAI, EnvLike } from './openai';
 import { createTimer } from './timing';
 
 export type DiagramType = "flowchart" | "radial_mindmap" | "sequence_comparison";
@@ -31,20 +31,17 @@ As a response to the below query, choose which output representation would be be
 Respond with ONLY one word: "flowchart", "radial_mindmap", or "sequence_comparison".`;
   
   try {
-    // Use gpt-5-mini with low effort for fast classification
-    const classificationModel = env.OPENAI_FALLBACK_MODEL || "gpt-5-mini";
     const response = await timer.timeStep("diagram_type_llm_call", () => callOpenAI(
       env,
       selectorPrompt,
       query,
-      classificationModel,
-      100,  // Higher token limit to account for reasoning
-      "low"  // Low effort for fast classification
+      env.OPENAI_MODEL || "gpt-4o-mini",
+      50,
+      0.3
     ), {
-      user_message_length: query.length,
-      model: classificationModel,
-      max_tokens: 100,
-      effort: "low"
+      query_length: query.length,
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 50
     });
     
     const validTypes = ["flowchart", "radial_mindmap", "sequence_comparison"];

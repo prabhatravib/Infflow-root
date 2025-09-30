@@ -3,7 +3,7 @@
  * Handles content generation, diagram creation, and pipeline orchestration.
  */
 
-import { callOpenAI, EnvLike, selectOptimalModel } from './openai';
+import { callOpenAI, EnvLike } from './openai';
 import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt, getMegaPrompt } from './prompts';
 import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
@@ -60,13 +60,14 @@ Make sure the central node A is visible and contains the exact query text.`;
       env,
       diagramPrompt,
       userMessage,
-      env.OPENAI_MODEL || env.OPENAI_FALLBACK_MODEL || "gpt-5-mini",
-      2000
+      env.OPENAI_MODEL || "gpt-4o-mini",
+      2000,
+      0.7
     ), {
       diagram_type: diagramType,
       content_length: contentDescription.length,
       query_length: originalQuery.length,
-      model: env.OPENAI_MODEL || env.OPENAI_FALLBACK_MODEL || "gpt-5-mini",
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
       max_tokens: 2000
     });
     
@@ -103,7 +104,7 @@ export async function generateCombinedContent(
   console.log(`🔵 [${timer.getRequestId()}] Starting combined content generation...`);
   console.log(`Query: ${query}`);
   console.log(`Diagram type: ${diagramType}`);
-  console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4o-mini"}`);
+  console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4.1"}`);
   
   try {
     console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI for combined content generation...`);
@@ -111,12 +112,13 @@ export async function generateCombinedContent(
       env,
       combinedPrompt,
       query,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      3000
+      env.OPENAI_MODEL || "gpt-4.1",
+      3000,
+      0.7
     ), {
       query_length: query.length,
       diagram_type: diagramType,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      model: env.OPENAI_MODEL || "gpt-4.1",
       max_tokens: 3000
     });
     
@@ -263,7 +265,8 @@ Original query that generated the diagram: ${originalQuery}`;
       deepDivePrompt,
       userMessage,
       env.OPENAI_MODEL || "gpt-4o-mini",
-      500
+      500,
+      0.7
     ), {
       selected_text_length: selectedText.length,
       question_length: question.length,
@@ -310,33 +313,19 @@ export async function generateUnifiedDiagram(
   console.log(`Query: ${query}`);
   
   try {
-    // Use smart model selection for better performance
-    const optimalModel = selectOptimalModel(
-      env.OPENAI_MODEL || "gpt-5-mini-2025-08-07",
-      env.OPENAI_FALLBACK_MODEL || "gpt-5-mini",
-      "universal",
-      query.length
-    );
-
-    const effort = optimalModel.includes("gpt-5-mini") ? "low" : "medium";
-    const tokenLimit = optimalModel.includes("gpt-5-mini") ? 6000 : 10000;
-
-    console.log(`🎯 [${timer.getRequestId()}] Using optimal model: ${optimalModel} with effort: ${effort}`);
-
     // Single API call for everything
     const response = await timer.timeStep("unified_llm_call", () =>
       callOpenAI(
         env,
         megaPrompt,
         query,
-        optimalModel,
-        tokenLimit,
-        effort
+        env.OPENAI_MODEL || "gpt-4o-mini",
+        5000,
+        0.7
       ), {
       query_length: query.length,
-      model: optimalModel,
-      max_tokens: tokenLimit,
-      effort: effort
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 5000
     });
     
     console.log(`✅ [${timer.getRequestId()}] Unified response received, length: ${response?.length || 0}`);

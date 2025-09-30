@@ -3,7 +3,7 @@
  * Handles generating structured content descriptions from user queries.
  */
 
-import { callOpenAI, EnvLike, selectOptimalModel } from './openai';
+import { callOpenAI, EnvLike } from './openai';
 import { getContentPrompt } from './prompts';
 import { cleanTextContent } from './utils';
 import { createTimer } from './timing';
@@ -32,33 +32,19 @@ export async function generateContent(
   console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4o-mini"}`);
   
   try {
-    // Use smart model selection for better performance
-    const optimalModel = selectOptimalModel(
-      env.OPENAI_MODEL || "gpt-5-mini-2025-08-07",
-      env.OPENAI_FALLBACK_MODEL || "gpt-5-mini",
-      "content",
-      query.length
-    );
-
-    const effort = optimalModel.includes("gpt-5-mini") ? "low" : "medium";
-    const tokenLimit = optimalModel.includes("gpt-5-mini") ? 800 : 1000;
-
-    console.log(`🎯 [${timer.getRequestId()}] Using optimal model: ${optimalModel} with effort: ${effort}`);
-
     console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI for content generation...`);
     const response = await timer.timeStep("content_llm_call", () => callOpenAI(
       env,
       prompt,
       query,
-      optimalModel,
-      tokenLimit,
-      effort
+      env.OPENAI_MODEL || "gpt-4o-mini",
+      1000,
+      0.7
     ), {
       query_length: query.length,
       diagram_type: diagramType,
-      model: optimalModel,
-      max_tokens: tokenLimit,
-      effort: effort
+      model: env.OPENAI_MODEL || "gpt-4o-mini",
+      max_tokens: 1000
     });
     
     console.log(`✅ [${timer.getRequestId()}] OpenAI content response received:`);

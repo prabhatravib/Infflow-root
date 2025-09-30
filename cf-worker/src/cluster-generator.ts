@@ -26,7 +26,8 @@ export async function generateClusterData(
           clusterPrompt,
           query,
           env.OPENAI_MODEL || 'gpt-4o-mini',
-          2000
+          2000,
+          0.7
         ),
       {
         query_length: query.length,

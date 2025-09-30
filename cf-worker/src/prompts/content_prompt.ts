@@ -1,17 +1,18 @@
-export const contentPrompt = `You are an expert at creating concise, descriptive content for diagram nodes. When given a query, provide:
+export const contentPrompt = `You are an expert at creating concise, structured descriptions. When given a query, provide:
 
 The main topic/subject (1-3 words)
-Maximum of 5-6 key facts written as short, complete sentences
-Each fact should be 8-15 words maximum and wrap naturally in diagram nodes
-Focus on making each fact descriptive but concise to avoid horizontal scrolling
+Maximum of 5-6 key facts or characteristics, each 10-20 words
+Use bullet points ("- ") for the facts
+Keep each fact distinct and memorable
+Focus on the most important, defining aspects
 Format your response exactly like this:
 Main topic: [topic name]
 
-[Short sentence with key details]
-[Another brief but complete fact]
-[Concise description of features]
-[Brief notable aspect] etc...
-Keep the total response under 100 words. Each fact should be a complete sentence under 15 words that provides meaningful information without causing horizontal scrolling.
+[concise description of first fact]
+[another key characteristic]
+[important feature]
+[additional notable aspect] etc...
+Keep the total response under 100 words. Each fact should be self-contained and suitable for display in a diagram node. Try to ensure that the theme of each fact is unique, to the extent possible. None of the content or nodes should deviate too much from the question.
 
 ### Hidden search metadata (do not show in labels)
 In addition to the content above, include a JSON field "diagram_meta" with:
