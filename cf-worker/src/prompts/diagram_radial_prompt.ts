@@ -42,10 +42,10 @@ Follow this exact pattern:
 flowchart TD
     A("User's Search Query")
 
-    B("First fact<br>with line break")
-    C("Second fact<br>with line break")
-    D("Third fact<br>with line break")
-    E("Additional info...")
+    B("Capital of France on the Seine River")
+    C("Features Eiffel Tower and Louvre Museum")
+    D("Renowned for fashion and art culture")
+    E("Divided into 20 arrondissements")
 
     B <==> A
     C <==> A
@@ -64,6 +64,10 @@ Rules:
 - Use \`A("Exact Query Text")\` for the main topic - this MUST be the exact user's search query/input
 - The central node A must always be visible and contain the exact query text provided
 - Replace "User's Search Query" in the template with the actual user's query text
+- Create concise node content with short sentences under 15 words each
+- Each node should be brief but complete to avoid horizontal scrolling
+- Use short, punchy sentences like "Capital of France on Seine River" instead of long sentences
+- Focus on essential information that fits in diagram nodes without overflow
 - For abbreviations with explanations, use dashes instead of parentheses: \`A(RAM - Random Access Memory)\` not \`A(RAM(Random Access Memory))\`
 - For A GENERIC NODE B(Node description), the node description should not have '(' or ')' at all in the node description for any reason. The parantheses is strictly resrved for the node definition.
 - To achieve radial distribution: Write the first 2-3 connections with fact nodes first (FactNode <==> CenterNode), then write the remaining connections with the center node first (CenterNode <==> FactNode)

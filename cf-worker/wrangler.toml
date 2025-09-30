@@ -7,7 +7,8 @@ compatibility_date = "2024-12-01"
 directory = "frontend/dist"
 
 [vars]
-OPENAI_MODEL = "gpt-4.1"
+OPENAI_MODEL = "gpt-5-mini-2025-08-07"
+OPENAI_FALLBACK_MODEL = "gpt-5-mini"
 
 # Bindings for secrets (set via: wrangler secret put OPENAI_API_KEY)
 # [vars]
@@ -16,4 +17,3 @@ OPENAI_MODEL = "gpt-4.1"
 # Observability configuration for consistent logging across deployments
 [observability.logs]
 enabled = true
-

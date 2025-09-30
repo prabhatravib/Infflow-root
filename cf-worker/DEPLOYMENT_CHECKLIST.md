@@ -66,7 +66,7 @@ After deployment, you should see:
 ### wrangler.toml
 - Main entry point: `src/entry.ts`
 - Assets directory: `../Infflow-magicpath/dist`
-- OpenAI model: `gpt-4.1`
+- OpenAI model: `gpt-5-2025-08-07`
 
 ### .wranglerignore
 - Excludes `../Infflow-magicpath/` and `../pitext_desktop/`
