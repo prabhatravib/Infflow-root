@@ -135,7 +135,7 @@ export default function SearchResults({
       <div className="flex">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <main className="flex-1 transition-all duration-500 ml-16 lg:ml-24">
+        <main className="flex-1 transition-all duration-500 ml-32 lg:ml-40">
           {radialEnabled && diagramViewTab === 'visual' && (
             <RadialBarOverlay>
               <SearchBar
@@ -164,7 +164,7 @@ export default function SearchResults({
               onExternalLinksRequest={handleExternalLinksRequest}
             />
           ) : (
-            <div className="relative pl-16 pr-6 py-6">
+            <div className="relative pl-24 pr-6 py-6">
               {contentData && contentData.universal_content ? (
                 <div className="space-y-4">
                   <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">

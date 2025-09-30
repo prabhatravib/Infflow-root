@@ -25,10 +25,10 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
   const EXTRA_DOWN_OFFSET_PX = 60;       // move down to position hexagon lower (increased from 30)
   const BASE = {
-    container: 350,        // px (further increased for more hexagon visibility)
+    container: 600,        // px (increased to properly accommodate iframe with transforms)
     iframeWidth: 300,      // px (increased iframe width for better coverage)
-    iframeHeight: 320,     // px (increased iframe height for better coverage)
-    iframeTop: -100,       // px (moved iframe frame up to center green hexagon within bounds)
+    iframeHeight: 520,     // px (significantly increased height to center green hexagon within bounds)
+    iframeTop: -150,       // px (moved iframe frame up dramatically to center green hexagon)
     iframeLeft: -25        // px (adjusted for better centering with larger iframe)
   } as const;
   
@@ -191,65 +191,70 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
 
       {/* Expanded State - Only show when voice is enabled (hexagon widget) */}
       {isExpanded && isVoiceEnabled && (
-        <div className="flex flex-col items-center">
-          <div className="transition-all duration-500 ease-in-out relative">
-            {/* Minimize Button */}
-            <button
-              onClick={toggleExpanded}
-              className="absolute top-4 -left-2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
-              title="Minimize"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            
-            <div 
-              className="hexagon-container"
+        <div className="flex flex-col items-start" style={{ marginLeft: '-25px', gap: '20px', position: 'relative' }}>
+          {/* Minimize Button */}
+          <button
+            onClick={toggleExpanded}
+            className="relative left-2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
+            style={{ top: '172px' }} // Positioned just above hexagon top node with 10px gap
+            title="Minimize"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+
+          {/* Hexagon Container with proper containment */}
+          <div 
+            className="hexagon-container"
+            style={{
+              width: `${SCALED.container}px`,
+              height: `${SCALED.container}px`,
+              position: 'relative',
+              transform: `translateY(${-10 + 60}px)`,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <iframe
+              ref={iframeRef}
+              src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
+              width={SCALED.iframeWidth}
+              height={SCALED.iframeHeight}
               style={{
-                width: `${SCALED.container}px`,
-                height: `${SCALED.container}px`,
-                position: 'relative',
-                // Step 1 complete, now move whole setup down (Step 2)
-                transform: `translateY(${-10 + 60}px)`,
-                // Ensure container doesn't overflow and covers text
-                overflow: 'visible',
-                // CSS variable for clean hexagon positioning
-                ['--hexa-nudge-y' as any]: '30px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                clipPath: 'polygon(50% 15%, 90% 30%, 90% 60%, 50% 75%, 10% 60%, 10% 30%)',
+                borderRadius: '0',
+                position: 'absolute',
+                top: `${SCALED.iframeTop}px`,
+                left: `${SCALED.iframeLeft}px`,
+                transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(220px)`,
+                transformOrigin: 'center center',
+                zIndex: 1,
               }}
-            >
-              <iframe
-                ref={iframeRef}
-                src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
-                width={SCALED.iframeWidth}
-                height={SCALED.iframeHeight}
-                style={{
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                  borderRadius: '0',
-                  position: 'absolute',
-                  top: `${SCALED.iframeTop}px`,
-                  left: `${SCALED.iframeLeft}px`,
-                  transform: `scale(${INTERNAL_HEXAGON_SCALE}) translateY(170px)`,  // Compensate for iframe frame moving up to center hexagon
-                  transformOrigin: 'center center',  // Scale from center
-                  zIndex: 1, // Lower z-index than text to ensure text stays visible
-                }}
-                title="Hexa Voice Agent"
-                allow="microphone"
-                onLoad={() => {
-                  console.log('ðŸ”„ Iframe loaded');
-                  if (sessionId) {
-                    console.log('ðŸ†” Voice session started with session ID:', sessionId);
-                  }
-                  // Diagram data is already sent via API, no postMessage needed
-                  console.log('âœ… Voice worker iframe loaded - diagram data should be available via API');
-                }}
-              />
-            </div>
+              title="Hexa Voice Agent"
+              allow="microphone"
+              onLoad={() => {
+                console.log('🔄 Iframe loaded');
+                if (sessionId) {
+                  console.log('🆔 Voice session started with session ID:', sessionId);
+                }
+                console.log('✅ Voice worker iframe loaded - diagram data should be available via API');
+              }}
+            />
           </div>
 
-          {/* Code Flow Status - Positioned to always be visible below iframe */}
-          <div className="text-center mt-6 relative z-10">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
+          {/* Code Flow Status - Positioned vertically below hexagon bottom node */}
+          <div 
+            className="absolute"
+            style={{
+              top: '520px', // Below hexagon bottom node
+              left: '120px', // Moved further left to be directly below hexagon bottom node
+              zIndex: 30
+            }}
+          >
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium bg-white/90 px-3 py-2 rounded-md border border-gray-200">
               {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
             </div>
           </div>
