@@ -238,16 +238,16 @@ export default function DiagramView({
     <>
       <div className="p-8 text-center" style={{ minHeight: '400px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
         {/* Icon positioned above search bar */}
-        <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)' }}>
-          <img 
-            src="/textchart-icon.png" 
-            alt="Textchart" 
+        <div style={{ position: 'absolute', top: '40px', left: '50%', transform: 'translateX(-50%)' }}>
+          <img
+            src="/Textchart icon.png"
+            alt="Textchart"
             className="w-16 h-16 mx-auto"
           />
         </div>
-        
+
         {/* Loading text positioned below search bar */}
-        <div style={{ position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)' }}>
+        <div style={{ position: 'absolute', bottom: '120px', left: '50%', transform: 'translateX(-50%)' }}>
           <p className="text-gray-500 dark:text-gray-400">Textchart being generated...</p>
         </div>
       </div>

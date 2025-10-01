@@ -37,12 +37,24 @@ export default function Logo({
   isDark = false
 }: LogoProps) {
   const sizes = sizeClasses[size];
-  
-  const IconComponent = () => <div className={`${sizes.icon} flex items-center justify-center`}>
-      <img 
-        src={isDark ? "/infflow_whitefont.webp" : "/infflow-logo.webp"} 
-        alt="infflow logo" 
+
+  // Check for dark mode by looking at the document element class
+  const isActuallyDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
+
+  const IconComponent = () => <div
+      className={`${sizes.icon} flex items-center justify-center`}
+      style={{
+        backgroundColor: 'inherit',
+        borderRadius: '0px'
+      }}
+    >
+      <img
+        src={variant === "icon" ? "/Textchart icon.png" : (isActuallyDark ? "/infflow_white_logo-transparent.png" : "/infflow_large_logo.webp")}
+        alt="infflow logo"
         className="w-full h-full object-contain"
+        style={{
+          background: 'transparent'
+        }}
         onLoad={() => console.log('Logo loaded successfully')}
         onError={(e) => {
           console.error('Logo failed to load:', e);
