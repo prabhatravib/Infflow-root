@@ -3,7 +3,7 @@
  * Handles content generation, diagram creation, and pipeline orchestration.
  */
 
-import { callOpenAI, EnvLike } from './openai';
+import { callOpenAI, callOpenAIOptimized, selectOptimalModel, EnvLike } from './openai';
 import { getDiagramPrompt, getDeepDivePrompt, getCombinedContentPrompt, getMegaPrompt } from './prompts';
 import { generateContent, ContentResult } from './content';
 import { createTimer } from './timing';
@@ -19,15 +19,15 @@ export async function generateDiagramCode(
 ): Promise<string> {
   const timer = createTimer();
   const diagramPrompt = getDiagramPrompt(diagramType);
-  
-  console.log(`🟡 [${timer.getRequestId()}] Starting diagram generation...`);
+
+  console.log(`🟡 [${timer.getRequestId()}] Starting OPTIMIZED diagram generation...`);
   console.log(`Diagram type: ${diagramType}`);
   console.log(`Content description: ${contentDescription.substring(0, 200)}...`);
   console.log(`Original query: ${originalQuery}`);
-  
+
   // Build user message based on diagram type
   let userMessage: string;
-  
+
   if (diagramType === "flowchart") {
     userMessage = `Create a Mermaid flowchart that answers this query:
 
@@ -51,43 +51,56 @@ Use the format: A("${originalQuery}")
 
 Make sure the central node A is visible and contains the exact query text.`;
   }
-  
+
   console.log(`🟡 [${timer.getRequestId()}] User message for diagram generation: ${userMessage.substring(0, 300)}...`);
-  
+
   try {
-    console.log(`🟡 [${timer.getRequestId()}] Calling OpenAI for diagram generation...`);
-    const response = await timer.timeStep("diagram_generation_llm_call", () => callOpenAI(
+    // Select optimal model for this specific diagram generation task
+    const optimalModel = selectOptimalModel(originalQuery, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model for diagram: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 2000 to 1200 for faster processing
+    const optimizedMaxTokens = 1200;
+
+    console.log(`🟡 [${timer.getRequestId}] Calling OpenAI with optimizations for diagram generation...`);
+    const response = await timer.timeStep("optimized_diagram_llm_call", () => callOpenAIOptimized(
       env,
       diagramPrompt,
       userMessage,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      2000,
-      0.7
+      optimalModel,
+      optimizedMaxTokens,
+      0.7,
+        {
+          usePriority: true,        // Faster queue processing
+          useCache: true,          // Cache reusable prompts
+          useStructured: false     // Text response, not JSON
+        }
     ), {
       diagram_type: diagramType,
       content_length: contentDescription.length,
       query_length: originalQuery.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 2000
+      model: optimalModel,
+      max_tokens: optimizedMaxTokens,
+      optimizations: "priority,cache,early_stop"
     });
-    
-    console.log(`✅ [${timer.getRequestId()}] OpenAI diagram response received:`);
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized diagram response received:`);
     console.log(`Response length: ${response?.length || 0}`);
     console.log(`Response preview: ${response?.substring(0, 300)}...`);
-    
+
     if (!response) {
       throw new Error("Empty diagram response from LLM");
     }
-    
-    console.log(`✅ [${timer.getRequestId()}] Diagram generation successful`);
-    
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized diagram generation successful`);
+
     // Log performance for this function
     timer.logPerformanceReport();
-    
+
     return response;
-    
+
   } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Diagram generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Optimized diagram generation failed:`, error);
     timer.logPerformanceReport();
     throw error;
   }
@@ -246,49 +259,62 @@ export async function generateDeepDiveResponse(
 ): Promise<string> {
   const timer = createTimer();
   const deepDivePrompt = getDeepDivePrompt();
-  
-  console.log(`🔍 [${timer.getRequestId()}] Starting deep dive response generation...`);
+
+  console.log(`🔍 [${timer.getRequestId()}] Starting OPTIMIZED deep dive response generation...`);
   console.log(`Selected text length: ${selectedText.length}`);
   console.log(`Question length: ${question.length}`);
   console.log(`Original query length: ${originalQuery.length}`);
-  
+
   const userMessage = `Selected text from diagram: "${selectedText}"
 
 User's question: ${question}
 
 Original query that generated the diagram: ${originalQuery}`;
-  
+
   try {
-    console.log(`🔍 [${timer.getRequestId()}] Calling OpenAI for deep dive generation...`);
-    const response = await timer.timeStep("deep_dive_llm_call", () => callOpenAI(
+    // Select optimal model for deep dive (usually simpler, so use mini)
+    const optimalModel = selectOptimalModel(question, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model for deep dive: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 500 to 300 for faster processing
+    const optimizedMaxTokens = 300;
+
+    console.log(`🔍 [${timer.getRequestId()}] Calling OpenAI with optimizations for deep dive generation...`);
+    const response = await timer.timeStep("optimized_deep_dive_llm_call", () => callOpenAIOptimized(
       env,
       deepDivePrompt,
       userMessage,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      500,
-      0.7
+      optimalModel,
+      optimizedMaxTokens,
+      0.7,
+        {
+          usePriority: true,        // Faster queue processing
+          useCache: true,          // Cache reusable prompts
+          useStructured: false     // Text response, not JSON
+        }
     ), {
       selected_text_length: selectedText.length,
       question_length: question.length,
       original_query_length: originalQuery.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 500
+      model: optimalModel,
+      max_tokens: optimizedMaxTokens,
+      optimizations: "priority,cache,early_stop"
     });
-    
+
     if (!response) {
       throw new Error("Empty deep dive response from LLM");
     }
-    
-    console.log(`✅ [${timer.getRequestId()}] Deep dive response generated successfully`);
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized deep dive response generated successfully`);
     console.log(`Response length: ${response.length}`);
-    
+
     // Log performance for this function
     timer.logPerformanceReport();
-    
+
     return response.trim();
-    
+
   } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Deep dive generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Optimized deep dive generation failed:`, error);
     timer.logPerformanceReport();
     throw error;
   }
@@ -308,53 +334,67 @@ export async function generateUnifiedDiagram(
 ): Promise<UnifiedDiagramResult> {
   const timer = createTimer();
   const megaPrompt = getMegaPrompt();
-  
-  console.log(`🚀 [${timer.getRequestId()}] Starting UNIFIED diagram generation...`);
+
+  console.log(`🚀 [${timer.getRequestId()}] Starting OPTIMIZED UNIFIED diagram generation...`);
   console.log(`Query: ${query}`);
-  
+
   try {
-    // Single API call for everything
-    const response = await timer.timeStep("unified_llm_call", () =>
-      callOpenAI(
+    // Select optimal model for this query
+    const optimalModel = selectOptimalModel(query, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 5000 to 2000 for faster processing
+    const optimizedMaxTokens = 2000;
+
+    // Use optimized OpenAI call with all performance enhancements
+    const response = await timer.timeStep("optimized_unified_llm_call", () =>
+      callOpenAIOptimized(
         env,
         megaPrompt,
         query,
-        env.OPENAI_MODEL || "gpt-4o-mini",
-        5000,
-        0.7
+        optimalModel,
+        optimizedMaxTokens,
+        0.7,
+        {
+          usePriority: true,        // Faster queue processing
+          useCache: true,          // Cache reusable prompts
+          useStructured: true      // Ensure JSON response
+        }
       ), {
       query_length: query.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 5000
+      model: optimalModel,
+      max_tokens: optimizedMaxTokens,
+      optimizations: "priority,cache,structured,early_stop"
     });
-    
-    console.log(`✅ [${timer.getRequestId()}] Unified response received, length: ${response?.length || 0}`);
-    
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized unified response received, length: ${response?.length || 0}`);
+
     if (!response) {
       throw new Error("Empty unified response from LLM");
     }
-    
+
     // Parse the JSON response
     const result = await timer.timeStep("parse_unified_response", async () => {
       return parseUnifiedResponse(response);
     }, {
       response_length: response.length
     });
-    
-    console.log(`✅ [${timer.getRequestId()}] Unified generation successful`);
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized unified generation successful`);
     console.log(`📊 [${timer.getRequestId()}] Results:`, {
       diagram_type: result.diagram_type,
       universal_content_length: result.universal_content.length,
       diagram_content_length: result.diagram_content.length,
       mermaid_code_length: result.mermaid_code.length,
-      has_meta: !!result.diagram_meta
+      has_meta: !!result.diagram_meta,
+      model_used: optimalModel
     });
-    
+
     timer.logPerformanceReport();
     return result;
-    
+
   } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Unified generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Optimized unified generation failed:`, error);
     timer.logPerformanceReport();
     throw error;
   }

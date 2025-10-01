@@ -3,7 +3,7 @@
  * Handles hierarchical cluster data generation for visualization.
  */
 
-import { callOpenAI, EnvLike } from './openai';
+import { callOpenAI, callOpenAIOptimized, selectOptimalModel, EnvLike } from './openai';
 import { clusterPrompt } from './prompts/cluster_prompt';
 import { createTimer } from './timing';
 
@@ -15,23 +15,37 @@ export async function generateClusterData(
   env: EnvLike
 ): Promise<any> {
   const timer = createTimer();
-  console.log(`🟡 [${timer.getRequestId()}] Starting cluster generation...`);
+  console.log(`🟡 [${timer.getRequestId()}] Starting OPTIMIZED cluster generation...`);
 
   try {
+    // Select optimal model for cluster generation
+    const optimalModel = selectOptimalModel(query, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model for cluster: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 2000 to 1500 for faster processing
+    const optimizedMaxTokens = 1500;
+
     const response = await timer.timeStep(
-      'cluster_generation_llm_call',
+      'optimized_cluster_generation_llm_call',
       () =>
-        callOpenAI(
+        callOpenAIOptimized(
           env,
           clusterPrompt,
           query,
-          env.OPENAI_MODEL || 'gpt-4o-mini',
-          2000,
-          0.7
+          optimalModel,
+          optimizedMaxTokens,
+          0.7,
+          {
+            usePriority: true,        // Faster queue processing
+            useCache: true,          // Cache reusable prompts
+            useStructured: true      // Ensure JSON response
+          }
         ),
       {
         query_length: query.length,
-        model: env.OPENAI_MODEL || 'gpt-4o-mini',
+        model: optimalModel,
+        max_tokens: optimizedMaxTokens,
+        optimizations: "priority,cache,structured,early_stop"
       }
     );
 
@@ -57,10 +71,10 @@ export async function generateClusterData(
         throw _e;
       }
     }
-    console.log(`✅ [${timer.getRequestId()}] Cluster generation successful.`);
+    console.log(`✅ [${timer.getRequestId()}] Optimized cluster generation successful.`);
     return clusterData;
   } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Cluster generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Optimized cluster generation failed:`, error);
     throw error;
   }
 }

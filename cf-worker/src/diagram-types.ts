@@ -3,7 +3,7 @@
  * Handles diagram type definitions and selection based on user queries.
  */
 
-import { callOpenAI, EnvLike } from './openai';
+import { callOpenAI, callOpenAIOptimized, selectOptimalModel, EnvLike } from './openai';
 import { createTimer } from './timing';
 
 export type DiagramType = "flowchart" | "radial_mindmap" | "sequence_comparison";
@@ -29,33 +29,46 @@ As a response to the below query, choose which output representation would be be
 - sequence_comparison: comparing two or more items, highlighting similarities and unique features
 
 Respond with ONLY one word: "flowchart", "radial_mindmap", or "sequence_comparison".`;
-  
+
   try {
-    const response = await timer.timeStep("diagram_type_llm_call", () => callOpenAI(
+    // Select optimal model for diagram type selection (usually simple, so use mini)
+    const optimalModel = selectOptimalModel(query, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model for diagram type selection: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 50 to 20 for faster processing
+    const optimizedMaxTokens = 20;
+
+    const response = await timer.timeStep("optimized_diagram_type_llm_call", () => callOpenAIOptimized(
       env,
       selectorPrompt,
       query,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      50,
-      0.3
+      optimalModel,
+      optimizedMaxTokens,
+      0.3,
+        {
+          usePriority: true,        // Faster queue processing
+          useCache: true,          // Cache reusable prompts
+          useStructured: false     // Simple text response
+        }
     ), {
       query_length: query.length,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 50
+      model: optimalModel,
+      max_tokens: optimizedMaxTokens,
+      optimizations: "priority,cache,early_stop"
     });
-    
+
     const validTypes = ["flowchart", "radial_mindmap", "sequence_comparison"];
     const responseClean = response.trim().toLowerCase();
-    
+
     if (validTypes.includes(responseClean)) {
       console.log(`✅ [${timer.getRequestId()}] Selected diagram type: ${responseClean}`);
       return responseClean as DiagramType;
     }
-    
+
     // Default to radial_mindmap for general queries
     console.log(`⚠️ [${timer.getRequestId()}] Invalid response, defaulting to radial_mindmap. Response: ${responseClean}`);
     return "radial_mindmap";
-    
+
   } catch (error) {
     console.error(`❌ [${timer.getRequestId()}] Error selecting diagram type:`, error);
     return "radial_mindmap";

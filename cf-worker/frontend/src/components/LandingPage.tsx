@@ -79,7 +79,7 @@ export default function LandingPage({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && onSearch(searchQuery)}
-              placeholder="Explore visually..."
+              placeholder="Craft your answer..."
               className="flex-1 px-6 py-3.5 text-lg bg-transparent border-none outline-none text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               data-demo-search-input
             />

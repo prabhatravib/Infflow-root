@@ -32,6 +32,7 @@ export default function App() {
   const lastInitialSearchDone = useRef(false);
   const lastSearchQuery = useRef<string>('');
   const currentRequestId = useRef<string>('');
+  const currentAbortController = useRef<AbortController | null>(null);
 
   // Selection and deep dive functionality
   const {
@@ -58,6 +59,7 @@ export default function App() {
     askDeepDive,
     lastSearchQuery,
     currentRequestId,
+    currentAbortController,
     clusters,
     contentData,
     diagram

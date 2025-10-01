@@ -6,7 +6,10 @@ import { handleDemoAnalytics, Env as DemoAnalyticsEnv } from './routes/demoAnaly
 export interface Env extends NodeSearchEnv, DemoAnalyticsEnv {
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
-  ASSETS: { fetch: (req: Request) => Promise<Response> };
+  ASSETS: {
+    fetch: (req: Request) => Promise<Response>;
+    get: (path: string) => Promise<Response | null>;
+  };
 }
 
 export default {
@@ -78,8 +81,3 @@ export default {
     }
   },
 };
-
-
-
-
-

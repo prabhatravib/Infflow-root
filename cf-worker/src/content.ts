@@ -3,7 +3,7 @@
  * Handles generating structured content descriptions from user queries.
  */
 
-import { callOpenAI, EnvLike } from './openai';
+import { callOpenAI, callOpenAIOptimized, selectOptimalModel, EnvLike } from './openai';
 import { getContentPrompt } from './prompts';
 import { cleanTextContent } from './utils';
 import { createTimer } from './timing';
@@ -25,36 +25,48 @@ export async function generateContent(
 ): Promise<ContentResult> {
   const timer = createTimer();
   const prompt = getContentPrompt(diagramType);
-  
-  console.log(`🔵 [${timer.getRequestId()}] Starting content generation...`);
+
+  console.log(`🔵 [${timer.getRequestId()}] Starting OPTIMIZED content generation...`);
   console.log(`Query: ${query}`);
   console.log(`Diagram type: ${diagramType}`);
-  console.log(`Using model: ${env.OPENAI_MODEL || "gpt-4o-mini"}`);
-  
+
   try {
-    console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI for content generation...`);
-    const response = await timer.timeStep("content_llm_call", () => callOpenAI(
+    // Select optimal model for content generation
+    const optimalModel = selectOptimalModel(query, env);
+    console.log(`🎯 [${timer.getRequestId()}] Selected model for content: ${optimalModel}`);
+
+    // Optimized token limit - reduced from 1000 to 600 for faster processing
+    const optimizedMaxTokens = 600;
+
+    console.log(`🔵 [${timer.getRequestId()}] Calling OpenAI with optimizations for content generation...`);
+    const response = await timer.timeStep("optimized_content_llm_call", () => callOpenAIOptimized(
       env,
       prompt,
       query,
-      env.OPENAI_MODEL || "gpt-4o-mini",
-      1000,
-      0.7
+      optimalModel,
+      optimizedMaxTokens,
+      0.7,
+        {
+          usePriority: true,        // Faster queue processing
+          useCache: true,          // Cache reusable prompts
+          useStructured: false     // Text response, not JSON
+        }
     ), {
       query_length: query.length,
       diagram_type: diagramType,
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      max_tokens: 1000
+      model: optimalModel,
+      max_tokens: optimizedMaxTokens,
+      optimizations: "priority,cache,early_stop"
     });
-    
-    console.log(`✅ [${timer.getRequestId()}] OpenAI content response received:`);
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized content response received:`);
     console.log(`Response length: ${response?.length || 0}`);
     console.log(`Response preview: ${response?.substring(0, 200)}...`);
-    
+
     if (!response) {
       throw new Error("Empty content response from LLM");
     }
-    
+
     // Validate content structure
     console.log(`🔵 [${timer.getRequestId()}] Validating content structure...`);
     const isValid = await timer.timeStep("content_validation", async () => {
@@ -64,13 +76,13 @@ export async function generateContent(
       diagram_type: diagramType
     });
     console.log(`Content validation result: ${isValid}`);
-    
+
     if (!isValid) {
       console.error(`❌ [${timer.getRequestId()}] Content validation failed`);
       console.error(`Full content: ${response}`);
       throw new Error("Invalid content structure");
     }
-    
+
     // Parse content
     console.log(`🔵 [${timer.getRequestId()}] Parsing content...`);
     const parsed = await timer.timeStep("content_parsing", async () => {
@@ -80,7 +92,7 @@ export async function generateContent(
       diagram_type: diagramType
     });
     console.log(`Parsed content: ${JSON.stringify(parsed, null, 2)}`);
-    
+
     // Extract metadata if present
     const metadata = await timer.timeStep("metadata_extraction", async () => {
       return extractMetadata(response, diagramType);
@@ -89,28 +101,28 @@ export async function generateContent(
       diagram_type: diagramType
     });
     console.log(`Extracted metadata: ${metadata ? 'Yes' : 'No'}`);
-    
+
     // Clean the content by removing JSON metadata
     const cleanedContent = await timer.timeStep("content_cleaning", async () => {
       return cleanContentFromMetadata(response);
     }, {
       original_length: response.length
     });
-    
+
     // Log performance for this function
     timer.logPerformanceReport();
-    
-    console.log(`✅ [${timer.getRequestId()}] Content generation successful`);
+
+    console.log(`✅ [${timer.getRequestId()}] Optimized content generation successful`);
     console.log(`Final content length: ${cleanedContent.length}`);
-    
+
     return {
       content: cleanedContent,
       parsed,
       metadata
     };
-    
+
   } catch (error) {
-    console.error(`❌ [${timer.getRequestId()}] Content generation failed:`, error);
+    console.error(`❌ [${timer.getRequestId()}] Optimized content generation failed:`, error);
     timer.logPerformanceReport();
     throw error;
   }

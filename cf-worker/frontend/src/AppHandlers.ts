@@ -2,6 +2,18 @@ import React from 'react';
 import { describe, callDeepDiveApi, fetchClusterChildren } from './lib/api';
 import { exportDiagramAsText, exportDiagramAsPNG } from './utils/export-utils';
 
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: number;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
 export interface AppHandlersProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -17,6 +29,7 @@ export interface AppHandlersProps {
   askDeepDive: (question: string, apiCall: any) => Promise<void>;
   lastSearchQuery: React.MutableRefObject<string>;
   currentRequestId: React.MutableRefObject<string>;
+  currentAbortController: React.MutableRefObject<AbortController | null>;
   clusters: import('./types/cluster').ClusterNode | null;
   contentData: {content: string; description: string; universal_content: string} | null;
   diagram: string | null;
@@ -37,6 +50,7 @@ export const createAppHandlers = ({
   askDeepDive,
   lastSearchQuery,
   currentRequestId,
+  currentAbortController,
   clusters,
   contentData,
   diagram
@@ -94,25 +108,38 @@ export const createAppHandlers = ({
     }
   };
 
-  const handleSearch = async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
-    if (!query.trim()) return;
-    
-    const startTime = performance.now();
-    console.log(`[App] handleSearch called with query: ${query} options:`, options);
-    
-    // Prevent duplicate searches for the same query
+  // Debounced search function to prevent excessive API calls
+  const debouncedSearch = React.useCallback(
+    debounce(async (query: string, options: { navigate?: boolean } = { navigate: true }) => {
+      if (!query.trim()) return;
+
+      // Cancel any previous request
+      if (currentAbortController.current) {
+        currentAbortController.current.abort();
+      }
+
+      // Create new abort controller for this request
+      currentAbortController.current = new AbortController();
+
+      const startTime = performance.now();
+      console.log(`[App] handleSearch called with query: ${query} options:`, options);
+
+      // Allow duplicate searches for the same query
+      const cleaned = query.trim();
+
+      // Generate unique request ID to prevent duplicate API calls
+      const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+      currentRequestId.current = requestId;
+      console.log(`[App] Starting search with request ID: ${requestId}`);
+
+      await performSearch(query, requestId, options, startTime);
+    }, 300), // 300ms debounce delay
+    [currentAbortController, currentRequestId]
+  );
+
+  const performSearch = async (query: string, requestId: string, options: { navigate?: boolean }, startTime: number) => {
     const cleaned = query.trim();
-    if (lastSearchQuery.current === cleaned) {
-      console.log(`[App] Skipping duplicate search for: ${cleaned}`);
-      return;
-    }
-    lastSearchQuery.current = cleaned;
-    
-    // Generate unique request ID to prevent duplicate API calls
-    const requestId = `search_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-    currentRequestId.current = requestId;
-    console.log(`[App] Starting search with request ID: ${requestId}`);
-    
+
     setSearchQuery(cleaned);
     const qLower = cleaned.toLowerCase();
     const wantsFoamTree = (
@@ -334,7 +361,8 @@ export const createAppHandlers = ({
         }
         if (!foamTreeContainer) {
           // Look for any canvas element in the diagram viewport
-          foamTreeContainer = document.querySelector('.diagram-viewport canvas')?.parentElement;
+          const canvasElement = document.querySelector('.diagram-viewport canvas');
+          foamTreeContainer = canvasElement?.parentElement || null;
           console.log('Trying canvas parent selector:', foamTreeContainer);
         }
         if (!foamTreeContainer) {
@@ -406,7 +434,7 @@ export const createAppHandlers = ({
   };
 
   return {
-    handleSearch,
+    handleSearch: debouncedSearch,
     handleBackToHome,
     handleDeepDiveAsk,
     handleSaveText,
