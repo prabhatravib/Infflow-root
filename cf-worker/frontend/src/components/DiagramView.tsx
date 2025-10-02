@@ -95,16 +95,37 @@ export default function DiagramView({
     const fontWaitTime = performance.now() - fontWaitStartTime;
     console.log(`⏱️ [${renderId}] Font ready wait time: ${fontWaitTime.toFixed(2)}ms`);
 
-    // Add plus buttons to nodes with a delay to ensure SVG is fully rendered
-    if (searchQuery) {
+    const shouldDecorateNodes = Boolean(diagramMeta);
+
+    const removeExistingDecorations = () => {
+      const existingDecorations = svgElement.querySelectorAll('g.__plus');
+      if (existingDecorations.length) {
+        console.log(`[${renderId}] Removing ${existingDecorations.length} existing node decorations`);
+        existingDecorations.forEach(decoration => decoration.parentElement?.removeChild(decoration));
+      }
+    };
+
+    if (!shouldDecorateNodes || !searchQuery) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      if (!shouldDecorateNodes) {
+        console.log(`[${renderId}] Skipping node decorations (disabled for this view)`);
+      } else {
+        console.log(`[${renderId}] No searchQuery available for plus buttons`);
+      }
+      removeExistingDecorations();
+    } else {
       const plusButtonStartTime = performance.now();
       console.log(`[${renderId}] Adding plus buttons with searchQuery:`, searchQuery);
       const exclude = new Set<string>(["A"]);
-      
+
       // Add delay to ensure SVG is fully rendered and positioned
       timeoutRef.current = setTimeout(() => {
         const decorationStartTime = performance.now();
         console.log(`[${renderId}] Executing decorateNodesWithPlus after delay`);
+        removeExistingDecorations();
         decorateNodesWithPlus({
           svg: svgElement,
           originalQuery: searchQuery,
@@ -121,8 +142,6 @@ export default function DiagramView({
       }, 200); // Increased delay to 200ms for better reliability
       const plusButtonSetupTime = performance.now() - plusButtonStartTime;
       console.log(`⏱️ [${renderId}] Plus button setup time: ${plusButtonSetupTime.toFixed(2)}ms`);
-    } else {
-      console.log(`[${renderId}] No searchQuery available for plus buttons`);
     }
 
     if (radialEnabled && hostRef.current && svgElement) {
