@@ -50,6 +50,24 @@ function isSubgraph(g: SVGGElement): boolean {
 export function decorateNodesWithPlus(opts: DecorateOptions) {
   const { svg, originalQuery, diagramMeta, onOpenPopover, excludeIds = new Set() } = opts;
 
+  // CLEANUP: Remove all existing decorations from previous renders to prevent duplicates
+  console.log('[decorateNodesWithPlus] Cleaning up existing decorations...');
+  const existingDecorations = svg.querySelectorAll('g.__plus');
+  console.log(`[decorateNodesWithPlus] Found ${existingDecorations.length} existing __plus decorations to remove`);
+  existingDecorations.forEach(decoration => {
+    decoration.parentElement?.removeChild(decoration);
+  });
+  
+  // Also remove any duplicate filter definitions
+  const existingFilters = svg.querySelectorAll('filter[id="plus-shadow"]');
+  if (existingFilters.length > 1) {
+    console.log(`[decorateNodesWithPlus] Found ${existingFilters.length} duplicate plus-shadow filters, removing extras`);
+    // Keep only the first one, remove the rest
+    Array.from(existingFilters).slice(1).forEach(filter => {
+      filter.parentElement?.removeChild(filter);
+    });
+  }
+
   // Expand the SVG viewBox to accommodate icons that extend beyond the content
   const currentViewBox = svg.getAttribute('viewBox');
   if (currentViewBox) {
@@ -171,6 +189,27 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     });
   });
 
+  // Create shadow filter once for all plus buttons (outside the loop)
+  const defs = svg.querySelector('defs') || svg.insertBefore(document.createElementNS("http://www.w3.org/2000/svg", "defs"), svg.firstChild);
+  if (!svg.querySelector('filter[id="plus-shadow"]')) {
+    const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+    filter.setAttribute("id", "plus-shadow");
+    filter.setAttribute("x", "-50%");
+    filter.setAttribute("y", "-50%");
+    filter.setAttribute("width", "200%");
+    filter.setAttribute("height", "200%");
+    
+    const feDropShadow = document.createElementNS("http://www.w3.org/2000/svg", "feDropShadow");
+    feDropShadow.setAttribute("dx", "2");
+    feDropShadow.setAttribute("dy", "2");
+    feDropShadow.setAttribute("stdDeviation", "3");
+    feDropShadow.setAttribute("flood-color", "rgba(0,0,0,0.5)");
+    
+    filter.appendChild(feDropShadow);
+    defs.appendChild(filter);
+    console.log('[decorateNodesWithPlus] Created plus-shadow filter definition');
+  }
+
   nodeGroupsArray.forEach((g) => {
     const id = g.getAttribute("id") || "";
     if (!id || excludeIds.has(id)) return;
@@ -193,24 +232,6 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
     plus.setAttribute("aria-label", "Search for this node");
     plus.setAttribute("opacity", "0"); // Hide by default
     plus.style.transition = "opacity 0.2s ease-in-out"; // Smooth transition
-    
-    // Add shadow filter for better visibility
-    const defs = svg.querySelector('defs') || svg.insertBefore(document.createElementNS("http://www.w3.org/2000/svg", "defs"), svg.firstChild);
-    const filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
-    filter.setAttribute("id", "plus-shadow");
-    filter.setAttribute("x", "-50%");
-    filter.setAttribute("y", "-50%");
-    filter.setAttribute("width", "200%");
-    filter.setAttribute("height", "200%");
-    
-    const feDropShadow = document.createElementNS("http://www.w3.org/2000/svg", "feDropShadow");
-    feDropShadow.setAttribute("dx", "2");
-    feDropShadow.setAttribute("dy", "2");
-    feDropShadow.setAttribute("stdDeviation", "3");
-    feDropShadow.setAttribute("flood-color", "rgba(0,0,0,0.5)");
-    
-    filter.appendChild(feDropShadow);
-    defs.appendChild(filter);
 
     const r = Math.max(12, Math.min(16, Math.round(Math.min(bbox.width, bbox.height) * 0.12)));
     
