@@ -69,10 +69,17 @@ export function decorateNodesWithPlus(opts: DecorateOptions) {
   }
 
   // Expand the SVG viewBox to accommodate icons that extend beyond the content
+  const svgDataset = (svg as unknown as HTMLElement).dataset as DOMStringMap | undefined;
   const currentViewBox = svg.getAttribute('viewBox');
-  if (currentViewBox) {
-    const viewBoxValues = currentViewBox.split(' ').map(Number);
-    if (viewBoxValues.length === 4) {
+  const originalViewBox = svgDataset?.plusOriginalViewBox || currentViewBox;
+
+  if (svgDataset && !svgDataset.plusOriginalViewBox && currentViewBox) {
+    svgDataset.plusOriginalViewBox = currentViewBox;
+  }
+
+  if (originalViewBox) {
+    const viewBoxValues = originalViewBox.split(' ').map(Number);
+    if (viewBoxValues.length === 4 && viewBoxValues.every(v => Number.isFinite(v))) {
       const [x, y, width, height] = viewBoxValues;
       const margin = 50; // Add 50px margin on all sides
       svg.setAttribute('viewBox', `${x - margin} ${y - margin} ${width + margin * 2} ${height + margin * 2}`);

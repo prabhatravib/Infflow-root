@@ -41,6 +41,7 @@ export default function DiagramView({
   const mermaidRef = useRef<MermaidRef>(null);
   const cleanupRef = useRef<null | (() => void)>(null);
   const timeoutRef = useRef<number | null>(null);
+  const [svgRevision, setSvgRevision] = useState(0);
   
   // External links state is now handled by parent component
 
@@ -52,14 +53,8 @@ export default function DiagramView({
     console.log(`🎯 [${renderId}] Starting DiagramView render processing...`);
     
     (svgRef as any).current = svgElement;
+    setSvgRevision(prev => prev + 1);
     cleanupRef.current?.();
-
-    // Cancel any pending timeout from previous renders
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-      console.log(`[${renderId}] Cancelled previous timeout`);
-    }
 
     console.log(`[${renderId}] handleMermaidRender called with SVG:`, svgElement);
 
@@ -95,55 +90,6 @@ export default function DiagramView({
     const fontWaitTime = performance.now() - fontWaitStartTime;
     console.log(`⏱️ [${renderId}] Font ready wait time: ${fontWaitTime.toFixed(2)}ms`);
 
-    const shouldDecorateNodes = Boolean(diagramMeta);
-
-    const removeExistingDecorations = () => {
-      const existingDecorations = svgElement.querySelectorAll('g.__plus');
-      if (existingDecorations.length) {
-        console.log(`[${renderId}] Removing ${existingDecorations.length} existing node decorations`);
-        existingDecorations.forEach(decoration => decoration.parentElement?.removeChild(decoration));
-      }
-    };
-
-    if (!shouldDecorateNodes || !searchQuery) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-      if (!shouldDecorateNodes) {
-        console.log(`[${renderId}] Skipping node decorations (disabled for this view)`);
-      } else {
-        console.log(`[${renderId}] No searchQuery available for plus buttons`);
-      }
-      removeExistingDecorations();
-    } else {
-      const plusButtonStartTime = performance.now();
-      console.log(`[${renderId}] Adding plus buttons with searchQuery:`, searchQuery);
-      const exclude = new Set<string>(["A"]);
-
-      // Add delay to ensure SVG is fully rendered and positioned
-      timeoutRef.current = setTimeout(() => {
-        const decorationStartTime = performance.now();
-        console.log(`[${renderId}] Executing decorateNodesWithPlus after delay`);
-        removeExistingDecorations();
-        decorateNodesWithPlus({
-          svg: svgElement,
-          originalQuery: searchQuery,
-          excludeIds: exclude,
-          diagramMeta: diagramMeta,
-          onOpenPopover: ({ query, nodeId, meta }) => {
-            console.log(`[${renderId}] Plus button clicked, requesting external links for query:`, query, 'nodeId:', nodeId, 'meta:', meta);
-            onExternalLinksRequest?.(query, meta);
-          },
-        });
-        const decorationTime = performance.now() - decorationStartTime;
-        console.log(`⏱️ [${renderId}] Node decoration time: ${decorationTime.toFixed(2)}ms`);
-        timeoutRef.current = null; // Clear the ref after execution
-      }, 200); // Increased delay to 200ms for better reliability
-      const plusButtonSetupTime = performance.now() - plusButtonStartTime;
-      console.log(`⏱️ [${renderId}] Plus button setup time: ${plusButtonSetupTime.toFixed(2)}ms`);
-    }
-
     if (radialEnabled && hostRef.current && svgElement) {
       const radialSetupStartTime = performance.now();
       cleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
@@ -160,17 +106,95 @@ export default function DiagramView({
     console.log(`📈 Breakdown:`);
     console.log(`   • Node removal: ${nodeRemovalTime.toFixed(2)}ms (${((nodeRemovalTime / totalTime) * 100).toFixed(1)}%)`);
     console.log(`   • Font wait: ${fontWaitTime.toFixed(2)}ms (${((fontWaitTime / totalTime) * 100).toFixed(1)}%)`);
-    console.log(`   • Plus button setup: ${searchQuery ? 'Scheduled' : 'Skipped'}`);
     console.log(`   • Radial setup: ${radialEnabled ? 'Completed' : 'Skipped'}`);
-    
-  }, [radialEnabled, searchQuery]);
+
+  }, [radialEnabled]);
+
+  useEffect(() => {
+    const svgElement = svgRef.current;
+    if (!svgElement) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const removeExistingDecorations = () => {
+      const existingDecorations = svgElement.querySelectorAll('g.__plus');
+      if (existingDecorations.length) {
+        console.log(`[decorateNodesWithPlus] Removing ${existingDecorations.length} existing decorations prior to update`);
+        existingDecorations.forEach(decoration => decoration.parentElement?.removeChild(decoration));
+      }
+    };
+
+    if (timeoutRef.current !== null) {
+      cancelAnimationFrame(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    const hasDecorationData = Boolean(diagramMeta) && Boolean(searchQuery);
+    if (!hasDecorationData) {
+      removeExistingDecorations();
+      return;
+    }
+
+    const scheduleDecoration = () => {
+      if (cancelled) {
+        return;
+      }
+      timeoutRef.current = requestAnimationFrame(() => {
+        timeoutRef.current = null;
+        if (cancelled) {
+          return;
+        }
+        removeExistingDecorations();
+        const exclude = new Set<string>(['A']);
+        decorateNodesWithPlus({
+          svg: svgElement,
+          originalQuery: searchQuery,
+          excludeIds: exclude,
+          diagramMeta: diagramMeta,
+          onOpenPopover: ({ query, nodeId, meta }) => {
+            console.log('[DiagramView] Plus button clicked, requesting external links for query:', query, 'nodeId:', nodeId, 'meta:', meta);
+            onExternalLinksRequest?.(query, meta);
+          },
+        });
+
+        if (radialEnabled && hostRef.current) {
+          cleanupRef.current?.();
+          cleanupRef.current = setupRadialAlignment(svgElement, hostRef.current, {
+            paddingPercent: 0.12,
+            minScale: 0.5
+          });
+        }
+      });
+    };
+
+    const fontReady = (document as any).fonts?.ready;
+    if (fontReady && typeof fontReady.then === 'function') {
+      fontReady.then(() => {
+        if (!cancelled) {
+          scheduleDecoration();
+        }
+      });
+    } else {
+      scheduleDecoration();
+    }
+
+    return () => {
+      cancelled = true;
+      if (timeoutRef.current !== null) {
+        cancelAnimationFrame(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [diagramMeta, onExternalLinksRequest, radialEnabled, searchQuery, svgRevision]);
 
   // Cleanup alignment and timeouts on unmount
   useEffect(() => {
     return () => {
       cleanupRef.current?.();
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      if (timeoutRef.current !== null) {
+        cancelAnimationFrame(timeoutRef.current);
         timeoutRef.current = null;
       }
     };
