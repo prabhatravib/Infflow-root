@@ -16,54 +16,55 @@ The system consists of two main components:
 
 #### SessionManager Class
 ```typescript
+// cf-worker/frontend/src/utils/sessionManager.ts
 class SessionManager {
-  private sessionId: string | null = null
-  private listeners: ((sessionId: string | null) => void)[] = []
+  private sessionId: string | null = null;
+  private listeners: ((sessionId: string | null) => void)[] = [];
 
   generateSessionId(): string {
-    this.sessionId = this.generateUUID()
-    this.notifyListeners()
-    return this.sessionId
+    this.sessionId = this.generateUUID();
+    this.notifyListeners();
+    return this.sessionId;
   }
 
   getSessionId(): string | null {
-    return this.sessionId
+    return this.sessionId;
   }
 
   setSessionId(sessionId: string): void {
-    this.sessionId = sessionId
-    this.notifyListeners()
+    this.sessionId = sessionId;
+    this.notifyListeners();
   }
 
   clearSession(): void {
-    this.sessionId = null
-    this.notifyListeners()
+    this.sessionId = null;
+    this.notifyListeners();
   }
 
   onSessionChange(callback: (sessionId: string | null) => void): () => void {
-    this.listeners.push(callback)
+    this.listeners.push(callback);
     return () => {
-      const index = this.listeners.indexOf(callback)
+      const index = this.listeners.indexOf(callback);
       if (index > -1) {
-        this.listeners.splice(index, 1)
+        this.listeners.splice(index, 1);
       }
-    }
+    };
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener(this.sessionId))
+    this.listeners.forEach(listener => listener(this.sessionId));
   }
 
   private generateUUID(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0
-      const v = c === 'x' ? r : (r & 0x3 | 0x8)
-      return v.toString(16)
-    })
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 }
 
-export const sessionManager = new SessionManager()
+export const sessionManager = new SessionManager();
 ```
 
 ### 2. iframe Communication Protocol
@@ -108,220 +109,107 @@ interface PostMessageTypes {
 }
 ```
 
+
 #### External Frame Implementation
 ```typescript
-// HexaWorker Component
+// cf-worker/frontend/src/components/HexaWorker.tsx (simplified)
 interface HexaWorkerProps {
-  codeFlowStatus: 'sent' | 'not-sent'
-  diagramData: DiagramData | null
+  codeFlowStatus: 'sent' | 'not-sent';
+  diagramData: DiagramData | null;
+  autoDemoMode?: boolean;
+  demoNarration?: string | null;
 }
 
-export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramData }) => {
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
+export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramData, autoDemoMode = false, demoNarration = null }) => {
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Subscribe to session changes
   useEffect(() => {
     const unsubscribe = sessionManager.onSessionChange((newSessionId) => {
-      setSessionId(newSessionId)
-      console.log('🆔 HexaWorker received session ID:', newSessionId)
-    })
+      setSessionId(newSessionId);
+      console.log('🆔 HexaWorker received session ID:', newSessionId);
+    });
+    const currentSessionId = sessionManager.getSessionId();
+    if (currentSessionId) setSessionId(currentSessionId);
+    return unsubscribe;
+  }, []);
 
-    const currentSessionId = sessionManager.getSessionId()
-    if (currentSessionId) {
-      setSessionId(currentSessionId)
-    }
-
-    return unsubscribe
-  }, [])
-
-  // Send diagram data to iframe when it changes
+  // Send diagram data to voice worker via API when it changes (deduplicated)
+  const lastSentDataRef = useRef<string | null>(null);
   useEffect(() => {
-    if (diagramData && iframeRef.current && isVoiceEnabled) {
-      console.log('📤 Sending diagram data to HexaWorker iframe:', diagramData)
-      
-      iframeRef.current.contentWindow?.postMessage({
-        type: 'diagram_data',
-        data: diagramData
-      }, 'https://hexa-worker.prabhatravib.workers.dev')
+    if (diagramData) {
+      const dataHash = JSON.stringify({
+        mermaidCode: diagramData.mermaidCode,
+        prompt: diagramData.prompt,
+        sessionId: sessionId || 'default',
+      });
+      if (dataHash === lastSentDataRef.current) {
+        console.log('⏭️ Skipping duplicate diagram data send');
+        return;
+      }
+      lastSentDataRef.current = dataHash;
+      fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mermaidCode: diagramData.mermaidCode,
+          diagramImage: diagramData.diagramImage,
+          prompt: diagramData.prompt,
+          type: 'diagram',
+          sessionId: sessionId || 'default',
+        })
+      }).then(response => {
+        if (!response.ok) lastSentDataRef.current = null;
+      }).catch(() => { lastSentDataRef.current = null; });
     }
-  }, [diagramData, isVoiceEnabled])
+  }, [diagramData, sessionId]);
 
-  const toggleVoice = () => {
-    setIsVoiceEnabled(!isVoiceEnabled)
-    
-    if (!isVoiceEnabled && !sessionId) {
-      const newSessionId = sessionManager.generateSessionId()
-      console.log('🆔 Generated session ID for voice session:', newSessionId)
-    }
-  }
-
-  return (
-    <div className="hexa-worker-container">
-      <button onClick={toggleVoice} className="voice-toggle">
-        {isVoiceEnabled ? 'Disable Voice' : 'Enable Voice'}
-      </button>
-
-      {isVoiceEnabled ? (
-        <iframe
-          ref={iframeRef}
-          src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}` : ''}`}
-          width="340"
-          height="340"
-          style={{
-            border: 'none',
-            backgroundColor: 'transparent',
-            transition: 'opacity 0.3s ease',
-            transform: 'scale(1)',
-            transformOrigin: 'center',
-            clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-          }}
-          title="Hexa Voice Agent"
-          allow="microphone"
-          onLoad={() => {
-            console.log('🔄 Iframe loaded')
-            if (sessionId) {
-              console.log('🆔 Voice session started with session ID:', sessionId)
-            }
-            if (diagramData) {
-              console.log('📤 Sending diagram data on iframe load:', diagramData)
-              iframeRef.current?.contentWindow?.postMessage({
-                type: 'diagram_data',
-                data: diagramData
-              }, 'https://hexa-worker.prabhatravib.workers.dev')
-            }
-          }}
-        />
-      ) : (
-        <div className="voice-disabled-placeholder">
-          <div className="text-white text-sm font-medium">Voice Disabled</div>
-        </div>
-      )}
-    </div>
-  )
+  // ...existing code for UI, expansion, demo mode, and iframe rendering...
+  // The iframe src should be:
+  // src={`https://hexa-worker.prabhatravib.workers.dev/${sessionId ? `?sessionId=${sessionId}&iframe=true` : '?iframe=true'}`}
 }
 ```
+
 
 ### 3. HTTP API Communication
 
 #### External Data Endpoint
 ```typescript
-// Send diagram data to hexagon worker via HTTP API
-const handleDiscussionRequest = async (diagramContext: DiagramData) => {
-  console.log('Hexagon discussion started for diagram:', diagramContext)
-  
-  try {
-    const response = await fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
+// Send diagram data to hexagon worker via HTTP API (with deduplication and sessionId)
+const lastSentDataRef = useRef<string | null>(null);
+useEffect(() => {
+  if (diagramData) {
+    const dataHash = JSON.stringify({
+      mermaidCode: diagramData.mermaidCode,
+      prompt: diagramData.prompt,
+      sessionId: sessionId || 'default',
+    });
+    if (dataHash === lastSentDataRef.current) return;
+    lastSentDataRef.current = dataHash;
+    fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mermaidCode: diagramContext.mermaidCode,
-        diagramImage: diagramContext.diagramImage,
-        prompt: diagramContext.prompt,
-        type: 'diagram'
+        mermaidCode: diagramData.mermaidCode,
+        diagramImage: diagramData.diagramImage,
+        prompt: diagramData.prompt,
+        type: 'diagram',
+        sessionId: sessionId || 'default',
       })
-    })
-
-    if (!response.ok) {
-      if (response.status === 409) {
-        console.error('❌ 409 Conflict: Hexagon worker rejected the diagram data')
-        const errorText = await response.text()
-        throw new Error(`Hexagon worker rejected data: ${errorText}`)
-      }
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const result = await response.json()
-    console.log('✅ Diagram data sent to hexagon worker:', result)
-    
-    // Update status to show "Code Flow Sent"
-    onCodeFlowStatusChange?.('sent')
-    
-  } catch (error) {
-    console.error('❌ Error sending data to hexagon worker:', error)
+    }).then(response => {
+      if (!response.ok) lastSentDataRef.current = null;
+    }).catch(() => { lastSentDataRef.current = null; });
   }
-}
+}, [diagramData, sessionId]);
 ```
+
 
 ### 4. Hexagon Worker Implementation
 
-#### Voice Session Management
-```typescript
-export class VoiceSession {
-  private core: VoiceSessionCore
-  private handlers: VoiceSessionHandlers
-  private externalData: VoiceSessionExternalData
-  private openaiConnection: OpenAIConnection
-  private messageHandlers: MessageHandlers
-  private agentManager: AgentManager
-
-  constructor(private state: DurableObjectState, private env: Env) {
-    // Initialize core session management
-    this.core = new VoiceSessionCore(state, env)
-    
-    // Initialize OpenAI connection
-    this.openaiConnection = new OpenAIConnection(
-      env,
-      (data: string) => this.handlers.handleOpenAIConnectionMessage(data),
-      (error: any) => this.core.broadcastToClients({ type: 'error', error }),
-      () => this.handlers.onOpenAIConnected(),
-      () => this.handlers.onOpenAIDisconnected()
-    )
-
-    // Initialize message handlers
-    this.messageHandlers = new MessageHandlers(
-      this.openaiConnection,
-      (message: any) => this.core.broadcastToClients(message)
-    )
-
-    // Initialize agent manager
-    this.agentManager = new AgentManager(
-      this.openaiConnection,
-      (message: any) => this.core.broadcastToClients(message)
-    )
-
-    // Initialize external data management
-    this.externalData = new VoiceSessionExternalData(
-      this.core,
-      state,
-      this.messageHandlers,
-      this.agentManager
-    )
-
-    // Initialize handlers
-    this.handlers = new VoiceSessionHandlers(
-      this.core,
-      this.openaiConnection,
-      this.messageHandlers,
-      this.agentManager
-    )
-
-    // Wire up handlers with external data
-    this.handlers.setExternalData(this.externalData)
-    this.core.setHandlers(this.handlers)
-  }
-
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url)
-    
-    // Handle external data endpoint
-    if (url.pathname === '/api/external-data' && request.method === 'POST') {
-      return this.externalData.handleExternalData(request)
-    }
-    
-    // Handle WebSocket upgrade
-    if (request.headers.get('Upgrade') === 'websocket') {
-      return this.core.handleWebSocketUpgrade(request)
-    }
-    
-    // Handle other requests
-    return this.core.handleRequest(request)
-  }
-}
-```
+**Note:** The current repo does not use Durable Objects or a `VoiceSession` class. The worker implementation may be a standard Cloudflare Worker or similar, and the `/api/external-data` endpoint should accept POST requests with the diagram data and sessionId. Update this section if you add Durable Objects or advanced session management in the future.
 
 #### External Data Handler
 ```typescript
@@ -407,77 +295,23 @@ export class MessageHandlers {
 }
 ```
 
+
 ### 6. OpenAI Integration
 
-#### Realtime API Connection
+#### Standard Chat Completion API
 ```typescript
-export class OpenAIConnection {
-  private env: Env
-  private sessionId: string | null = null
-  private clientSecret: string | null = null
-  private externalData: any = null
-
-  async sendMessage(message: any): Promise<void> {
-    if (!this.sessionId) {
-      console.error('No active session for sending message')
-      return
-    }
-
-    try {
-      if (message.type === 'text') {
-        const conversationItem = {
-          type: "conversation.item.create",
-          item: {
-            type: "message",
-            role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: message.text
-              }
-            ]
-          }
-        }
-
-        const response = await fetch(`https://api.openai.com/v1/realtime/sessions/${this.sessionId}/conversation/items`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${this.env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(conversationItem)
-        })
-
-        if (response.ok) {
-          console.log('✅ Text message sent to Realtime session')
-          
-          // Trigger response
-          const responseTrigger = { type: "response.create" }
-          await fetch(`https://api.openai.com/v1/realtime/sessions/${this.sessionId}/responses`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.env.OPENAI_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(responseTrigger)
-          })
-        }
-      }
-    } catch (error) {
-      console.error('❌ Failed to send message to OpenAI:', error)
-    }
-  }
-
-  setExternalData(externalData: any): void {
-    this.externalData = externalData
-  }
-
-  getSessionInfo(): { sessionId: string; clientSecret: string } {
-    return {
-      sessionId: this.sessionId || '',
-      clientSecret: this.clientSecret || ''
-    }
-  }
+// cf-worker/src/openai.ts
+export async function callOpenAI(env: EnvLike, system: string, user: string, model: string, maxTokens: number, temperature: number): Promise<string> {
+  // ...existing code...
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+  // ...existing code...
 }
 ```
 
@@ -500,39 +334,36 @@ export class OpenAIConnection {
    - Handle error responses and retries
    - Add request deduplication
 
+
 ### Step 2: Set Up Hexagon Worker
 
-1. **Create Voice Session Durable Object**
-   - Implement session management
-   - Add WebSocket handling
-   - Create external data endpoints
+1. **Create Worker Endpoint**
+  - Implement `/api/external-data` POST endpoint to receive diagram data and sessionId
+  - Store or process data as needed for the session
 
-2. **Implement Message Handlers**
-   - Add audio input processing
-   - Handle text input
-   - Manage OpenAI integration
+2. **Implement OpenAI Integration**
+  - Use the `callOpenAI` function to generate responses
 
-3. **Add External Data Management**
-   - Store external data in Durable Object storage
-   - Inject data into AI context
-   - Broadcast updates to clients
+3. **(Optional) Add Advanced Session Management**
+  - If needed, add Durable Objects or WebSocket support for real-time features
+
 
 ### Step 3: Configure Communication
 
 1. **Set Up CORS**
-   - Allow cross-origin requests
-   - Configure allowed headers and methods
-   - Handle preflight requests
+  - Allow cross-origin requests
+  - Configure allowed headers and methods
+  - Handle preflight requests
 
 2. **Implement Security**
-   - Validate message origins
-   - Sanitize external data
-   - Add rate limiting
+  - Validate message origins (for iframe postMessage, if used)
+  - Sanitize external data
+  - Add rate limiting
 
 3. **Add Error Handling**
-   - Implement retry logic
-   - Add fallback mechanisms
-   - Create user-friendly error messages
+  - Implement retry logic for API calls
+  - Add fallback mechanisms
+  - Create user-friendly error messages
 
 ### Step 4: Deploy and Test
 
@@ -577,24 +408,23 @@ const corsHeaders = {
 }
 ```
 
+
 ## Security Considerations
 
 1. **Message Origin Validation**
-   - Always validate postMessage origins
-   - Use specific target origins in postMessage calls
+  - If using postMessage, always validate origins and use specific target origins
 
 2. **Data Sanitization**
-   - Sanitize external data before processing
-   - Validate data types and structure
+  - Sanitize external data before processing
+  - Validate data types and structure
 
 3. **Rate Limiting**
-   - Implement rate limiting for API endpoints
-   - Add request throttling for voice input
+  - Implement rate limiting for API endpoints
 
 4. **Session Security**
-   - Use secure session ID generation
-   - Implement session expiration
-   - Add session validation
+  - Use secure session ID generation
+  - Implement session expiration if needed
+  - Add session validation
 
 ## Performance Optimization
 

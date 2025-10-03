@@ -5,7 +5,7 @@ import { FoamTreeView } from './visual/FoamTreeView';
 import type { ClusterNode } from '../types/cluster';
 import { setupRadialAlignment } from '../utils/radial-align';
 import { removeCentralNodeA } from '../utils/svg-search-dom';
-import { decorateNodesWithPlus } from '../lib/mermaid/decorateNodesWithPlus';
+import { decorateNodesWithSearch } from '../lib/mermaid/decorateNodesWithSearch';
 
 interface DiagramViewProps {
   diagramViewTab: 'visual' | 'text';
@@ -119,9 +119,9 @@ export default function DiagramView({
     let cancelled = false;
 
     const removeExistingDecorations = () => {
-      const existingDecorations = svgElement.querySelectorAll('g.__plus');
+      const existingDecorations = svgElement.querySelectorAll('g.__search');
       if (existingDecorations.length) {
-        console.log(`[decorateNodesWithPlus] Removing ${existingDecorations.length} existing decorations prior to update`);
+        console.log(`[decorateNodesWithSearch] Removing ${existingDecorations.length} existing decorations prior to update`);
         existingDecorations.forEach(decoration => decoration.parentElement?.removeChild(decoration));
       }
     };
@@ -148,13 +148,13 @@ export default function DiagramView({
         }
         removeExistingDecorations();
         const exclude = new Set<string>(['A']);
-        decorateNodesWithPlus({
+        decorateNodesWithSearch({
           svg: svgElement,
           originalQuery: searchQuery,
           excludeIds: exclude,
           diagramMeta: diagramMeta,
           onOpenPopover: ({ query, nodeId, meta }) => {
-            console.log('[DiagramView] Plus button clicked, requesting external links for query:', query, 'nodeId:', nodeId, 'meta:', meta);
+            console.log('[DiagramView] Search button clicked, requesting external links for query:', query, 'nodeId:', nodeId, 'meta:', meta);
             onExternalLinksRequest?.(query, meta);
           },
         });
