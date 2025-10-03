@@ -164,7 +164,7 @@ export default function SearchResults({
               onExternalLinksRequest={handleExternalLinksRequest}
             />
           ) : (
-            <div className="relative pl-16 pr-6 py-6">
+            <div className="relative pl-60 pr-6 py-6">
               {contentData && contentData.universal_content ? (
                 <div className="space-y-4">
                   <div className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap prose max-w-none">

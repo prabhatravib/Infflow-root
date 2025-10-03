@@ -20,6 +20,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   const [isExpanded, setIsExpanded] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const prevAutoDemoMode = useRef(autoDemoMode);
   
   // Layout constants for the expanded hexagon
   const INTERNAL_HEXAGON_SCALE = 0.8;    // scale internal hexagon to 80%
@@ -45,7 +46,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
   useEffect(() => {
     const unsubscribe = sessionManager.onSessionChange((newSessionId) => {
       setSessionId(newSessionId);
-      console.log('ðŸ†” HexaWorker received session ID:', newSessionId);
+      console.log('Ã°Å¸â€ â€ HexaWorker received session ID:', newSessionId);
     });
 
     const currentSessionId = sessionManager.getSessionId();
@@ -60,16 +61,17 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     if (autoDemoMode) {
       setIsExpanded(true);
       setIsVoiceEnabled(true);
-      if (!sessionId) {
+      if (!sessionManager.getSessionId()) {
         const newSessionId = sessionManager.generateSessionId();
-        setSessionId(newSessionId);
         console.log('[AutoDemo] Generated session ID for demo run:', newSessionId);
       }
-    } else {
+    } else if (prevAutoDemoMode.current) {
       setIsExpanded(false);
       setIsVoiceEnabled(false);
     }
-  }, [autoDemoMode, sessionId]);
+
+    prevAutoDemoMode.current = autoDemoMode;
+  }, [autoDemoMode]);
 
   useEffect(() => {
     if (!iframeRef.current) {
@@ -108,12 +110,12 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
       });
       
       if (dataHash === lastSentDataRef.current) {
-        console.log('â­ï¸ Skipping duplicate diagram data send');
+        console.log('Ã¢ÂÂ­Ã¯Â¸Â Skipping duplicate diagram data send');
         return;
       }
       
       lastSentDataRef.current = dataHash;
-      console.log('ðŸ“¤ Sending diagram data to voice worker via API:', diagramData);
+      console.log('Ã°Å¸â€œÂ¤ Sending diagram data to voice worker via API:', diagramData);
       
       // Send diagram data to voice worker via API call
       fetch('https://hexa-worker.prabhatravib.workers.dev/api/external-data', {
@@ -130,14 +132,14 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
         })
       }).then(response => {
         if (response.ok) {
-          console.log('âœ… Diagram data sent to voice worker successfully');
+          console.log('Ã¢Å“â€¦ Diagram data sent to voice worker successfully');
         } else {
-          console.error('âŒ Failed to send diagram data to voice worker:', response.status);
+          console.error('Ã¢ÂÅ’ Failed to send diagram data to voice worker:', response.status);
           // Reset hash on failure so it can be retried
           lastSentDataRef.current = null;
         }
       }).catch(error => {
-        console.error('âŒ Error sending diagram data to voice worker:', error);
+        console.error('Ã¢ÂÅ’ Error sending diagram data to voice worker:', error);
         // Reset hash on error so it can be retried
         lastSentDataRef.current = null;
       });
@@ -149,7 +151,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
     
     if (!isVoiceEnabled && !sessionId) {
       const newSessionId = sessionManager.generateSessionId();
-      console.log('ðŸ†” Generated session ID for voice session:', newSessionId);
+      console.log('Ã°Å¸â€ â€ Generated session ID for voice session:', newSessionId);
     }
   };
 
@@ -170,7 +172,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
               setIsVoiceEnabled(true);
               if (!sessionId) {
                 const newSessionId = sessionManager.generateSessionId();
-                console.log('ðŸ†” Generated session ID for voice session:', newSessionId);
+                console.log('Ã°Å¸â€ â€ Generated session ID for voice session:', newSessionId);
               }
             }}
             className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200 shadow-lg"
@@ -196,7 +198,7 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
             {/* Minimize Button */}
             <button
               onClick={toggleExpanded}
-              className="absolute top-4 -left-2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
+              className="absolute top-[60px] left-1/2 -translate-x-1/2 z-10 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-200"
               title="Minimize"
             >
               <Minus className="w-4 h-4" />
@@ -236,19 +238,19 @@ export const HexaWorker: React.FC<HexaWorkerProps> = ({ codeFlowStatus, diagramD
                 title="Hexa Voice Agent"
                 allow="microphone"
                 onLoad={() => {
-                  console.log('ðŸ”„ Iframe loaded');
+                  console.log('Ã°Å¸â€â€ž Iframe loaded');
                   if (sessionId) {
-                    console.log('ðŸ†” Voice session started with session ID:', sessionId);
+                    console.log('Ã°Å¸â€ â€ Voice session started with session ID:', sessionId);
                   }
                   // Diagram data is already sent via API, no postMessage needed
-                  console.log('âœ… Voice worker iframe loaded - diagram data should be available via API');
+                  console.log('Ã¢Å“â€¦ Voice worker iframe loaded - diagram data should be available via API');
                 }}
               />
             </div>
           </div>
 
           {/* Code Flow Status - Positioned to always be visible below iframe */}
-          <div className="text-center mt-6 relative z-10">
+          <div className="text-center mt-6 relative z-10" style={{ transform: 'translateX(-20px)' }}>
             <div className="text-xs text-gray-500 dark:text-gray-400">
               {codeFlowStatus === 'sent' ? 'Basic Details Sent' : 'No Details Sent'}
             </div>
